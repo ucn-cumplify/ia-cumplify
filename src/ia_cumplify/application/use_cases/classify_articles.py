@@ -23,8 +23,9 @@ class ClassifyLegalBodyUseCase:
             ClassifiedArticle(
                 article_id=article.id,
                 number=article.number,
-                classification=self._classifier.classify(legal_body, article),
+                classification=self._classifier.classify(legal_body, article, articles),
             )
             for article in articles
+            if article.should_classify()
         )
         return ClassifiedLegalBody(legal_body=legal_body, articles=classified)

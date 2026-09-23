@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-5.6-luna"
     openai_reasoning_effort: str = "low"
     database_url: str = ""
+    # DEV-ONLY: include elapsed time and token usage on classify responses
+    include_dev_metrics: bool = True
 
 
 @lru_cache

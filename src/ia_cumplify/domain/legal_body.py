@@ -5,3 +5,5 @@ from dataclasses import dataclass
 class LegalBody:
     id: str
     title: str
+    summary: str
+    type: str

@@ -7,7 +7,7 @@ from ia_cumplify.domain.article import Article
 from ia_cumplify.domain.legal_body import LegalBody
 
 _GET_LEGAL_BODY = """
-SELECT id, title
+SELECT id, title, summary, "type"
 FROM legal_bodies
 WHERE id = %s
 """
@@ -33,7 +33,12 @@ class PostgresLegalBodyRepository:
         if row is None:
             return None
 
-        return LegalBody(id=str(row["id"]), title=row["title"])
+        return LegalBody(
+            id=str(row["id"]),
+            title=row["title"],
+            summary=row["summary"] or "",
+            type=row["type"] or "",
+        )
 
     def list_articles(self, legal_body_id: str) -> list[Article]:
         with self._pool.connection() as connection:

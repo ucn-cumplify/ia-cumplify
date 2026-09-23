@@ -2,6 +2,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from ia_cumplify.adapters.inbound.http.dev_metrics import DevMetricsPayload  # DEV-ONLY
+
 from ia_cumplify.domain.classification import (
     ArticleClassification,
     ClassifiedArticle,
@@ -49,6 +51,7 @@ class ClassifyLegalBodyResponse(BaseModel):
     legal_body_id: str
     title: str
     results: list[ClassifyArticleResponse]
+    dev_metrics: DevMetricsPayload | None = None  # DEV-ONLY
 
     @classmethod
     def from_domain(cls, result: ClassifiedLegalBody) -> "ClassifyLegalBodyResponse":
