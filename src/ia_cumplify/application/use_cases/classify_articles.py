@@ -1,6 +1,6 @@
 from ia_cumplify.application.ports.article_classifier import ArticleClassifierPort
 from ia_cumplify.application.ports.legal_body_repository import LegalBodyRepositoryPort
-from ia_cumplify.domain.classification import ClassifiedArticle, ClassifiedLegalBody
+from ia_cumplify.domain.classification import ClassifiedLegalBody
 from ia_cumplify.domain.exceptions import LegalBodyNotFoundError
 
 
@@ -19,13 +19,6 @@ class ClassifyLegalBodyUseCase:
             raise LegalBodyNotFoundError(legal_body_id)
 
         articles = self._repository.list_articles(legal_body.id)
-        classified = tuple(
-            ClassifiedArticle(
-                article_id=article.id,
-                number=article.number,
-                classification=self._classifier.classify(legal_body, article, articles),
-            )
-            for article in articles
-            if article.should_classify()
-        )
-        return ClassifiedLegalBody(legal_body=legal_body, articles=classified)
+        targets = [article for article in articles if article.should_classify()]
+        classified = self._classifier.classify_many(legal_body, articles, targets)
+        return ClassifiedLegalBody(legal_body=legal_body, articles=tuple(classified))

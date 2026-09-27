@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     database_url: str = ""
     # DEV-ONLY: include elapsed time and token usage on classify responses
     include_dev_metrics: bool = True
+    classify_batch_size: int = 25
 
 
 @lru_cache

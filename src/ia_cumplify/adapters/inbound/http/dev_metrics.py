@@ -1,16 +1,15 @@
 """DEV-ONLY metrics. Delete this file and every `# DEV-ONLY` comment to remove it."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from time import perf_counter
 from typing import Any
-
-from collections.abc import Sequence
 
 from pydantic import BaseModel
 
 from ia_cumplify.adapters.outbound.openai.classifier import OpenAIArticleClassifierAdapter
 from ia_cumplify.domain.article import Article
-from ia_cumplify.domain.classification import ArticleClassification
+from ia_cumplify.domain.classification import ClassifiedArticle
 from ia_cumplify.domain.legal_body import LegalBody
 
 
@@ -53,14 +52,15 @@ class MeteredArticleClassifier:
         self._inner = inner
         self._meter = meter
 
-    def classify(
+    def classify_many(
         self,
         legal_body: LegalBody,
-        article: Article,
         all_articles: Sequence[Article],
-    ) -> ArticleClassification:
-        classification, usage = self._inner.classify_with_usage(
-            legal_body, article, all_articles
+        targets: Sequence[Article],
+    ) -> list[ClassifiedArticle]:
+        classified, usages = self._inner.classify_many_with_usage(
+            legal_body, all_articles, targets
         )
-        self._meter.add_usage(usage)
-        return classification
+        for usage in usages:
+            self._meter.add_usage(usage)
+        return classified
