@@ -54,8 +54,9 @@ def classify_legal_body(
     body: ClassifyLegalBodyRequest,
     wiring: _ClassifyWiring = Depends(get_classify_wiring),
 ) -> ClassifyLegalBodyResponse:
+    candidates = body.candidate_values.to_domain() if body.candidate_values else None
     try:
-        result = wiring.use_case.execute(str(body.legal_body_id))
+        result = wiring.use_case.execute(str(body.legal_body_id), candidates)
     except LegalBodyNotFoundError as exc:
         raise HTTPException(
             status_code=404,

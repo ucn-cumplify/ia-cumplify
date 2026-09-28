@@ -1,3 +1,5 @@
+from ia_cumplify.domain.classification import CandidateLabels
+
 SYSTEM_PROMPT = """You classify Chilean regulatory and compliance articles for companies.
 
 You receive these blocks:
@@ -26,3 +28,16 @@ LABEL RULES. Labels are compared by exact text with thousands of articles from o
 
 Return one result per listed article, using the exact article_id provided. Prefer multiple list entries when several distinct values apply."""
 
+
+def render_candidate_labels(candidates: CandidateLabels) -> str:
+    """EXISTING LABELS block. Reusing these is what makes labels repeat across legal bodies."""
+    lines = [
+        "--- EXISTING LABELS (reuse when they fit) ---",
+        "Labels already used for other legal bodies. If one fits, copy it exactly; "
+        "create a new label only when none fits.",
+    ]
+    for dimension, labels in candidates.by_dimension():
+        if labels:
+            lines.append(f"{dimension}: " + " | ".join(labels))
+    lines.append("--- END EXISTING LABELS ---")
+    return "\n".join(lines)
