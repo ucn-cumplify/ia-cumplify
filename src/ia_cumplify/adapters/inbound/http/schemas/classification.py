@@ -1,18 +1,62 @@
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from ia_cumplify.adapters.inbound.http.dev_metrics import DevMetricsPayload  # DEV-ONLY
 
 from ia_cumplify.domain.classification import (
     ArticleClassification,
+    CandidateLabels,
     ClassifiedArticle,
     ClassifiedLegalBody,
 )
 
+# Keeps the EXISTING LABELS block of the prompt short: one line per dimension.
+MAX_CANDIDATES_PER_DIMENSION = 60
+
+# A line break or "|" would break the one-line-per-dimension layout of the prompt block.
+CandidateLabel = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=100, pattern=r"^[^|\r\n]+$"),
+]
+
+
+class CandidateValues(BaseModel):
+    """Existing labels per dimension, chosen by the backend from its taxonomy."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    scope: list[CandidateLabel] = Field(default_factory=list, max_length=MAX_CANDIDATES_PER_DIMENSION)
+    productive_sector: list[CandidateLabel] = Field(
+        default_factory=list, max_length=MAX_CANDIDATES_PER_DIMENSION
+    )
+    territorial_coverage: list[CandidateLabel] = Field(
+        default_factory=list, max_length=MAX_CANDIDATES_PER_DIMENSION
+    )
+
+    def to_domain(self) -> CandidateLabels:
+        return CandidateLabels(
+            scope=_unique(self.scope),
+            productive_sector=_unique(self.productive_sector),
+            territorial_coverage=_unique(self.territorial_coverage),
+        )
+
+
+def _unique(labels: list[str]) -> tuple[str, ...]:
+    # Keeps the order the backend chose (most used first).
+    return tuple(dict.fromkeys(labels))
+
 
 class ClassifyLegalBodyRequest(BaseModel):
     legal_body_id: UUID = Field(..., description="UUID of the legal_bodies row")
+    candidate_values: CandidateValues | None = Field(
+        default=None,
+        description=(
+            "Optional labels already used for other legal bodies. The model reuses them when "
+            "they fit, so the same concept gets the same label."
+        ),
+    )
 
 
 class ArticleClassificationParameters(BaseModel):

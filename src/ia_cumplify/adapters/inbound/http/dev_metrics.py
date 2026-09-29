@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from ia_cumplify.adapters.outbound.openai.classifier import OpenAIArticleClassifierAdapter
 from ia_cumplify.domain.article import Article
-from ia_cumplify.domain.classification import ClassifiedArticle
+from ia_cumplify.domain.classification import CandidateLabels, ClassifiedArticle
 from ia_cumplify.domain.legal_body import LegalBody
 
 
@@ -57,9 +57,10 @@ class MeteredArticleClassifier:
         legal_body: LegalBody,
         all_articles: Sequence[Article],
         targets: Sequence[Article],
+        candidates: CandidateLabels | None = None,
     ) -> list[ClassifiedArticle]:
         classified, usages = self._inner.classify_many_with_usage(
-            legal_body, all_articles, targets
+            legal_body, all_articles, targets, candidates
         )
         for usage in usages:
             self._meter.add_usage(usage)

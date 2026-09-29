@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from typing import Protocol
 
 from ia_cumplify.domain.article import Article
-from ia_cumplify.domain.classification import ClassifiedArticle
+from ia_cumplify.domain.classification import CandidateLabels, ClassifiedArticle
 from ia_cumplify.domain.legal_body import LegalBody
 
 
@@ -12,4 +12,5 @@ class ArticleClassifierPort(Protocol):
         legal_body: LegalBody,
         all_articles: Sequence[Article],
         targets: Sequence[Article],
+        candidates: CandidateLabels | None = None,
     ) -> list[ClassifiedArticle]: ...

@@ -6,9 +6,13 @@ from ia_cumplify.adapters.outbound.openai.llm_schema import (
     LlmArticleClassification,
     LlmLegalBodyClassification,
 )
-from ia_cumplify.adapters.outbound.openai.prompts import SYSTEM_PROMPT
+from ia_cumplify.adapters.outbound.openai.prompts import SYSTEM_PROMPT, render_candidate_labels
 from ia_cumplify.domain.article import Article
-from ia_cumplify.domain.classification import ArticleClassification, ClassifiedArticle
+from ia_cumplify.domain.classification import (
+    ArticleClassification,
+    CandidateLabels,
+    ClassifiedArticle,
+)
 from ia_cumplify.domain.exceptions import ClassificationError
 from ia_cumplify.domain.legal_body import LegalBody
 
@@ -32,9 +36,10 @@ class OpenAIArticleClassifierAdapter:
         legal_body: LegalBody,
         all_articles: Sequence[Article],
         targets: Sequence[Article],
+        candidates: CandidateLabels | None = None,
     ) -> list[ClassifiedArticle]:
         classified, _usages = self.classify_many_with_usage(
-            legal_body, all_articles, targets
+            legal_body, all_articles, targets, candidates
         )
         return classified
 
@@ -44,6 +49,7 @@ class OpenAIArticleClassifierAdapter:
         legal_body: LegalBody,
         all_articles: Sequence[Article],
         targets: Sequence[Article],
+        candidates: CandidateLabels | None = None,
     ) -> tuple[list[ClassifiedArticle], list[object]]:
         if not targets:
             return [], []
@@ -51,7 +57,9 @@ class OpenAIArticleClassifierAdapter:
         classified: list[ClassifiedArticle] = []
         usages: list[object] = []
         for chunk in _chunks(list(targets), self._batch_size):
-            chunk_results, usage = self._classify_chunk(legal_body, all_articles, chunk)
+            chunk_results, usage = self._classify_chunk(
+                legal_body, all_articles, chunk, candidates
+            )
             classified.extend(chunk_results)
             if usage is not None:
                 usages.append(usage)
@@ -62,11 +70,15 @@ class OpenAIArticleClassifierAdapter:
         legal_body: LegalBody,
         all_articles: Sequence[Article],
         targets: Sequence[Article],
+        candidates: CandidateLabels | None,
     ) -> tuple[list[ClassifiedArticle], object | None]:
-        user_content = (
-            f"{_render_legal_body(legal_body, all_articles)}\n\n"
-            f"{_render_targets(targets)}"
-        )
+        # The existing labels go right before the targets, next to where the model writes labels.
+        # They are the same for every batch of a legal body, so the shared prefix stays cacheable.
+        blocks = [_render_legal_body(legal_body, all_articles)]
+        if candidates is not None and not candidates.is_empty():
+            blocks.append(render_candidate_labels(candidates))
+        blocks.append(_render_targets(targets))
+        user_content = "\n\n".join(blocks)
 
         try:
             completion = self._client.chat.completions.parse(
