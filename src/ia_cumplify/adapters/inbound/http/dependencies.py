@@ -27,6 +27,7 @@ def get_classifier() -> OpenAIArticleClassifierAdapter:
         api_key=settings.openai_api_key,
         model=settings.openai_model,
         reasoning_effort=settings.openai_reasoning_effort,
+        batch_size=settings.classify_batch_size,
     )
 
 
