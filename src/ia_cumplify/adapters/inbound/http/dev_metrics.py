@@ -1,5 +1,3 @@
-"""DEV-ONLY metrics. Delete this file and every `# DEV-ONLY` comment to remove it."""
-
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from time import perf_counter
