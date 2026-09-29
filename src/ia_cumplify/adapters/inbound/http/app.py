@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from psycopg_pool import ConnectionPool
 
-from ia_cumplify.adapters.inbound.http.routers import articles
+from ia_cumplify.adapters.inbound.http.routers import articles, embeddings
 from ia_cumplify.config.settings import get_settings
 
 
@@ -33,6 +33,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     app = FastAPI(title=get_settings().app_name, lifespan=lifespan)
     app.include_router(articles.router, prefix="/api/v1")
+    app.include_router(embeddings.router, prefix="/api/v1")
     return app
 
 
