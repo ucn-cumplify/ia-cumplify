@@ -58,6 +58,13 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
       }
     }
   ],
+  "classifier_version": "classify-v1@gpt-5.6-luna",
+  "usage": {
+    "prompt_tokens": 1800,
+    "completion_tokens": 400,
+    "total_tokens": 2200,
+    "llm_calls": 1
+  },
   "dev_metrics": {
     "elapsed_ms": 4200.5,
     "prompt_tokens": 1800,
@@ -68,7 +75,12 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
 }
 ```
 
-`dev_metrics` solo viaja cuando `INCLUDE_DEV_METRICS` es verdadero. Cada lista de `classification` tiene al menos un elemento.
+`classifier_version` y `usage` viajan siempre:
+
+- `classifier_version` es `<versión del prompt>@<modelo>`. La versión del prompt es `PROMPT_VERSION` y sube con cada cambio del prompt; el modelo es `OPENAI_MODEL`. El backend la guarda con cada respuesta para encontrar los cuerpos clasificados con un prompt o un modelo anterior.
+- `usage` suma los tokens de todas las llamadas al modelo para este cuerpo. `llm_calls` cuenta las llamadas, una por lote. Sin artículos clasificables todo vale 0.
+
+`dev_metrics` solo trae datos cuando `INCLUDE_DEV_METRICS` es verdadero: agrega el tiempo y repite los tokens de `usage`, con la misma forma de siempre. Si no, viene en `null`. Cada lista de `classification` tiene al menos un elemento.
 
 **Reglas:**
 

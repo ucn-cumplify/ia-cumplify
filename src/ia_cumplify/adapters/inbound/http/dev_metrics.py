@@ -1,65 +1,23 @@
-from collections.abc import Sequence
-from dataclasses import dataclass, field
-from time import perf_counter
-from typing import Any
-
 from pydantic import BaseModel
 
-from ia_cumplify.adapters.outbound.openai.classifier import OpenAIArticleClassifierAdapter
-from ia_cumplify.domain.article import Article
-from ia_cumplify.domain.classification import CandidateLabels, ClassifiedArticle
-from ia_cumplify.domain.legal_body import LegalBody
+from ia_cumplify.domain.classification import TokenUsage
 
 
 class DevMetricsPayload(BaseModel):
+    """DEV-ONLY: elapsed time plus the same usage the response always reports."""
+
     elapsed_ms: float
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
     llm_calls: int
 
-
-@dataclass
-class DevTokenMeter:
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    total_tokens: int = 0
-    llm_calls: int = 0
-    _started_at: float = field(default_factory=perf_counter)
-
-    def add_usage(self, usage: Any) -> None:
-        if usage is None:
-            return
-        self.prompt_tokens += int(getattr(usage, "prompt_tokens", 0) or 0)
-        self.completion_tokens += int(getattr(usage, "completion_tokens", 0) or 0)
-        self.total_tokens += int(getattr(usage, "total_tokens", 0) or 0)
-        self.llm_calls += 1
-
-    def payload(self) -> DevMetricsPayload:
-        return DevMetricsPayload(
-            elapsed_ms=round((perf_counter() - self._started_at) * 1000, 2),
-            prompt_tokens=self.prompt_tokens,
-            completion_tokens=self.completion_tokens,
-            total_tokens=self.total_tokens,
-            llm_calls=self.llm_calls,
+    @classmethod
+    def from_usage(cls, usage: TokenUsage, elapsed_ms: float) -> "DevMetricsPayload":
+        return cls(
+            elapsed_ms=round(elapsed_ms, 2),
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
+            total_tokens=usage.total_tokens,
+            llm_calls=usage.llm_calls,
         )
-
-
-class MeteredArticleClassifier:
-    def __init__(self, inner: OpenAIArticleClassifierAdapter, meter: DevTokenMeter) -> None:
-        self._inner = inner
-        self._meter = meter
-
-    def classify_many(
-        self,
-        legal_body: LegalBody,
-        all_articles: Sequence[Article],
-        targets: Sequence[Article],
-        candidates: CandidateLabels | None = None,
-    ) -> list[ClassifiedArticle]:
-        classified, usages = self._inner.classify_many_with_usage(
-            legal_body, all_articles, targets, candidates
-        )
-        for usage in usages:
-            self._meter.add_usage(usage)
-        return classified

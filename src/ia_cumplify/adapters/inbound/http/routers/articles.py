@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from time import perf_counter
 
 from fastapi import APIRouter, Depends, HTTPException
 from psycopg_pool import ConnectionPool
@@ -8,10 +8,7 @@ from ia_cumplify.adapters.inbound.http.dependencies import (
     get_classifier,
     get_db_pool,
 )
-from ia_cumplify.adapters.inbound.http.dev_metrics import (  
-    DevTokenMeter,
-    MeteredArticleClassifier,
-)
+from ia_cumplify.adapters.inbound.http.dev_metrics import DevMetricsPayload
 from ia_cumplify.adapters.inbound.http.schemas.classification import (
     ClassifyLegalBodyRequest,
     ClassifyLegalBodyResponse,
@@ -26,37 +23,25 @@ router = APIRouter(prefix="/legal-bodies", tags=["legal-bodies"])
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class _ClassifyWiring:
-    use_case: ClassifyLegalBodyUseCase
-    meter: DevTokenMeter | None  
-
-
-def get_classify_wiring(
+def get_classify_use_case(
     pool: ConnectionPool = Depends(get_db_pool),
     classifier: OpenAIArticleClassifierAdapter = Depends(get_classifier),
-) -> _ClassifyWiring:
-    meter: DevTokenMeter | None = None
-    if get_settings().include_dev_metrics:  
-        meter = DevTokenMeter()
-        classifier = MeteredArticleClassifier(classifier, meter)  
-    return _ClassifyWiring(
-        use_case=ClassifyLegalBodyUseCase(
-            repository=PostgresLegalBodyRepository(pool),
-            classifier=classifier,
-        ),
-        meter=meter,
+) -> ClassifyLegalBodyUseCase:
+    return ClassifyLegalBodyUseCase(
+        repository=PostgresLegalBodyRepository(pool),
+        classifier=classifier,
     )
 
 
 @router.post("/classify", response_model=ClassifyLegalBodyResponse)
 def classify_legal_body(
     body: ClassifyLegalBodyRequest,
-    wiring: _ClassifyWiring = Depends(get_classify_wiring),
+    use_case: ClassifyLegalBodyUseCase = Depends(get_classify_use_case),
 ) -> ClassifyLegalBodyResponse:
     candidates = body.candidate_values.to_domain() if body.candidate_values else None
+    started_at = perf_counter()
     try:
-        result = wiring.use_case.execute(str(body.legal_body_id), candidates)
+        result = use_case.execute(str(body.legal_body_id), candidates)
     except LegalBodyNotFoundError as exc:
         raise HTTPException(
             status_code=404,
@@ -75,6 +60,8 @@ def classify_legal_body(
         ) from exc
 
     response = ClassifyLegalBodyResponse.from_domain(result)
-    if wiring.meter is not None:  
-        response.dev_metrics = wiring.meter.payload()
+    if get_settings().include_dev_metrics:  # DEV-ONLY
+        response.dev_metrics = DevMetricsPayload.from_usage(
+            result.usage, (perf_counter() - started_at) * 1000
+        )
     return response

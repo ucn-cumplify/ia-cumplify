@@ -10,6 +10,7 @@ from ia_cumplify.domain.classification import (
     CandidateLabels,
     ClassifiedArticle,
     ClassifiedLegalBody,
+    TokenUsage,
 )
 
 # Keeps the EXISTING LABELS block of the prompt short: one line per dimension.
@@ -91,10 +92,32 @@ class ClassifyArticleResponse(BaseModel):
         )
 
 
+class TokenUsageResponse(BaseModel):
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    llm_calls: int
+
+    @classmethod
+    def from_domain(cls, usage: TokenUsage) -> "TokenUsageResponse":
+        return cls(
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
+            total_tokens=usage.total_tokens,
+            llm_calls=usage.llm_calls,
+        )
+
+
 class ClassifyLegalBodyResponse(BaseModel):
     legal_body_id: str
     title: str
     results: list[ClassifyArticleResponse]
+    classifier_version: str = Field(
+        ..., description='Prompt version and model, as "<prompt>@<model>"'
+    )
+    usage: TokenUsageResponse = Field(
+        ..., description="Tokens of every model call, sent even without dev metrics"
+    )
     dev_metrics: DevMetricsPayload | None = None  # DEV-ONLY
 
     @classmethod
@@ -103,4 +126,6 @@ class ClassifyLegalBodyResponse(BaseModel):
             legal_body_id=result.legal_body.id,
             title=result.legal_body.title,
             results=[ClassifyArticleResponse.from_domain(item) for item in result.articles],
+            classifier_version=result.classifier_version,
+            usage=TokenUsageResponse.from_domain(result.usage),
         )

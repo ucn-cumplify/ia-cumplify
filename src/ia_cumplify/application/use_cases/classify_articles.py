@@ -24,5 +24,10 @@ class ClassifyLegalBodyUseCase:
 
         articles = self._repository.list_articles(legal_body.id)
         targets = [article for article in articles if article.should_classify()]
-        classified = self._classifier.classify_many(legal_body, articles, targets, candidates)
-        return ClassifiedLegalBody(legal_body=legal_body, articles=tuple(classified))
+        output = self._classifier.classify_many(legal_body, articles, targets, candidates)
+        return ClassifiedLegalBody(
+            legal_body=legal_body,
+            articles=output.articles,
+            classifier_version=self._classifier.version,
+            usage=output.usage,
+        )
