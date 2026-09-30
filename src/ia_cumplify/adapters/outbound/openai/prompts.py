@@ -1,5 +1,9 @@
 from ia_cumplify.domain.classification import CandidateLabels
 
+# Bump on every change to SYSTEM_PROMPT or to the EXISTING LABELS block. The backend stores it
+# with each response, so it can find the legal bodies classified with an older prompt.
+PROMPT_VERSION = "classify-v1"
+
 SYSTEM_PROMPT = """You classify Chilean regulatory and compliance articles for companies.
 
 You receive these blocks:

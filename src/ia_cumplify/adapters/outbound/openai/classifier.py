@@ -6,12 +6,18 @@ from ia_cumplify.adapters.outbound.openai.llm_schema import (
     LlmArticleClassification,
     LlmLegalBodyClassification,
 )
-from ia_cumplify.adapters.outbound.openai.prompts import SYSTEM_PROMPT, render_candidate_labels
+from ia_cumplify.adapters.outbound.openai.prompts import (
+    PROMPT_VERSION,
+    SYSTEM_PROMPT,
+    render_candidate_labels,
+)
 from ia_cumplify.domain.article import Article
 from ia_cumplify.domain.classification import (
     ArticleClassification,
     CandidateLabels,
     ClassifiedArticle,
+    ClassifierOutput,
+    TokenUsage,
 )
 from ia_cumplify.domain.exceptions import ClassificationError
 from ia_cumplify.domain.legal_body import LegalBody
@@ -31,39 +37,29 @@ class OpenAIArticleClassifierAdapter:
         self._batch_size = max(1, batch_size)
         self._client = OpenAI(api_key=api_key)
 
+    @property
+    def version(self) -> str:
+        return f"{PROMPT_VERSION}@{self._model}"
+
     def classify_many(
         self,
         legal_body: LegalBody,
         all_articles: Sequence[Article],
         targets: Sequence[Article],
         candidates: CandidateLabels | None = None,
-    ) -> list[ClassifiedArticle]:
-        classified, _usages = self.classify_many_with_usage(
-            legal_body, all_articles, targets, candidates
-        )
-        return classified
-
-    # DEV-ONLY: used by inbound/http/dev_metrics.py
-    def classify_many_with_usage(
-        self,
-        legal_body: LegalBody,
-        all_articles: Sequence[Article],
-        targets: Sequence[Article],
-        candidates: CandidateLabels | None = None,
-    ) -> tuple[list[ClassifiedArticle], list[object]]:
+    ) -> ClassifierOutput:
         if not targets:
-            return [], []
+            return ClassifierOutput(articles=(), usage=TokenUsage())
 
         classified: list[ClassifiedArticle] = []
-        usages: list[object] = []
+        usage = TokenUsage()
         for chunk in _chunks(list(targets), self._batch_size):
-            chunk_results, usage = self._classify_chunk(
+            chunk_results, chunk_usage = self._classify_chunk(
                 legal_body, all_articles, chunk, candidates
             )
             classified.extend(chunk_results)
-            if usage is not None:
-                usages.append(usage)
-        return classified, usages
+            usage += chunk_usage
+        return ClassifierOutput(articles=tuple(classified), usage=usage)
 
     def _classify_chunk(
         self,
@@ -71,7 +67,7 @@ class OpenAIArticleClassifierAdapter:
         all_articles: Sequence[Article],
         targets: Sequence[Article],
         candidates: CandidateLabels | None,
-    ) -> tuple[list[ClassifiedArticle], object | None]:
+    ) -> tuple[list[ClassifiedArticle], TokenUsage]:
         # The existing labels go right before the targets, next to where the model writes labels.
         # They are the same for every batch of a legal body, so the shared prefix stays cacheable.
         blocks = [_render_legal_body(legal_body, all_articles)]
@@ -105,8 +101,20 @@ class OpenAIArticleClassifierAdapter:
 
         return (
             _map_parsed_to_targets(message.parsed, targets),
-            getattr(completion, "usage", None),
+            _to_usage(getattr(completion, "usage", None)),
         )
+
+
+def _to_usage(usage: object | None) -> TokenUsage:
+    # The call counts even when the provider omits the usage block.
+    if usage is None:
+        return TokenUsage(llm_calls=1)
+    return TokenUsage(
+        prompt_tokens=int(getattr(usage, "prompt_tokens", 0) or 0),
+        completion_tokens=int(getattr(usage, "completion_tokens", 0) or 0),
+        total_tokens=int(getattr(usage, "total_tokens", 0) or 0),
+        llm_calls=1,
+    )
 
 
 def _chunks(items: list[Article], size: int) -> list[list[Article]]:
