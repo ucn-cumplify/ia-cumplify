@@ -56,6 +56,8 @@ EMBEDDINGS_MAX_TEXTS=256
 
 `OPENAI_EMBEDDING_DIMENSIONS` tiene que coincidir con la columna `vector(1024)` del backend. Si el request de embeddings no manda `model` ni `dimensions`, se usan estos valores.
 
+`INCLUDE_DEV_METRICS` solo agrega `dev_metrics`, con el tiempo de respuesta. La versión del clasificador y el uso de tokens viajan siempre, en `classifier_version` y `usage`.
+
 ## Ejecución local
 
 Con el Postgres del backend ya disponible:
