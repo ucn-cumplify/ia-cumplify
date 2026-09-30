@@ -10,6 +10,7 @@ class ArticleClassification:
     territorial_coverage: tuple[str, ...]
     activity_action: tuple[str, ...]
     facility_installation_equipment: tuple[str, ...]
+    others: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)

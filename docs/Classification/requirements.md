@@ -1,6 +1,6 @@
 # Módulo: Clasificación de cuerpos legales
 
-> Clasifica los artículos de un cuerpo legal ya persistido por `backend-cumplify`, en cinco dimensiones de cumplimiento, usando el modelo configurado en `OPENAI_MODEL`.
+> Clasifica los artículos de un cuerpo legal ya persistido por `backend-cumplify`, en seis dimensiones de cumplimiento, usando el modelo configurado en `OPENAI_MODEL`.
 
 ---
 
@@ -21,7 +21,7 @@ Dado el id de una fila de `legal_bodies`, devolver una etiqueta por dimensión p
 
 **Descripción:**
 
-El sistema debe clasificar los artículos de un cuerpo legal existente. La respuesta trae un resultado por artículo clasificable, en el orden de `articles.order`, con las cinco dimensiones.
+El sistema debe clasificar los artículos de un cuerpo legal existente. La respuesta trae un resultado por artículo clasificable, en el orden de `articles.order`, con las seis dimensiones.
 
 **Validaciones:**
 
@@ -61,7 +61,7 @@ No se clasifican los artículos cuyo `number`, luego de recortar espacios y pasa
 
 El llamador puede enviar etiquetas ya usadas en otros cuerpos legales para `scope`, `productive_sector` y `territorial_coverage`. Si una encaja, el modelo debe copiarla tal cual. Una etiqueta nueva solo aparece cuando ninguna de las enviadas encaja.
 
-`activity_action` y `facility_installation_equipment` no reciben candidatos: su cardinalidad es alta y la elige el modelo con las reglas del prompt.
+`activity_action`, `facility_installation_equipment` y `others` no reciben candidatos: su cardinalidad es alta y la elige el modelo con las reglas del prompt.
 
 **Validaciones:**
 
