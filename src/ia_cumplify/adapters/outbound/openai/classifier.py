@@ -185,4 +185,5 @@ def _to_domain(parsed: LlmArticleClassification) -> ArticleClassification:
         territorial_coverage=tuple(parsed.territorial_coverage),
         activity_action=tuple(parsed.activity_action),
         facility_installation_equipment=tuple(parsed.facility_installation_equipment),
+        others=tuple(parsed.others),
     )

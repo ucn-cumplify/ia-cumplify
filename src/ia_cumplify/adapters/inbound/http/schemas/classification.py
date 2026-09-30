@@ -66,6 +66,7 @@ class ArticleClassificationParameters(BaseModel):
     territorial_coverage: list[str]
     activity_action: list[str]
     facility_installation_equipment: list[str]
+    others: list[str]
 
     @classmethod
     def from_domain(cls, classification: ArticleClassification) -> "ArticleClassificationParameters":
@@ -75,6 +76,7 @@ class ArticleClassificationParameters(BaseModel):
             territorial_coverage=list(classification.territorial_coverage),
             activity_action=list(classification.activity_action),
             facility_installation_equipment=list(classification.facility_installation_equipment),
+            others=list(classification.others),
         )
 
 
