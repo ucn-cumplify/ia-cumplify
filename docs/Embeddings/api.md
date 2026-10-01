@@ -2,7 +2,7 @@
 
 > Base path: `/api/v1/embeddings`
 
-El servicio no exige `Authorization`. Este endpoint no consulta PostgreSQL.
+Exige el header `X-API-Key` con el valor de `SERVICE_API_KEY`. Este endpoint no consulta PostgreSQL.
 
 ---
 
@@ -57,15 +57,17 @@ POST /api/v1/embeddings
 
 - El orden se toma del índice del proveedor, no del orden en que llegue el arreglo.
 - Si el proveedor devuelve una cantidad distinta de vectores, la petición falla con 502. No se recorta ni se rellena.
+- Cada llamada HTTP a OpenAI usa `OPENAI_TIMEOUT_SECONDS` (defecto 180) y `OPENAI_MAX_RETRIES` (defecto 2) para 408, 429 y 5xx.
 - Los vectores no se guardan.
 
 **Errores:**
 
 | Código | Cuándo |
 |---|---|
+| 401 | Falta `X-API-Key` o no coincide con `SERVICE_API_KEY` |
 | 422 | `texts` vacío, texto en blanco, más textos que el máximo, `dimensions` fuera de 1..3072, modelo desconocido, tamaño no soportado, o texto sobre el límite de tokens |
 | 502 | Fallo del proveedor, o cantidad de vectores distinta a la de textos |
-| 503 | Falta `OPENAI_API_KEY` |
+| 503 | Falta `SERVICE_API_KEY` u `OPENAI_API_KEY` |
 
 **Limitaciones:**
 

@@ -51,6 +51,7 @@ Un modelo desconocido, un tamaño no soportado o un texto que supera el límite 
 ## Dentro de alcance
 
 - Llamar al endpoint de embeddings de OpenAI.
+- Usar timeout y reintentos explícitos del cliente OpenAI (`OPENAI_TIMEOUT_SECONDS`, `OPENAI_MAX_RETRIES`).
 - Ordenar los vectores por el índice que devuelve el proveedor, para no depender del orden de la respuesta.
 - Reportar `usage.total_tokens`.
 
@@ -63,6 +64,6 @@ Un modelo desconocido, un tamaño no soportado o un texto que supera el límite 
 
 ## Deuda técnica conocida
 
-- No hay reintento ante un 502.
+- El cliente OpenAI reintenta 408/429/5xx según `OPENAI_MAX_RETRIES` antes de responder 502.
 - El tope de 3072 es el del esquema HTTP. El modelo configurado puede rechazar un tamaño menor con 422.
 - No hay autenticación: quien alcance el puerto puede consumir la cuota del proveedor.

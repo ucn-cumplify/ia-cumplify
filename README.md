@@ -37,9 +37,11 @@ cp .env.example .env
 
 En PowerShell: `copy .env.example .env`.
 
-2. Completa al menos la clave de OpenAI y la base:
+2. Completa al menos la clave compartida con el backend, la clave de OpenAI y la base:
 
 ```env
+SERVICE_API_KEY=un-secreto-largo-y-aleatorio
+
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-5.6-luna
 OPENAI_REASONING_EFFORT=low
@@ -53,6 +55,8 @@ OPENAI_EMBEDDING_MODEL=text-embedding-3-large
 OPENAI_EMBEDDING_DIMENSIONS=1024
 EMBEDDINGS_MAX_TEXTS=256
 ```
+
+`SERVICE_API_KEY` es el secreto que el backend envía en el header `X-API-Key` y tiene que ser igual a su `AI_SERVICE_API_KEY`. Todo `/api/v1` lo exige: sin header o con otro valor responde 401, y si `SERVICE_API_KEY` está vacía responde 503. `/health` queda abierto. Para generar uno: `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
 
 `OPENAI_EMBEDDING_DIMENSIONS` tiene que coincidir con la columna `vector(1024)` del backend. Si el request de embeddings no manda `model` ni `dimensions`, se usan estos valores.
 
@@ -76,7 +80,7 @@ El comando levanta Uvicorn con recarga en `http://0.0.0.0:8000`.
 
 | Método | Ruta | Uso |
 |---|---|---|
-| GET | `/health` | Responde `{"status": "ok"}` |
+| GET | `/health` | Responde `{"status": "ok"}`. No exige `X-API-Key` |
 | POST | `/api/v1/legal-bodies/classify` | Clasifica los artículos de un cuerpo legal ya hidratado |
 | POST | `/api/v1/embeddings` | Devuelve un vector por cada texto, en el mismo orden |
 

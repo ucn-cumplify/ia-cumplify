@@ -94,7 +94,7 @@ Si el cuerpo no tiene artículos, o solo tiene piezas estructurales, la respuest
 
 **Descripción:**
 
-Los artículos clasificables se envían al modelo en lotes de `CLASSIFY_BATCH_SIZE` (defecto 25). Cada lote recibe el cuerpo legal completo como contexto. Los resultados se concatenan en el orden de los artículos. Si un lote falla, toda la petición falla y no se devuelven resultados parciales.
+Los artículos clasificables se envían al modelo en lotes de `CLASSIFY_BATCH_SIZE` (defecto 25). Cada lote recibe el cuerpo legal completo como contexto. Los resultados se concatenan en el orden de los artículos. Si un lote falla, la petición sigue con los lotes restantes: la respuesta 200 trae lo clasificado y lista en `failed_article_ids` los artículos no clasificados. Si ningún artículo se clasifica, la petición falla.
 
 ---
 
@@ -113,7 +113,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 - `classifier_version` es `<PROMPT_VERSION>@<OPENAI_MODEL>`.
 - Todo cambio de `SYSTEM_PROMPT` o del bloque de etiquetas existentes sube `PROMPT_VERSION`.
-- `usage` suma `prompt_tokens`, `completion_tokens` y `total_tokens` de todas las llamadas, y `llm_calls` cuenta una por lote.
+- `usage` suma `prompt_tokens`, `completion_tokens` y `total_tokens` de todas las llamadas, y `llm_calls` cuenta una por lote (incluidos los fallidos).
 - Sin artículos clasificables, todos los campos de `usage` valen 0.
 - `dev_metrics`, cuando viaja, repite los tokens de `usage`.
 
@@ -123,6 +123,8 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 - Leer `legal_bodies` (`id`, `title`, `summary`, `type`) y `articles` (`id`, `legal_body_id`, `number`, `section`, `text`, `order`) de la base del backend.
 - Clasificar con el modelo, el esfuerzo de razonamiento y el tamaño de lote configurados.
+- Usar timeout y reintentos explícitos del cliente OpenAI (`OPENAI_TIMEOUT_SECONDS`, `OPENAI_MAX_RETRIES`).
+- Quitar imágenes embebidas en base64 del texto que se envía al modelo.
 - Informar siempre la versión del clasificador y el uso de tokens.
 - Adjuntar `dev_metrics` (tiempo y tokens) cuando `INCLUDE_DEV_METRICS` es verdadero.
 
@@ -138,6 +140,6 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 - `articles.number` o `articles.section` en null hace fallar la petición, porque el clasificador trata esos campos como texto.
 - `INCLUDE_DEV_METRICS` arranca en verdadero. En un entorno compartido conviene apagarlo; el uso de tokens igual viaja en `usage`.
 - `PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue las respuestas nuevas de las anteriores.
-- Si un lote falla, la respuesta es 502 y no informa el uso de los lotes que sí respondieron: esos tokens se gastan sin quedar registrados.
-- No hay reintento: un error del proveedor o un lote incompleto responde 502.
+- Un lote fallido no aborta el resto. `failed_article_ids` lista lo que faltó; si el proveedor no informa tokens de ese lote, `llm_calls` igual suma 1 y esos tokens pueden quedar en 0.
+- El cliente OpenAI reintenta 408/429/5xx según `OPENAI_MAX_RETRIES`. No se vuelve a encolar un lote ya fallido después de esos reintentos.
 - Las reglas de longitud de etiqueta (4 palabras, 3 palabras, etc.) viven en el prompt. El esquema solo exige listas no vacías, así que una etiqueta más larga igual puede volver en la respuesta.

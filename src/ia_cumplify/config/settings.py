@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "ia-cumplify"
+    # Shared secret the backend sends in X-API-Key. Empty rejects every /api/v1 request with 503.
+    service_api_key: str = ""
     openai_api_key: str = ""
     openai_model: str = "gpt-5.6-luna"
     openai_reasoning_effort: str = "low"
@@ -23,6 +25,8 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-3-large"
     openai_embedding_dimensions: int = 1024
     embeddings_max_texts: int = 256
+    openai_timeout_seconds: float = 180
+    openai_max_retries: int = 2
 
 
 @lru_cache

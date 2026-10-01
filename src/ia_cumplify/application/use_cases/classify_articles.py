@@ -30,4 +30,5 @@ class ClassifyLegalBodyUseCase:
             articles=output.articles,
             classifier_version=self._classifier.version,
             usage=output.usage,
+            failed_article_ids=output.failed_article_ids,
         )
