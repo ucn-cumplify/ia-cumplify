@@ -11,6 +11,7 @@ from ia_cumplify.adapters.outbound.openai.prompts import (
     SYSTEM_PROMPT,
     render_candidate_labels,
 )
+from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
 from ia_cumplify.domain.article import Article
 from ia_cumplify.domain.classification import (
     ArticleClassification,
@@ -129,7 +130,7 @@ def _render_legal_body(legal_body: LegalBody, articles: Sequence[Article]) -> st
         f"Type: {legal_body.type}",
     ]
     if legal_body.summary:
-        header_lines.append(f"Summary:\n{legal_body.summary}")
+        header_lines.append(f"Summary:\n{strip_base64_images(legal_body.summary)}")
 
     article_blocks = [_render_article_block(item) for item in articles]
     body = "\n\n".join(article_blocks) if article_blocks else "(no articles)"
@@ -153,7 +154,7 @@ def _render_article_block(article: Article) -> str:
         f"Number: {article.number}\n"
         f"Section: {article.section}\n"
         f"Order: {article.order}\n"
-        f"Text:\n{article.text}"
+        f"Text:\n{strip_base64_images(article.text)}"
     )
 
 

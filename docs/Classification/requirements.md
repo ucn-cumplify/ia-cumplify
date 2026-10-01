@@ -123,6 +123,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 - Leer `legal_bodies` (`id`, `title`, `summary`, `type`) y `articles` (`id`, `legal_body_id`, `number`, `section`, `text`, `order`) de la base del backend.
 - Clasificar con el modelo, el esfuerzo de razonamiento y el tamaño de lote configurados.
+- Quitar imágenes embebidas en base64 del texto que se envía al modelo.
 - Informar siempre la versión del clasificador y el uso de tokens.
 - Adjuntar `dev_metrics` (tiempo y tokens) cuando `INCLUDE_DEV_METRICS` es verdadero.
 

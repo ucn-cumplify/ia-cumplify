@@ -89,6 +89,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
 - Esas piezas igual se envían al modelo como contexto del cuerpo completo.
 - Sin artículos clasificables la respuesta trae `results: []` y no llama al modelo.
 - Más de `CLASSIFY_BATCH_SIZE` artículos (defecto 25) generan varias llamadas. El cuerpo completo va en cada una. Un fallo en cualquier lote responde error y no devuelve resultados parciales.
+- Antes de armar el prompt se quitan imágenes embebidas `data:image/...;base64,...` del resumen y del texto de los artículos, y se reemplazan por `[imagen omitida]`. La base no se modifica.
 - Las dimensiones 1 a 4 y 6 salen del texto. Si no hay respaldo, el valor es `No especificado`. `facility_installation_equipment` puede inferir una instalación típica; si no puede, también usa `No especificado`.
 - Si hay candidatos y uno encaja, se copia tal cual. `activity_action`, `facility_installation_equipment` y `others` no tienen candidatos.
 - El orden de `results` sigue `articles.order`, no el orden en que respondió el modelo.
