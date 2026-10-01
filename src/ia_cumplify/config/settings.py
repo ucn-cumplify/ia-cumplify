@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "ia-cumplify"
+    # Shared secret the backend sends in X-API-Key. Empty rejects every /api/v1 request with 503.
+    service_api_key: str = ""
     openai_api_key: str = ""
     openai_model: str = "gpt-5.6-luna"
     openai_reasoning_effort: str = "low"

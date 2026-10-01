@@ -2,7 +2,7 @@
 
 > Base path: `/api/v1/legal-bodies`
 
-El servicio no exige `Authorization`. Comparte la base PostgreSQL de `backend-cumplify` mediante `DATABASE_URL`.
+Exige el header `X-API-Key` con el valor de `SERVICE_API_KEY`. Comparte la base PostgreSQL de `backend-cumplify` mediante `DATABASE_URL`.
 
 ---
 
@@ -101,10 +101,11 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
 
 | Código | Cuándo |
 |---|---|
+| 401 | Falta `X-API-Key` o no coincide con `SERVICE_API_KEY` |
 | 404 | No existe la fila en `legal_bodies` |
 | 422 | `legal_body_id` no es UUID, o `candidate_values` no cumple las reglas de etiqueta |
 | 502 | Ningún artículo se pudo clasificar (todos los lotes fallaron, o `number`/`section` nulos) |
-| 503 | Falta `OPENAI_API_KEY` o `DATABASE_URL` |
+| 503 | Falta `SERVICE_API_KEY`, `OPENAI_API_KEY` o `DATABASE_URL` |
 
 **Limitaciones:**
 

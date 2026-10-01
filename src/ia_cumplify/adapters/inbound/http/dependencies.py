@@ -1,11 +1,27 @@
+import secrets
 from functools import lru_cache
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, Security
+from fastapi.security import APIKeyHeader
 from psycopg_pool import ConnectionPool
 
 from ia_cumplify.adapters.outbound.openai.classifier import OpenAIArticleClassifierAdapter
 from ia_cumplify.adapters.outbound.openai.embedder import OpenAITextEmbedderAdapter
 from ia_cumplify.config.settings import get_settings
+
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def require_api_key(api_key: str | None = Security(_api_key_header)) -> None:
+    expected = get_settings().service_api_key
+    if not expected:
+        raise HTTPException(status_code=503, detail="SERVICE_API_KEY is not configured.")
+    if not api_key or not secrets.compare_digest(api_key.encode(), expected.encode()):
+        raise HTTPException(
+            status_code=401,
+            detail="Missing or invalid X-API-Key.",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
 
 
 def get_db_pool(request: Request) -> ConnectionPool:

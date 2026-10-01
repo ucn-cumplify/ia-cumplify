@@ -2,7 +2,7 @@
 
 > Base path: `/api/v1/embeddings`
 
-El servicio no exige `Authorization`. Este endpoint no consulta PostgreSQL.
+Exige el header `X-API-Key` con el valor de `SERVICE_API_KEY`. Este endpoint no consulta PostgreSQL.
 
 ---
 
@@ -64,9 +64,10 @@ POST /api/v1/embeddings
 
 | Código | Cuándo |
 |---|---|
+| 401 | Falta `X-API-Key` o no coincide con `SERVICE_API_KEY` |
 | 422 | `texts` vacío, texto en blanco, más textos que el máximo, `dimensions` fuera de 1..3072, modelo desconocido, tamaño no soportado, o texto sobre el límite de tokens |
 | 502 | Fallo del proveedor, o cantidad de vectores distinta a la de textos |
-| 503 | Falta `OPENAI_API_KEY` |
+| 503 | Falta `SERVICE_API_KEY` u `OPENAI_API_KEY` |
 
 **Limitaciones:**
 
