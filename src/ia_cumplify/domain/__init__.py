@@ -3,6 +3,8 @@ from ia_cumplify.domain.classification import (
     ArticleClassification,
     ClassifiedArticle,
     ClassifiedLegalBody,
+    ClassifierOutput,
+    TokenUsage,
 )
 from ia_cumplify.domain.exceptions import (
     ClassificationError,
@@ -17,7 +19,9 @@ __all__ = [
     "ClassifiedArticle",
     "ClassifiedLegalBody",
     "ClassificationError",
+    "ClassifierOutput",
     "DomainError",
     "LegalBody",
     "LegalBodyNotFoundError",
+    "TokenUsage",
 ]

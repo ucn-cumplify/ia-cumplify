@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 
 
 class LlmArticleClassification(BaseModel):
-    """Five regulatory dimensions for one article."""
+    """Six regulatory dimensions for one article."""
 
     # The descriptions travel in the JSON schema, next to each field the model fills.
     scope: list[str] = Field(
@@ -34,6 +34,15 @@ class LlmArticleClassification(BaseModel):
         description=(
             "Physical facilities or equipment, at most 4 words per item. Infer typical installations "
             "implied by the activity and legal body even if they are not named in the article text."
+        ),
+    )
+    others: list[str] = Field(
+        ...,
+        min_length=1,
+        description=(
+            "Metrics, thresholds, sizes, building types, and other applicability conditions stated "
+            "in the article that do not belong in the other dimensions. Do not infer. "
+            "Use No especificado if there is nothing extra."
         ),
     )
 
