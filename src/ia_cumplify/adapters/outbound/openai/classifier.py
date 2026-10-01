@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+import logging
 
 from openai import OpenAI, OpenAIError
 
@@ -22,6 +23,8 @@ from ia_cumplify.domain.classification import (
 )
 from ia_cumplify.domain.exceptions import ClassificationError
 from ia_cumplify.domain.legal_body import LegalBody
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAIArticleClassifierAdapter:
@@ -53,14 +56,38 @@ class OpenAIArticleClassifierAdapter:
             return ClassifierOutput(articles=(), usage=TokenUsage())
 
         classified: list[ClassifiedArticle] = []
+        failed_article_ids: list[str] = []
         usage = TokenUsage()
+        last_error: Exception | None = None
         for chunk in _chunks(list(targets), self._batch_size):
-            chunk_results, chunk_usage = self._classify_chunk(
-                legal_body, all_articles, chunk, candidates
-            )
+            try:
+                chunk_results, chunk_usage, chunk_missing = self._classify_chunk(
+                    legal_body, all_articles, chunk, candidates
+                )
+            except (ClassificationError, OpenAIError) as exc:
+                last_error = exc
+                logger.exception(
+                    "Batch failed for legal body %s; continuing with remaining batches",
+                    legal_body.id,
+                )
+                failed_article_ids.extend(article.id for article in chunk)
+                usage += TokenUsage(llm_calls=1)
+                continue
             classified.extend(chunk_results)
+            failed_article_ids.extend(chunk_missing)
             usage += chunk_usage
-        return ClassifierOutput(articles=tuple(classified), usage=usage)
+
+        if not classified and targets:
+            detail = str(last_error) if last_error is not None else "all batches failed"
+            raise ClassificationError(
+                f"No article could be classified for legal body {legal_body.id}: {detail}"
+            )
+
+        return ClassifierOutput(
+            articles=tuple(classified),
+            usage=usage,
+            failed_article_ids=tuple(failed_article_ids),
+        )
 
     def _classify_chunk(
         self,
@@ -68,7 +95,7 @@ class OpenAIArticleClassifierAdapter:
         all_articles: Sequence[Article],
         targets: Sequence[Article],
         candidates: CandidateLabels | None,
-    ) -> tuple[list[ClassifiedArticle], TokenUsage]:
+    ) -> tuple[list[ClassifiedArticle], TokenUsage, list[str]]:
         # The existing labels go right before the targets, next to where the model writes labels.
         # They are the same for every batch of a legal body, so the shared prefix stays cacheable.
         blocks = [_render_legal_body(legal_body, all_articles)]
@@ -100,9 +127,11 @@ class OpenAIArticleClassifierAdapter:
                 f"Model did not return a valid classification for legal body {legal_body.id}.{extra}"
             )
 
+        mapped, missing = _map_parsed_to_targets(message.parsed, targets)
         return (
-            _map_parsed_to_targets(message.parsed, targets),
+            mapped,
             _to_usage(getattr(completion, "usage", None)),
+            missing,
         )
 
 
@@ -161,22 +190,19 @@ def _render_article_block(article: Article) -> str:
 def _map_parsed_to_targets(
     parsed: LlmLegalBodyClassification,
     targets: Sequence[Article],
-) -> list[ClassifiedArticle]:
+) -> tuple[list[ClassifiedArticle], list[str]]:
     by_id = {item.article_id: item.classification for item in parsed.results}
     missing = [article.id for article in targets if article.id not in by_id]
-    if missing:
-        raise ClassificationError(
-            "Model omitted classifications for article_id(s): " + ", ".join(missing)
-        )
-
-    return [
+    mapped = [
         ClassifiedArticle(
             article_id=article.id,
             number=article.number,
             classification=_to_domain(by_id[article.id]),
         )
         for article in targets
+        if article.id in by_id
     ]
+    return mapped, missing
 
 
 def _to_domain(parsed: LlmArticleClassification) -> ArticleClassification:

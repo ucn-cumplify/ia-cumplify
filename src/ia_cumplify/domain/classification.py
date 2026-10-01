@@ -65,6 +65,7 @@ class TokenUsage:
 class ClassifierOutput:
     articles: tuple[ClassifiedArticle, ...]
     usage: TokenUsage
+    failed_article_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,3 +76,4 @@ class ClassifiedLegalBody:
     # classified with an older prompt or model.
     classifier_version: str
     usage: TokenUsage
+    failed_article_ids: tuple[str, ...] = ()

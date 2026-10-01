@@ -120,6 +120,10 @@ class ClassifyLegalBodyResponse(BaseModel):
     usage: TokenUsageResponse = Field(
         ..., description="Tokens of every model call, sent even without dev metrics"
     )
+    failed_article_ids: list[str] = Field(
+        default_factory=list,
+        description="Articles that could not be classified because their batch failed or the model omitted them",
+    )
     dev_metrics: DevMetricsPayload | None = None  # DEV-ONLY
 
     @classmethod
@@ -130,4 +134,5 @@ class ClassifyLegalBodyResponse(BaseModel):
             results=[ClassifyArticleResponse.from_domain(item) for item in result.articles],
             classifier_version=result.classifier_version,
             usage=TokenUsageResponse.from_domain(result.usage),
+            failed_article_ids=list(result.failed_article_ids),
         )
