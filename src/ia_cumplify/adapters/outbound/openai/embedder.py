@@ -13,8 +13,18 @@ from ia_cumplify.domain.exceptions import EmbeddingError, EmbeddingInputError
 
 
 class OpenAITextEmbedderAdapter:
-    def __init__(self, *, api_key: str) -> None:
-        self._client = OpenAI(api_key=api_key)
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        timeout_seconds: float = 180,
+        max_retries: int = 2,
+    ) -> None:
+        self._client = OpenAI(
+            api_key=api_key,
+            timeout=timeout_seconds,
+            max_retries=max_retries,
+        )
 
     def embed(self, texts: Sequence[str], model: str, dimensions: int) -> TextEmbeddings:
         try:

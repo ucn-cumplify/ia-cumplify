@@ -35,11 +35,17 @@ class OpenAIArticleClassifierAdapter:
         model: str,
         reasoning_effort: str,
         batch_size: int = 25,
+        timeout_seconds: float = 180,
+        max_retries: int = 2,
     ) -> None:
         self._model = model
         self._reasoning_effort = reasoning_effort
         self._batch_size = max(1, batch_size)
-        self._client = OpenAI(api_key=api_key)
+        self._client = OpenAI(
+            api_key=api_key,
+            timeout=timeout_seconds,
+            max_retries=max_retries,
+        )
 
     @property
     def version(self) -> str:

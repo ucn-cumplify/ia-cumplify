@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-3-large"
     openai_embedding_dimensions: int = 1024
     embeddings_max_texts: int = 256
+    openai_timeout_seconds: float = 180
+    openai_max_retries: int = 2
 
 
 @lru_cache

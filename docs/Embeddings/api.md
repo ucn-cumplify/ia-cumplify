@@ -57,6 +57,7 @@ POST /api/v1/embeddings
 
 - El orden se toma del índice del proveedor, no del orden en que llegue el arreglo.
 - Si el proveedor devuelve una cantidad distinta de vectores, la petición falla con 502. No se recorta ni se rellena.
+- Cada llamada HTTP a OpenAI usa `OPENAI_TIMEOUT_SECONDS` (defecto 180) y `OPENAI_MAX_RETRIES` (defecto 2) para 408, 429 y 5xx.
 - Los vectores no se guardan.
 
 **Errores:**

@@ -28,6 +28,8 @@ def get_classifier() -> OpenAIArticleClassifierAdapter:
         model=settings.openai_model,
         reasoning_effort=settings.openai_reasoning_effort,
         batch_size=settings.classify_batch_size,
+        timeout_seconds=settings.openai_timeout_seconds,
+        max_retries=settings.openai_max_retries,
     )
 
 
@@ -39,7 +41,11 @@ def get_text_embedder() -> OpenAITextEmbedderAdapter:
             status_code=503,
             detail="OPENAI_API_KEY is not configured.",
         )
-    return OpenAITextEmbedderAdapter(api_key=settings.openai_api_key)
+    return OpenAITextEmbedderAdapter(
+        api_key=settings.openai_api_key,
+        timeout_seconds=settings.openai_timeout_seconds,
+        max_retries=settings.openai_max_retries,
+    )
 
 
 def reset_wiring_cache() -> None:

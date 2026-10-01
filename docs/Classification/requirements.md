@@ -123,6 +123,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 - Leer `legal_bodies` (`id`, `title`, `summary`, `type`) y `articles` (`id`, `legal_body_id`, `number`, `section`, `text`, `order`) de la base del backend.
 - Clasificar con el modelo, el esfuerzo de razonamiento y el tamaño de lote configurados.
+- Usar timeout y reintentos explícitos del cliente OpenAI (`OPENAI_TIMEOUT_SECONDS`, `OPENAI_MAX_RETRIES`).
 - Quitar imágenes embebidas en base64 del texto que se envía al modelo.
 - Informar siempre la versión del clasificador y el uso de tokens.
 - Adjuntar `dev_metrics` (tiempo y tokens) cuando `INCLUDE_DEV_METRICS` es verdadero.
@@ -140,5 +141,5 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 - `INCLUDE_DEV_METRICS` arranca en verdadero. En un entorno compartido conviene apagarlo; el uso de tokens igual viaja en `usage`.
 - `PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue las respuestas nuevas de las anteriores.
 - Un lote fallido no aborta el resto. `failed_article_ids` lista lo que faltó; si el proveedor no informa tokens de ese lote, `llm_calls` igual suma 1 y esos tokens pueden quedar en 0.
-- No hay reintento automático de un lote fallido.
+- El cliente OpenAI reintenta 408/429/5xx según `OPENAI_MAX_RETRIES`. No se vuelve a encolar un lote ya fallido después de esos reintentos.
 - Las reglas de longitud de etiqueta (4 palabras, 3 palabras, etc.) viven en el prompt. El esquema solo exige listas no vacías, así que una etiqueta más larga igual puede volver en la respuesta.
