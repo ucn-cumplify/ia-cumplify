@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI
 from psycopg_pool import ConnectionPool
 
 from ia_cumplify.adapters.inbound.http.dependencies import require_api_key
-from ia_cumplify.adapters.inbound.http.routers import articles, embeddings
+from ia_cumplify.adapters.inbound.http.routers import articles, company_profiles, embeddings
 from ia_cumplify.config.settings import get_settings
 
 
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     # /health stays outside: container probes do not carry the key.
     protected = [Depends(require_api_key)]
     app.include_router(articles.router, prefix="/api/v1", dependencies=protected)
+    app.include_router(company_profiles.router, prefix="/api/v1", dependencies=protected)
     app.include_router(embeddings.router, prefix="/api/v1", dependencies=protected)
     return app
 
