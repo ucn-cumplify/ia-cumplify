@@ -64,6 +64,5 @@ Un modelo desconocido, un tamaño no soportado o un texto que supera el límite 
 
 ## Deuda técnica conocida
 
-- El cliente OpenAI reintenta 408/429/5xx según `OPENAI_MAX_RETRIES` antes de responder 502.
+- El cliente OpenAI reintenta 408, 409, 429, 5xx, timeouts y errores de conexión según `OPENAI_MAX_RETRIES` antes de responder 502.
 - El tope de 3072 es el del esquema HTTP. El modelo configurado puede rechazar un tamaño menor con 422.
-- No hay autenticación: quien alcance el puerto puede consumir la cuota del proveedor.

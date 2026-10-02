@@ -113,7 +113,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 - `classifier_version` es `<PROMPT_VERSION>@<OPENAI_MODEL>`.
 - Todo cambio de `SYSTEM_PROMPT` o del bloque de etiquetas existentes sube `PROMPT_VERSION`.
-- `usage` suma `prompt_tokens`, `completion_tokens` y `total_tokens` de todas las llamadas, y `llm_calls` cuenta una por lote (incluidos los fallidos).
+- `usage` suma `prompt_tokens`, `completion_tokens` y `total_tokens` de los lotes que respondieron, y `llm_calls` cuenta uno por lote, incluidos los fallidos.
 - Sin artículos clasificables, todos los campos de `usage` valen 0.
 - `dev_metrics`, cuando viaja, repite los tokens de `usage`.
 
@@ -140,6 +140,6 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 - `articles.number` o `articles.section` en null hace fallar la petición, porque el clasificador trata esos campos como texto.
 - `INCLUDE_DEV_METRICS` arranca en verdadero. En un entorno compartido conviene apagarlo; el uso de tokens igual viaja en `usage`.
 - `PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue las respuestas nuevas de las anteriores.
-- Un lote fallido no aborta el resto. `failed_article_ids` lista lo que faltó; si el proveedor no informa tokens de ese lote, `llm_calls` igual suma 1 y esos tokens pueden quedar en 0.
-- El cliente OpenAI reintenta 408/429/5xx según `OPENAI_MAX_RETRIES`. No se vuelve a encolar un lote ya fallido después de esos reintentos.
+- Un lote fallido no aborta el resto. `failed_article_ids` lista lo que faltó. El lote suma 1 en `llm_calls`, pero sus tokens no se cuentan aunque el proveedor los haya cobrado: el uso informado puede quedar por debajo del real.
+- El cliente OpenAI reintenta 408, 409, 429, 5xx, timeouts y errores de conexión según `OPENAI_MAX_RETRIES`. En el peor caso un lote tarda (1 + `OPENAI_MAX_RETRIES`) × `OPENAI_TIMEOUT_SECONDS`, unos 9 minutos con los valores por defecto. No se vuelve a encolar un lote ya fallido después de esos reintentos.
 - Las reglas de longitud de etiqueta (4 palabras, 3 palabras, etc.) viven en el prompt. El esquema solo exige listas no vacías, así que una etiqueta más larga igual puede volver en la respuesta.
