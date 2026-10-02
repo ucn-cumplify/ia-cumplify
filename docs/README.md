@@ -35,6 +35,10 @@ docs/
 │   ├── api.md
 │   ├── requirements.md
 │   └── test.csv
+├── CompanyProfile/
+│   ├── api.md
+│   ├── requirements.md
+│   └── test.csv
 └── Embeddings/
     ├── api.md
     ├── requirements.md
