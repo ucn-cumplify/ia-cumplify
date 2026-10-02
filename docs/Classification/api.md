@@ -80,7 +80,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
 `classifier_version` y `usage` viajan siempre:
 
 - `classifier_version` es `<versión del prompt>@<modelo>`. La versión del prompt es `PROMPT_VERSION` y sube con cada cambio del prompt; el modelo es `OPENAI_MODEL`. El backend la guarda con cada respuesta para encontrar los cuerpos clasificados con un prompt o un modelo anterior.
-- `usage` suma los tokens de todas las llamadas al modelo para este cuerpo, incluidos los lotes que fallaron si el proveedor informó uso. `llm_calls` cuenta las llamadas, una por lote (también los fallidos). Sin artículos clasificables todo vale 0.
+- `usage` suma los tokens de los lotes que respondieron. Un lote fallido suma 1 en `llm_calls`, pero sus tokens no se cuentan, aunque el proveedor los haya cobrado (por ejemplo, una respuesta que no se pudo interpretar). Sin artículos clasificables todo vale 0.
 
 `dev_metrics` solo trae datos cuando `INCLUDE_DEV_METRICS` es verdadero: agrega el tiempo y repite los tokens de `usage`, con la misma forma de siempre. Si no, viene en `null`. Cada lista de `classification` tiene al menos un elemento.
 
@@ -90,7 +90,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
 - Esas piezas igual se envían al modelo como contexto del cuerpo completo.
 - Sin artículos clasificables la respuesta trae `results: []` y no llama al modelo.
 - Más de `CLASSIFY_BATCH_SIZE` artículos (defecto 25) generan varias llamadas. El cuerpo completo va en cada una. Si un lote falla, los demás se conservan: `results` trae lo clasificado y `failed_article_ids` los artículos de los lotes fallidos o omitidos. Solo si no se clasifica ningún artículo la petición es 502.
-- Cada llamada HTTP a OpenAI usa `OPENAI_TIMEOUT_SECONDS` (defecto 180) y `OPENAI_MAX_RETRIES` (defecto 2) para 408, 429 y 5xx.
+- Cada llamada HTTP a OpenAI usa `OPENAI_TIMEOUT_SECONDS` (defecto 180) y `OPENAI_MAX_RETRIES` (defecto 2). El SDK reintenta 408, 409, 429, 5xx, timeouts y errores de conexión.
 - Antes de armar el prompt se quitan imágenes embebidas `data:image/...;base64,...` del resumen y del texto de los artículos, y se reemplazan por `[imagen omitida]`. La base no se modifica.
 - Las dimensiones 1 a 4 y 6 salen del texto. Si no hay respaldo, el valor es `No especificado`. `facility_installation_equipment` puede inferir una instalación típica; si no puede, también usa `No especificado`.
 - Si hay candidatos y uno encaja, se copia tal cual. `activity_action`, `facility_installation_equipment` y `others` no tienen candidatos.
