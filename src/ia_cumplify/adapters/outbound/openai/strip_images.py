@@ -14,9 +14,13 @@ _IMG_TAG_DATA_URI = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
-# Leftover data URIs (src leftovers, CSS, raw blobs). Whitespace inside base64 is allowed.
+# Leftover data URIs (src leftovers, CSS, raw blobs). Base64 wrapped over several lines continues only
+# with long lines (40+ characters, longer than any real word), and a short last line only if it ends with
+# "=" padding, so the text that follows the image is never consumed.
 _DATA_IMAGE_URI = re.compile(
-    r"data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+",
+    r"data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/]+=*"
+    r"(?:\s+[A-Za-z0-9+/]{40,}=*)*"
+    r"(?:\s+[A-Za-z0-9+/]{1,39}={1,2}(?![A-Za-z0-9+/=]))?",
     re.IGNORECASE,
 )
 
