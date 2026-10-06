@@ -76,7 +76,11 @@ class ChatContextBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     app_name: AppName | None = Field(
-        default=None, description="Legal Requirements app the chat was opened from; null or absent outside an app"
+        default=None,
+        description=(
+            "Legal Requirements app the chat was opened in. The chat only lives inside these apps, so the "
+            "backend always sends it; null or absent still gets an answer, without the App line"
+        ),
     )
 
     @field_validator("app_name", mode="before")

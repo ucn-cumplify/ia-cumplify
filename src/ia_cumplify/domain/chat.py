@@ -64,7 +64,8 @@ class ChatRequest:
     history: tuple[ChatMessage, ...] = ()
     # Most relevant first. Empty is valid: the answer is a fixed refusal without a model call.
     passages: tuple[ChatPassage, ...] = ()
-    # Legal Requirements app the chat was opened from; None outside an app.
+    # Legal Requirements app the chat was opened in. The backend always sends it, since the chat only lives
+    # inside these apps; None leaves out the App line.
     app_name: str | None = None
 
 

@@ -59,14 +59,14 @@ Ejemplo ilustrativo: los textos entre paréntesis reemplazan el contenido real.
 | passages[].reference | string | Sí | Referencia legible, por ejemplo `Ley 16.744, art. 66`. Se recorta y debe quedar entre 1 y 200 caracteres, en una línea. El modelo la usa para nombrar la fuente en el texto |
 | passages[].text | string | Sí | El contenido del pasaje. Se recorta y debe quedar entre 1 y `CHAT_PASSAGE_MAX_CHARS` caracteres (defecto 6.000) |
 | context | objeto | No | Contexto de la conversación |
-| context.app_name | string | No | Nombre de la app de Requisitos Legales desde la que se abrió el chat (modo de contexto, tarea 4.10). Se recorta y debe quedar entre 1 y 200 caracteres, en una línea. Se omite si el chat no se abrió desde una app |
+| context.app_name | string | No | Nombre de la app de Requisitos Legales en la que se abrió el chat. El chat vive solo dentro de esas apps (decisión del equipo del 2026-10-06), así que el backend lo manda siempre; el campo sigue siendo opcional. Se recorta y debe quedar entre 1 y 200 caracteres, en una línea. Sin él, el pedido se responde igual, sin la línea `App:` |
 
 - La suma de los `passages[].text` no puede pasar de `CHAT_PASSAGES_MAX_TOTAL_CHARS` (defecto 48.000).
 - Los largos se miden sobre el texto recibido, después del recorte en los campos que se recortan, y antes de quitar las imágenes base64. El backend tiene que mandar los pasajes sin imágenes: una imagen embebida ocupa el tope sin aportar texto.
 - Un carácter es un punto de código Unicode: lo que cuentan `len` de Python y `max_length` de Pydantic. `string.Length` de .NET cuenta unidades UTF-16 y nunca da menos, así que sirve como espejo conservador. Los grafemas (`StringInfo`) pueden dar menos, por ejemplo con tildes combinadas (texto en NFD), y no sirven como espejo.
 - Recortar es quitar de los extremos los espacios en blanco de Unicode (propiedad White_Space), que son los que quitan `string.Trim()` de .NET y `strip_whitespace` de Pydantic. ia no usa `str.strip()` de Python, que quita además U+001C a U+001F, para que el backend pueda espejar el recorte con `Trim()`.
 - "En una línea" significa sin ningún salto de línea Unicode: ni U+000A a U+000D, ni U+001C a U+001E, ni U+0085, U+2028 o U+2029 (los que corta `str.splitlines()` de Python). En `reference` y `app_name` se comprueba después del recorte: un salto al final se quita y no da 422, salvo U+001C a U+001E, que no son espacios en blanco. En `id`, que no se recorta, todo salto da 422.
-- `null` en un campo opcional (`history`, `context`, `context.app_name`) equivale a omitirlo: `history: null` es la lista vacía, y `context: null`, `context: {}` o `context.app_name: null` indican que el chat no se abrió desde una app. En un campo requerido, `null` da 422.
+- `null` en un campo opcional (`history`, `context`, `context.app_name`) equivale a omitirlo: `history: null` es la lista vacía, y `context: null`, `context: {}` o `context.app_name: null` equivalen a un pedido sin app, que el widget no genera. En un campo requerido, `null` da 422.
 - Los campos que no están en esta tabla se rechazan con 422 (ver "Pendiente de acordar").
 
 Valores de `kind` (la lista es cerrada; los valores se confirman con el backend y el frontend, ver "Pendiente de acordar"):
