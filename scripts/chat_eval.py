@@ -54,6 +54,8 @@ QUERIES = {
         SELECT a.id::text AS id, a.number AS article, a.text, lb.type, lb.number AS law
         FROM articles a JOIN legal_bodies lb ON lb.id = a.legal_body_id
         WHERE regexp_replace(lb.number, '\\D', '', 'g') = %(law)s
+          -- Articles only: BCN also stores the heading, titles and chapters as rows of articles.
+          AND coalesce(a.number, '') ~* '^\\s*art'
           AND (%(article)s::text IS NULL OR regexp_replace(coalesce(a.number, ''), '\\D', '', 'g') = %(article)s)
         ORDER BY a."order", a.id
         LIMIT 1 OFFSET %(offset)s
@@ -81,6 +83,10 @@ QUERIES = {
         LEFT JOIN articles a ON a.id = v.article_id
         LEFT JOIN legal_bodies lb ON lb.id = a.legal_body_id
         LEFT JOIN obligations o ON o.id = v.obligation_id
+        -- The vinculations of one app, the same one the "legal_requirement" query returns at that position.
+        WHERE v.rrll_id = (
+            SELECT id FROM legal_requirements WHERE NOT is_catalog ORDER BY created_at, id LIMIT 1 OFFSET %(app_offset)s
+        )
         ORDER BY v.created_at, v.id
         LIMIT 1 OFFSET %(offset)s
     """,
@@ -195,7 +201,9 @@ def load_set(path: Path) -> list[dict]:
 def law_label(kind: str | None, number: str | None) -> str:
     digits = re.sub(r"\D", "", number or "")
     shown = f"{int(digits):,}".replace(",", ".") if digits else (number or "").strip()
-    return f"{(kind or 'Norma').strip()} {shown}".strip()
+    # BCN's type often carries the number already ("Ley N 21815"): keep only the kind of norm.
+    base = re.sub(r"(?i)\s*(?:n[°º.]?|núm\.?|número)?\s*[\d.]+\s*$", "", kind or "").strip() or "Norma"
+    return f"{base} {shown}".strip()
 
 
 def article_label(number: str | None) -> str:
@@ -209,7 +217,10 @@ def passage_from_row(query: str, row: dict) -> dict:
         text = row["text"] or ""
     elif query == "legal_body":
         reference = law_label(row["type"], row["law"])
-        text = f"Título: {row['title']}\nTipo: {row['type']}\nNúmero: {row['law']}\nResumen: {row['summary'] or ''}"
+        lines = [f"Título: {row['title']}", f"Tipo: {row['type']}", f"Número: {row['law']}"]
+        if (row["summary"] or "").strip():
+            lines.append(f"Resumen: {row['summary']}")
+        text = "\n".join(lines)
     elif query == "legal_requirement":
         reference = f"App: {row['name']}"
         text = f"Nombre: {row['name']}\nDescripción: {row['description'] or 'sin descripción'}"
@@ -223,7 +234,8 @@ def passage_from_row(query: str, row: dict) -> dict:
         lines = [
             f"App: {row['app']}",
             f"Vinculado: {linked}",
-            f"Estado: {row['status']}",
+            # The vinculation's evaluation cycle (EvaluationCycleStatus), not its compliance.
+            f"Ciclo de evaluación: {row['status']}",
             f"Criticidad: {row['criticality']}",
         ]
         if row["compliance_percentage"] is not None:
@@ -293,6 +305,7 @@ class Passages:
             "law": spec.get("law"),
             "article": spec.get("article"),
             "offset": max(int(spec.get("position", 1)) - 1, 0),
+            "app_offset": max(int(spec.get("app", 1)) - 1, 0),
         }
         key = json.dumps([spec["query"], params], sort_keys=True)
         if key not in self._cache:

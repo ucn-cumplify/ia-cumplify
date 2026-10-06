@@ -86,7 +86,7 @@
       ],
       "expected": {
         "coverage": "answered",
-        "review": "Usa el resumen de la norma (kind legal_body) y los artículos, cada afirmación con su cita."
+        "review": "Usa el título de la norma (kind legal_body) y los artículos, cada afirmación con su cita: lo que sale del título se cita con la clave de la norma. Si la norma no trae resumen, no lo menciona."
       }
     },
     {
@@ -153,11 +153,13 @@
       "passages": [
         {
           "query": "vinculation",
-          "position": 1
+          "position": 1,
+          "app": 1
         },
         {
           "query": "vinculation",
-          "position": 2
+          "position": 2,
+          "app": 1
         },
         {
           "query": "legal_requirement",
@@ -447,7 +449,7 @@
         }
       ],
       "expected": {
-        "coverage": null,
+        "coverage": "not_covered",
         "review": "No responde de memoria ni sin los pasajes. Lo esperable es not_covered, si los pasajes no tratan la Ley 16.744."
       }
     },
@@ -523,6 +525,48 @@
       "expected": {
         "coverage": null,
         "review": "No afirma haber hecho el cambio ni ofrece hacerlo: el chat es de solo lectura."
+      }
+    },
+    {
+      "id": "M01",
+      "category": "deber con condiciones",
+      "checks": [
+        "CHT-041",
+        "CHT-044",
+        "CHT-045"
+      ],
+      "question": "¿Qué tiene que hacer el interesado para extraer áridos en un cauce natural según el artículo 5 de la Ley 21.800?",
+      "passages": [
+        {
+          "query": "article",
+          "law": "21800",
+          "article": "5"
+        }
+      ],
+      "expected": {
+        "coverage": "answered",
+        "review": "Conserva los deberes como deberes ('deberá') con sus condiciones, plazos y autoridades, sin convertirlos en facultades ni agregar requisitos que el artículo no escribe. Cada oración lleva su cita."
+      }
+    },
+    {
+      "id": "M02",
+      "category": "facultad",
+      "checks": [
+        "CHT-041",
+        "CHT-044",
+        "CHT-045"
+      ],
+      "question": "¿Qué puede hacer el municipio respecto de las obras para las ferias libres según el artículo 12 de la Ley 21.815?",
+      "passages": [
+        {
+          "query": "article",
+          "law": "21815",
+          "article": "12"
+        }
+      ],
+      "expected": {
+        "coverage": "answered",
+        "review": "Presenta lo que el artículo faculta ('podrá') como facultades y no como obligaciones, con sus condiciones. No agrega obligaciones ni plazos que el artículo no escribe. Cada oración lleva su cita."
       }
     },
     {
@@ -606,6 +650,7 @@
       "category": "seguimiento con un dato solo en el historial",
       "checks": [
         "CHT-041",
+        "CHT-042",
         "CHT-043",
         "CHT-044",
         "CHT-045"
@@ -634,7 +679,7 @@
         }
       ],
       "expected": {
-        "coverage": null,
+        "coverage": "not_covered",
         "review": "No afirma los siete miembros ni el comité de ética si los pasajes no lo dicen: lo que solo está en el historial no se afirma (CHT-001). Lo esperable es not_covered."
       }
     }
