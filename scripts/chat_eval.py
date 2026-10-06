@@ -534,7 +534,7 @@ def summarize(results: list[Result], repeat: tuple[Result, Result] | None, simul
         )
         print(
             "  Límite (api.md, Privacidad): 0 con modo explícito sin puntos de corte; no más que los tokens de las "
-            "instrucciones (unos 1.000) con un punto de corte al final de ellas. Hoy no hay modo explícito "
+            "instrucciones (unos 1.150 con chat-v3) con un punto de corte al final de ellas. Hoy no hay modo explícito "
             "(CHT-032): con el modo implícito el valor no comprueba nada."
         )
     return not failures
