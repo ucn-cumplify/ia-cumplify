@@ -204,7 +204,8 @@ Ese texto es salida de un modelo que leyó contenido no confiable (texto de norm
 
 **Validaciones:**
 
-- Sin encabezados, viñetas con asterisco, negritas ni tablas de Markdown.
+- Sin encabezados, negritas ni tablas de Markdown, y ninguna línea que empiece con `*`, `-`, `+` o `#`, aunque la pregunta pida Markdown. Para enumerar, cada ítem va en su propio párrafo, con «•» o con la letra o el número que le da el pasaje.
+- Las fuentes se nombran por su referencia; el conjunto, como "las fuentes disponibles". La respuesta nunca habla de "pasajes", que el usuario no ve.
 - Párrafos separados por saltos de línea.
 
 ---
@@ -222,7 +223,7 @@ Cada respuesta informa qué versión del prompt y qué modelo la produjeron, y c
 
 **Validaciones:**
 
-- `chat_version` es `<CHAT_PROMPT_VERSION>@<modelo efectivo>`, por ejemplo `chat-v1@gpt-5.6-luna`, y viaja en `done` y en `error`. Con el respondedor falso vale `fake-v1@fake` (CHT-014).
+- `chat_version` es `<CHAT_PROMPT_VERSION>@<modelo efectivo>`, por ejemplo `chat-v3@gpt-5.6-luna`, y viaja en `done` y en `error`. Con el respondedor falso vale `fake-v1@fake` (CHT-014).
 - Todo cambio del prompt, del bloque de pasajes, de los textos fijos o de las reglas de marcadores y de cobertura sube `CHAT_PROMPT_VERSION`, una constante del código y no una variable de entorno.
 - `usage` trae `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens`, `reasoning_tokens` y `llm_calls`.
 - `usage` vale `null` cuando el proveedor no llegó a informarlo: si el stream se cortó, o si terminó sin mandar el fragmento de uso.
@@ -353,7 +354,7 @@ Con `CHAT_FAKE_RESPONDER=true`, el endpoint no llama a OpenAI: devuelve un strea
 ## Dentro de alcance
 
 - `POST /api/v1/chat` en streaming, con validación, citas, cobertura y negativa sin pasajes.
-- El prompt `chat-v1`, con las reglas de 4.2: solo los pasajes del pedido, citar cada afirmación, decir cuándo no alcanzan, los pasajes y el nombre de la app como datos, solo lectura y texto plano.
+- El prompt `chat-v3`, ajustado con el set de evaluación, con las reglas de 4.2: solo los pasajes del pedido, citar cada afirmación, decir cuándo no alcanzan, los pasajes y el nombre de la app como datos, solo lectura y texto plano.
 - `AsyncOpenAI` con `include_usage`, `store=False` y el modo de caché que se acuerde (CHT-012), y modelo, esfuerzo, tope de salida, timeout y reintentos propios del chat.
 - El manejador global del 422 sin `input` ni `ctx`. Cambia el cuerpo del 422 de todos los endpoints, pero no cuándo se responde 422.
 - `fastapi>=0.140.13` en `pyproject.toml` y `uv.lock`: `fastapi.sse` existe desde 0.135.0, y 0.140.12 y 0.140.13 corrigen el formato de los eventos y el código de estado del stream. El lock ya trae 0.141.1.
@@ -408,10 +409,16 @@ Con `CHAT_FAKE_RESPONDER=true`, el endpoint no llama a OpenAI: devuelve un strea
 - **No se sabe si OpenAI deja de generar y de facturar al cortar.** El experimento mide que ia cierra la conexión en milisegundos, no lo que hace OpenAI con lo que ya generó.
 - **3,85 caracteres por token** sale del tokenizador de embeddings (1.232.667 caracteres y 320.404 tokens de los 964 artículos ya embebidos), no del modelo de chat. Las estimaciones de costo y el uso estimado heredan ese error.
 - **Caché de prefijos de OpenAI.** `store=False` no lo cubre. Con el modo implícito, que rige si no se envía `prompt_cache_options`, el prefijo que OpenAI guarda puede incluir los pasajes de la empresa, con una vida mínima de 30 minutos y una retención de hasta 24 horas (`prompt_cache_retention`, deprecado en favor de `prompt_cache_options.ttl`, solo admite `24h` desde gpt-5.5). Según el SDK, el modo explícito de `prompt_cache_options` (gpt-5.6 en adelante) lo evita, sin puntos de corte o con uno solo al final de las instrucciones fijas. No está comprobado que OpenAI lo respete: lo delataría un `cached_tokens` por encima del límite en la repetición de un pedido idéntico, y un valor dentro del límite no prueba que se cumpla ("Privacidad" en `api.md`). Qué modo usan el chat y el perfil está pendiente de acordar con el equipo (`api.md`).
-- **Sin verificar con el modelo real:** si `gpt-5.6-luna` acepta `include_usage` en streaming; cuánto tarda el primer token con razonamiento `low`; cuánto de `CHAT_MAX_COMPLETION_TOKENS` se va en razonar; si OpenAI manda las cabeceras antes de razonar y si manda fragmentos sin texto mientras razona; si el modelo, sin Structured Outputs, informa las negativas en `refusal` o las escribe en `content`; y, si se acuerda un modo explícito de caché, si el modelo admite `prompt_cache_options` y lo respeta (se comprueba de forma indirecta repitiendo un pedido idéntico dentro de los 30 minutos; ver "Privacidad" en `api.md`). Si manda las cabeceras después y razona más de `CHAT_TIMEOUT_SECONDS`, el pedido termina en `timeout`. Si escribe la negativa en `content`, `refused` no se activa y la negativa llega al usuario como cualquier otra respuesta. Con un modo explícito, un `CHAT_MODEL` anterior a gpt-5.6 puede rechazar `prompt_cache_options` con un 400, que sale como `provider_rejected`. Se confirma en la primera corrida del set de evaluación.
+- **Verificado con el modelo real el 2026-10-05** (set de evaluación, 8 corridas con `gpt-5.6-luna` y razonamiento `low`): `include_usage` funciona en streaming, porque todas las respuestas trajeron su uso; el primer `delta` llega en alrededor de 1 s (máximo 2,7 s); y el razonamiento usa poco, hasta 78 tokens por respuesta, menos del 2 % de `CHAT_MAX_COMPLETION_TOKENS`.
+- **Sin verificar con el modelo real:** si OpenAI manda las cabeceras antes de razonar y si manda fragmentos sin texto mientras razona; si el modelo, sin Structured Outputs, informa las negativas en `refusal` o las escribe en `content`; y, si se acuerda un modo explícito de caché, si el modelo admite `prompt_cache_options` y lo respeta (se comprueba de forma indirecta repitiendo un pedido idéntico dentro de los 30 minutos; ver "Privacidad" en `api.md`). Si manda las cabeceras después y razona más de `CHAT_TIMEOUT_SECONDS`, el pedido termina en `timeout`. Si escribe la negativa en `content`, `refused` no se activa y la negativa llega al usuario como cualquier otra respuesta. Con un modo explícito, un `CHAT_MODEL` anterior a gpt-5.6 puede rechazar `prompt_cache_options` con un 400, que sale como `provider_rejected`. El set de evaluación no alcanza a verlo: el script guarda los eventos de ia, no los fragmentos del proveedor, y en las corridas no hubo ninguna negativa del proveedor.
 - **La forma real del 429 por cuota agotada no se comprobó.** CHT-010 lo distingue por `code: insufficient_quota`, que es lo que expone el SDK (`APIError.code`); se confirma la primera vez que ocurra. Con `CHAT_MAX_RETRIES` mayor que 0, el SDK lo reintenta igual que un 429 por límite de tasa.
 - **La forma real de un error dentro del stream no se comprobó con OpenAI.** Se clasifica siempre como `provider_error`, sea cual sea su `type`; se confirma la primera vez que ocurra.
-- **Costo por pregunta sin medir.** Se estiman unos 4.300 a 6.500 tokens con 8 pasajes medios, y hasta unos 20.700 con los topes. Los 10.000 a 30.000 que estimaba el plan del sprint 2 venían del diseño con herramientas, que se descartó.
+- **Costo por pregunta, medido el 2026-10-05** con los pasajes reales del set: de unos 750 a 3.400 tokens de entrada y hasta unos 1.000 de salida. Una corrida completa de 26 casos cuesta unos 51.000 tokens, de los que entre la mitad y algo más vienen del caché de OpenAI en el modo implícito. La evaluación completa del prompt (8 corridas y la validación de `chat-v3`) gastó 520.319 tokens en 249 llamadas, el 66 % desde el caché.
+- **Limitaciones conocidas del prompt `chat-v3`** (set de evaluación del 2026-10-05; detalle en CHT-041 y CHT-042 de `test.csv`):
+  - Paráfrasis citadas que cambian el sentido del pasaje, estables entre corridas: fines presentados como materias reguladas (P02 y C03) y condiciones omitidas (E02 c, S01 a). El prompt ya las prohíbe; falta probar `CHAT_REASONING_EFFORT=medium`.
+  - Al decir qué falta, a veces da por cierta la premisa de la pregunta (P01, 4 de 6).
+  - A veces etiqueta `not_covered` una respuesta parcial o negativa que sí tiene respaldo (P02, 1 de 3; E02, 2 de 10). Es el costo elegido para que un seguimiento sin respaldo no salga `answered` con citas (S03: 0 de 10 con `chat-v3`, 4 de 10 con `chat-v2`).
+  - En listas y respuestas largas, algunas oraciones van sin marcador propio; si la línea introductoria de una lista lo necesita se acuerda en CHT-004.
 - `CHAT_PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue las respuestas nuevas de las anteriores.
 - Los topes y las reglas fijas del pedido tienen que coincidir con los del backend: si el backend sube un tope y ia no, un pedido válido para el backend recibe 422 (punto 11 de "Consumo desde el backend" en `api.md`).
 - Un stream cortado no se puede retomar: no hay `id:` ni `Last-Event-ID`. El usuario vuelve a preguntar.
