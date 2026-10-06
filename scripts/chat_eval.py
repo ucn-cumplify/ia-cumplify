@@ -10,6 +10,9 @@ SERVICE_API_KEY and DATABASE_URL come from the environment or the arguments, nev
 passages come from the local database, read with this script's own read-only connection: the
 repository keeps only questions and queries. Each request follows the rules the backend mirrors
 (point 11 of "Consumo desde el backend" in docs/Chat/api.md), so a 422 is a defect of this script.
+Every request names the open app in context.app_name, as the backend does: the chat only lives inside
+Legal Requirements apps. It is the case's own app_name, or else the app whose data the case reads, or
+else the first app.
 Answers and passages go to --out, outside the repository; the console shows metrics only.
 """
 
@@ -101,6 +104,24 @@ QUERIES = {
 
 class SetError(ValueError):
     """The evaluation set does not have the expected shape."""
+
+
+# The open app (the chat only lives inside a Legal Requirements app, decided on 2026-10-06): the same
+# ordering as the "legal_requirement" and "vinculation" queries, so the name matches their data.
+APP_NAME_QUERY = """
+    SELECT name FROM legal_requirements WHERE NOT is_catalog ORDER BY created_at, id LIMIT 1 OFFSET %(app_offset)s
+"""
+SIMULATED_APP_NAME = "App simulada"
+
+
+def open_app_offset(case: dict) -> int:
+    """The position of the app whose data the case reads; the first app if it reads none."""
+    for spec in case["passages"]:
+        if spec.get("query") == "legal_requirement":
+            return max(int(spec.get("position", 1)) - 1, 0)
+        if spec.get("query") == "vinculation":
+            return max(int(spec.get("app", 1)) - 1, 0)
+    return 0
 
 
 class NoData(LookupError):
@@ -281,6 +302,21 @@ class Passages:
     def simulated(self) -> bool:
         return self._connection is None
 
+    def app_name(self, case: dict) -> str:
+        """The name of the app the chat is open in, for a case without its own app_name."""
+        if self._connection is None:
+            return SIMULATED_APP_NAME
+        offset = open_app_offset(case)
+        key = json.dumps(["app_name", offset])
+        if key not in self._cache:
+            with self._connection.cursor() as cursor:
+                cursor.execute(APP_NAME_QUERY, {"app_offset": offset})
+                row = cursor.fetchone()
+            if row is None:
+                raise NoData(f"app_name {offset + 1}")
+            self._cache[key] = {"name": row["name"]}
+        return self._cache[key]["name"]
+
     def close(self) -> None:
         if self._connection is not None:
             self._connection.close()
@@ -373,7 +409,7 @@ def fit_history(messages: list[dict], limits: Limits) -> list[dict]:
     return kept[-limits.history_messages :]
 
 
-def build_request(case: dict, passages: list[dict], answers: dict[str, str], limits: Limits) -> dict:
+def build_request(case: dict, passages: list[dict], answers: dict[str, str], limits: Limits, app_name: str) -> dict:
     history = []
     for message in case.get("history", []):
         content = message.get("content")
@@ -385,8 +421,7 @@ def build_request(case: dict, passages: list[dict], answers: dict[str, str], lim
         "history": fit_history(history, limits),
         "passages": fit_passages(passages, limits),
     }
-    if case.get("app_name"):
-        request["context"] = {"app_name": one_line(case["app_name"])}
+    request["context"] = {"app_name": one_line(app_name)}
     return request
 
 
@@ -605,10 +640,12 @@ def main(argv: list[str] | None = None) -> int:
     passages = Passages(None if args.without_db else args.database_url)
     # Every query runs before the first request: a failing one stops the run before it spends tokens.
     built: dict[str, list[dict] | str] = {}
+    app_names: dict[str, str] = {}
     try:
         for case in cases:
             try:
                 built[case["id"]] = passages.build(case)
+                app_names[case["id"]] = case.get("app_name") or passages.app_name(case)
             except NoData as exc:
                 built[case["id"]] = f"sin datos: {exc}"
     finally:
@@ -622,7 +659,7 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(case_passages, str):
             results.append(Result(case=case, skipped=case_passages))
             continue
-        body = build_request(case, case_passages, answers, limits)
+        body = build_request(case, case_passages, answers, limits, app_names[case["id"]])
         result = ask(args.base_url, args.api_key, body, args.timeout)
         result.case = case
         results.append(result)
