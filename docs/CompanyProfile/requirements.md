@@ -133,4 +133,4 @@ El texto es información de la empresa. No se registra en el log ni aparece en e
 - `PROFILE_TEXT_MAX_CHARS` tiene que coincidir con `AI_PROFILE_TEXT_MAX_CHARS` del backend: si el backend sube su tope y este no, un texto válido para el backend recibe `422`.
 - `PROFILE_PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue los perfiles nuevos de los anteriores.
 - Las reglas de longitud de etiqueta viven en el prompt. El esquema solo exige listas no vacías, así que una etiqueta más larga igual puede volver en la respuesta.
-- No hay pruebas automáticas: los casos de `test.csv` se ejecutaron contra el servicio (con un clasificador falso para el contrato y con OpenAI para el prompt).
+- Las pruebas automáticas (`tests/`) cubren solo el 422 sin el texto (PRF-013 de `test.csv`). Los demás casos se ejecutaron a mano contra el servicio, con un clasificador falso para el contrato y con OpenAI para el prompt, y no tienen prueba automática.

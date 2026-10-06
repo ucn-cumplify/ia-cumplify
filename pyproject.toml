@@ -7,7 +7,7 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "fastapi>=0.115.0",
+    "fastapi>=0.140.13",
     "uvicorn[standard]>=0.32.0",
     "openai>=1.68.0",
     "pydantic-settings>=2.6.0",
@@ -24,3 +24,15 @@ build-backend = "uv_build"
 
 [tool.uv]
 package = true
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.0",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "disconnect: uvicorn and a fake OpenAI as real servers on 127.0.0.1 (CHT-011); they run by default, deselect them with -m 'not disconnect'",
+]

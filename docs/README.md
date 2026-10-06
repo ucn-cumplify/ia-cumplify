@@ -31,6 +31,10 @@ Estos tres archivos son el contrato mínimo de cada módulo. Si un módulo crece
 ```text
 docs/
 ├── README.md
+├── Chat/
+│   ├── api.md
+│   ├── requirements.md
+│   └── test.csv
 ├── Classification/
 │   ├── api.md
 │   ├── requirements.md
@@ -45,7 +49,7 @@ docs/
     └── test.csv
 ```
 
-Este servicio no es dueño del esquema de PostgreSQL. Lee `legal_bodies` y `articles`, que define y migra `backend-cumplify`. Por eso no hay un diagrama de base propio.
+Este servicio no es dueño del esquema de PostgreSQL. Lee `legal_bodies` y `articles`, que define y migra `backend-cumplify`. Por eso no hay un diagrama de base propio. El chat, el perfil de empresa y los embeddings no leen la base: responden con lo que reciben en el pedido. El script manual del set de evaluación del chat (`scripts/chat_eval.py`) no es parte del servicio: arma sus pasajes con una conexión propia de solo lectura a `articles`, `legal_bodies`, `obligations`, `legal_requirements` y `legal_requirement_vinculations`.
 
 ---
 
@@ -77,4 +81,5 @@ Un archivo en `stage/` tiene ciclo de vida corto: una vez que la decisión o el 
   - Este repositorio no tiene interfaz. `Verificación Frontend` queda en `N/A`. `Verificación Backend` describe el endpoint, el código HTTP y el efecto sobre los datos.
   - `Estado` es `Pendiente` hasta que alguien ejecuta el caso, `Exitoso` solo cuando se ejecutó y el resultado coincide con lo esperado, y `Fallido` cuando se ejecutó y algo de lo esperado no se cumplió. Un caso que no se volvió a ejecutar después de cambiar el comportamiento vuelve a `Pendiente`.
   - `Resultado Obtenido` se llena solo con lo que se ejecutó de verdad. Si el caso se cubrió a medias, lo que faltó va en `Observaciones`.
+  - Si una prueba automática de `tests/` cubre el caso, `Resultado Obtenido` lleva la fecha de la corrida, la prueba (`archivo::Clase::prueba`) y lo que comprobó. Un caso que necesita el proveedor real, como el set de evaluación del chat, queda `Pendiente` hasta que alguien lo ejecuta.
 - Si una decisión de diseño cambia, actualizar el doc correspondiente en el mismo cambio que el código.
