@@ -81,5 +81,5 @@ Un archivo en `stage/` tiene ciclo de vida corto: una vez que la decisión o el 
   - Este repositorio no tiene interfaz. `Verificación Frontend` queda en `N/A`. `Verificación Backend` describe el endpoint, el código HTTP y el efecto sobre los datos.
   - `Estado` es `Pendiente` hasta que alguien ejecuta el caso, `Exitoso` solo cuando se ejecutó y el resultado coincide con lo esperado, y `Fallido` cuando se ejecutó y algo de lo esperado no se cumplió. Un caso que no se volvió a ejecutar después de cambiar el comportamiento vuelve a `Pendiente`.
   - `Resultado Obtenido` se llena solo con lo que se ejecutó de verdad. Si el caso se cubrió a medias, lo que faltó va en `Observaciones`.
-  - Si una prueba automática de `tests/` cubre el caso, `Resultado Obtenido` lleva la fecha de la corrida, la prueba (`archivo::Clase::prueba`) y lo que comprobó. Un caso que necesita el proveedor real, como el set de evaluación del chat, queda `Pendiente` hasta que alguien lo ejecuta.
+  - Si una prueba automática de `tests/` cubre el caso, `Resultado Obtenido` lleva la fecha de la ejecución, la prueba (`archivo::Clase::prueba`) y lo que comprobó. Un caso que necesita el proveedor real, como el set de evaluación del chat, queda `Pendiente` hasta que alguien lo ejecuta.
 - Si una decisión de diseño cambia, actualizar el doc correspondiente en el mismo cambio que el código.

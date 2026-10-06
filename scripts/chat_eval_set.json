@@ -1,10 +1,10 @@
 {
   "about": [
-    "Set fijo de evaluación del prompt del chat (CHT-041 a CHT-046 de docs/Chat/test.csv). Lo corre scripts/chat_eval.py.",
+    "Set fijo de evaluación del prompt del chat (CHT-041 a CHT-046 de docs/Chat/test.csv). Lo ejecuta scripts/chat_eval.py.",
     "Cada pasaje es una consulta de solo lectura a la base local (query, con law, article o position) o un pasaje sintético escrito aquí. Este archivo guarda solo preguntas y consultas: nunca textos sacados de la base, que pueden ser datos de la empresa (CHT-012).",
     "Las normas presentes (Ley 21.800, 21.813, 21.815 y 21.833) y las ausentes (Ley 16.744, DS 594) son las que tenía la base local al escribir el set. La base no tenía obligaciones: las obligaciones del set son sintéticas y ficticias.",
     "expected.coverage es la cobertura esperada (null: no se compara) y expected.review, lo que revisa una persona en la respuesta.",
-    "Los casos corren en el orden de este archivo: un mensaje del historial con from_case usa la respuesta de un caso anterior de la misma corrida, o fallback si ese caso no corrió.",
+    "Los casos se ejecutan en el orden de este archivo: un mensaje del historial con from_case usa la respuesta de un caso anterior de la misma ejecución, o fallback si ese caso no se ejecutó.",
     "Cada pedido lleva context.app_name, como lo manda el backend: el chat vive solo dentro de las apps de Requisitos Legales (decisión del 2026-10-06). Es el app_name del caso, si lo trae (E05 y C07); si no, el nombre de la app cuyos datos usa el caso, o el de la primera app."
   ],
   "cases": [

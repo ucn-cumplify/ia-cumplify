@@ -24,7 +24,7 @@ El backend crea el cuerpo legal y, si viene de la BCN, lo hidrata antes de clasi
 
 El chat tampoco lee la base ni guarda estado: cada pedido trae la pregunta, los mensajes recientes y los pasajes que el backend recuperó para ese turno. Recuperar los pasajes, guardar la conversación y reenviar el stream al navegador le corresponde al backend (tareas 4.5, 4.4 y 4.7 del plan del equipo).
 
-`DATABASE_URL` debe apuntar a la misma base, usando `localhost` cuando este proceso corre en el host y Postgres está publicado por Docker:
+`DATABASE_URL` debe apuntar a la misma base, usando `localhost` cuando este proceso se ejecuta en el host y Postgres está publicado por Docker:
 
 ```text
 postgresql://postgres:postgres@localhost:5432/cumplify_db
@@ -118,7 +118,7 @@ uv run pytest
 
 ### Set de evaluación del chat
 
-`scripts/chat_eval.py` corre a mano el set fijo de evaluación del prompt del chat (`scripts/chat_eval_set.json`, unas 24 preguntas) y cubre CHT-041 a CHT-046 de `docs/Chat/test.csv`. No es parte de pytest, que solo recoge `tests/`, y **gasta tokens reales**: le pide cada respuesta a un ia-cumplify ya en marcha, que llama a OpenAI. Una corrida se estima entre 104.000 y 388.000 tokens (`docs/Chat/requirements.md`, "Dentro de alcance"), y el script informa el gasto real.
+`scripts/chat_eval.py` ejecuta a mano el set fijo de evaluación del prompt del chat (`scripts/chat_eval_set.json`, 26 preguntas) y cubre CHT-041 a CHT-046 de `docs/Chat/test.csv`. No es parte de pytest, que solo recoge `tests/`, y **gasta tokens reales**: le pide cada respuesta a un ia-cumplify ya en marcha, que llama a OpenAI. Una ejecución completa costó de 50.000 a 53.000 tokens con `chat-v2` y `chat-v3` ("Costo por pregunta" en `docs/Chat/requirements.md`), y el script informa el gasto real.
 
 ```bash
 export SERVICE_API_KEY=...        # la misma del servicio
@@ -128,8 +128,8 @@ uv run python scripts/chat_eval.py --base-url http://127.0.0.1:8000
 
 - Saca los pasajes de la base local con una conexión propia de solo lectura. No lee `.env`: las variables van exportadas o como argumentos (`--api-key`, `--database-url`).
 - Por consola muestra solo métricas: tokens (incluidos `cached_tokens` y `reasoning_tokens`), latencia del primer `delta` y total, cobertura y citas descartadas por caso, y los casos cuya cobertura no es la esperada. Las respuestas completas y los pasajes, que traen datos de la empresa, van a `--out` (por defecto, un archivo del directorio temporal), siempre fuera del repositorio.
-- `--case E01` corre solo ese caso (se puede repetir). `--repeat-case E01` repite ese pedido idéntico al final y compara su `cached_tokens` con el límite de "Privacidad" de `docs/Chat/api.md`; solo sirve si se acuerda un modo explícito de caché.
-- Para probar el script sin gastar tokens, el servicio va con `CHAT_FAKE_RESPONDER=true` y sin `OPENAI_API_KEY`; sin base, `--without-db` usa pasajes simulados. El informe marca la corrida como simulada (`chat_version` `fake-v1@fake`, `usage` en cero).
+- `--case E01` ejecuta solo ese caso (se puede repetir). `--repeat-case E01` repite ese pedido idéntico al final y compara su `cached_tokens` con el límite de "Privacidad" de `docs/Chat/api.md`; solo sirve si se acuerda un modo explícito de caché.
+- Para probar el script sin gastar tokens, el servicio va con `CHAT_FAKE_RESPONDER=true` y sin `OPENAI_API_KEY`; sin base, `--without-db` usa pasajes simulados. El informe marca la ejecución como simulada (`chat_version` `fake-v1@fake`, `usage` en cero).
 
 ## Endpoints
 

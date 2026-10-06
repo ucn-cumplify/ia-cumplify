@@ -521,7 +521,7 @@ def summarize(results: list[Result], repeat: tuple[Result, Result] | None, simul
             reasons.append("respondedor falso (CHAT_FAKE_RESPONDER)")
         if simulated_passages:
             reasons.append("pasajes simulados (--without-db)")
-        print(f"CORRIDA SIMULADA: {' y '.join(reasons)}. No evalúa el prompt ni gasta tokens reales.")
+        print(f"EJECUCIÓN SIMULADA: {' y '.join(reasons)}. No evalúa el prompt ni gasta tokens reales.")
     totals = dict.fromkeys(USAGE_KEYS, 0)
     without_usage = 0
     for r in ran:
@@ -531,7 +531,7 @@ def summarize(results: list[Result], repeat: tuple[Result, Result] | None, simul
         for key in totals:
             totals[key] += int(r.usage.get(key, 0))
     print(
-        "Tokens de la corrida (gasto real informado por ia): "
+        "Tokens de la ejecución (gasto real informado por ia): "
         + ", ".join(f"{key} {value}" for key, value in totals.items())
         + (f"; {without_usage} respuestas sin usage (estimar)" if without_usage else "")
     )
@@ -634,7 +634,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"casos desconocidos: {', '.join(sorted(unknown))}")
         cases = [case for case in cases if case["id"] in args.case]
     if args.repeat_case and args.repeat_case not in {case["id"] for case in cases}:
-        parser.error("--repeat-case tiene que estar entre los casos que se corren")
+        parser.error("--repeat-case tiene que estar entre los casos que se ejecutan")
 
     limits = Limits.from_env()
     passages = Passages(None if args.without_db else args.database_url)
