@@ -267,7 +267,7 @@ def test_hostile_input_never_reaches_the_model_as_a_citation() -> None:
 
 
 def test_system_prompt_states_the_rules() -> None:
-    assert CHAT_PROMPT_VERSION == "chat-v1"
+    assert CHAT_PROMPT_VERSION == "chat-v3"
     for rule in (
         NOT_COVERED_MARK,
         '"--- PASAJE P<n> ---"',

@@ -282,7 +282,7 @@ def test_a_complete_answer_through_uvicorn(servers: Servers) -> None:
     done = events[-1].data
     assert isinstance(done, dict)
     assert done["citations"] == [{"n": 1, "id": "id-1"}]
-    assert (done["coverage"], done["finish_reason"], done["chat_version"]) == ("answered", "stop", "chat-v1@gpt-5.6-luna")
+    assert (done["coverage"], done["finish_reason"], done["chat_version"]) == ("answered", "stop", "chat-v3@gpt-5.6-luna")
     assert done["usage"] == {
         "prompt_tokens": 1200,
         "completion_tokens": 300,

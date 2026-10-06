@@ -140,14 +140,14 @@ class TestTheCall:
         reply = ask("answer")
         body = fake.requests("answer")[0]["body"]
         assert (body["model"], body["reasoning_effort"], body["max_completion_tokens"]) == ("modelo-chat", "medium", 1234)
-        assert reply.done["chat_version"] == "chat-v1@modelo-chat"
+        assert reply.done["chat_version"] == "chat-v3@modelo-chat"
 
     def test_empty_chat_model_and_effort_use_the_openai_ones(self, fake: FakeOpenAI, monkeypatch) -> None:
         configure(monkeypatch, openai_model="modelo-general", openai_reasoning_effort="high", chat_model="")
         reply = ask("answer")
         body = fake.requests("answer")[0]["body"]
         assert (body["model"], body["reasoning_effort"]) == ("modelo-general", "high")
-        assert reply.done["chat_version"] == "chat-v1@modelo-general"
+        assert reply.done["chat_version"] == "chat-v3@modelo-general"
 
     def test_the_constructor_loads_the_chat_resources(self) -> None:
         adapter = OpenAIChatResponderAdapter(
@@ -175,7 +175,7 @@ class TestTheAnswer:
             "reasoning_tokens": 96,
             "llm_calls": 1,
         }
-        assert done["chat_version"] == "chat-v1@gpt-5.6-luna"
+        assert done["chat_version"] == "chat-v3@gpt-5.6-luna"
 
     def test_usage_not_reported_is_null(self, fake: FakeOpenAI) -> None:
         assert ask("no_usage").done["usage"] is None
@@ -233,7 +233,7 @@ class TestProviderFailures:
             "code": code,
             "retryable": code != "provider_rejected",
             "usage": None,
-            "chat_version": "chat-v1@gpt-5.6-luna",
+            "chat_version": "chat-v3@gpt-5.6-luna",
         }
         # CHAT_MAX_RETRIES is 0 by default: one request, even for the retryable statuses.
         assert len(fake.requests(scenario)) == 1
