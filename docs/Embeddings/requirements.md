@@ -176,10 +176,12 @@ Para cada app elegible de Norte, Altiplano y Litoral, o para las de `--apps`:
 3. **Grupos, por app.** El filtro territorial y el puntaje no se aplican: el script no reimplementa el cruce.
    - **Seguidas:** las normas públicas que la app sigue.
    - **Candidatas de la taxonomía:** las de `CandidateNormsAsync` en un cruce completo. Son las normas con un artículo clasificado con una raíz del perfil de una dimensión con peso (ámbito, sector o territorio), sin el país, y que no están seguidas, notificadas ni descartadas en la app.
-   - **Sin relación:** las demás, sin las notificadas ni las descartadas.
+   - **Relacionadas fuera del cruce:** las normas con un artículo clasificado con una raíz del perfil que va al texto pero no genera candidatas, porque su dimensión no pesa en el cruce (actividad o instalación). Tampoco están seguidas, notificadas ni descartadas, y no son candidatas. Su contenido coincide con una línea del perfil, así que no sirven de control negativo: se informan aparte.
+   - **Sin relación:** las demás, sin las notificadas ni las descartadas. Es el control negativo: de sus percentiles salen el piso provisional y el control entre rubros.
+   - **Sin trozos vigentes.** Las candidatas y las seguidas públicas sin trozos `art-v2` vigentes quedan fuera de los grupos. El informe de cada app las cuenta (`candidatas_total`, `candidatas_sin_trozos` y `seguidas_publicas_sin_trozos`). Avisa si falta más de un cuarto de las candidatas, o cualquier seguida pública.
 4. **(a) Distribución del coseno por grupo.**
    - Por artículo y por norma: cantidad, media, mínimo, percentiles del 5 al 95 y máximo.
-   - El AUC de las seguidas y el de las candidatas contra las sin relación: la probabilidad de que un artículo del grupo tenga más similitud que uno sin relación. 0,5 es no separar.
+   - El AUC de las seguidas, el de las candidatas y el de las relacionadas fuera del cruce contra las sin relación: la probabilidad de que un artículo del grupo tenga más similitud que uno sin relación. 0,5 es no separar.
    - Con `prof-v1`, cuántos artículos de cada grupo caen en cada tramo de 0,05, con una muestra fija de dos por grupo y tramo para la revisión humana: norma, artículo, coseno y el comienzo del trozo.
 
    El grupo de seguidas está contaminado por construcción, porque el vector sale de sus artículos. La medida limpia es la del punto 5.
@@ -188,6 +190,7 @@ Para cada app elegible de Norte, Altiplano y Litoral, o para las de `--apps`:
    - También se registra su percentil entre las sin relación.
    - Por variante, se resume con la mediana del puesto, el MRR y el recall@1, 5, 10 y 25.
    - Una norma seguida que no es pública, o que no tiene trozos vigentes, se informa y no se cuenta.
+   - Los artículos se apartan con su propia norma (`articles.legal_body_id`), y las normas seguidas salen de las vinculaciones (`source_id`). El backend no valida que el artículo de una vinculación sea de su norma, así que el script avisa cuántos artículos vinculados son de otra norma: al apartar la de la vinculación, el derived los conserva.
 6. **(c) Variantes** (`--variants`):
 
    | Variante | Qué cambia |

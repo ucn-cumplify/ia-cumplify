@@ -477,6 +477,9 @@ class AppData:
     # Sugerencias guardadas de la app, por norma: solo para marcar las candidatas, sin recalcular su score.
     suggestions: dict[str, dict]
     candidates: set[str] = field(default_factory=set)
+    # Normas que comparten con el perfil una raíz que va al texto pero no genera candidatas (actividad o
+    # instalación) y que no son candidatas, seguidas, notificadas ni descartadas.
+    related: set[str] = field(default_factory=set)
     synthetic: bool = False
 
 
@@ -528,6 +531,37 @@ def match_roots(
     }
 
 
+def text_only_roots(
+    entries: list[Entry], occurrences: dict[str, int], country_roots: set[str], settings: Settings = SETTINGS
+) -> set[str]:
+    """Las raíces con peso que van al texto de prof-v1 pero no generan candidatas: las de las dimensiones de la
+    receta sin peso en el cruce (actividad e instalación, con los pesos por defecto)."""
+    weights = profile_source_weights(entries, occurrences, settings)
+    recipe = {entry.root for entry in entries if entry.root in weights and entry.dimension in RECIPE_DIMENSIONS}
+    return recipe - match_roots(entries, occurrences, country_roots, settings)
+
+
+def foreign_links(rows: list[dict], app_id: str) -> set[str]:
+    """Los artículos que la app vincula con una vinculación cuya norma (source_id) no es la del artículo
+    (articles.legal_body_id). El backend no lo valida al crear la vinculación (CreateVinculationUseCase)."""
+    return {row["article_id"] for row in rows if row["app_id"] == app_id and row["source_id"] != row["legal_body_id"]}
+
+
+# Desde qué proporción de candidatas sin trozos art-v2 vigentes se avisa: con más, su distribución y su AUC salen
+# de un subconjunto chico. Una norma seguida pública sin trozos se avisa siempre.
+MISSING_CHUNKS_SHARE = 0.25
+
+
+def chunk_coverage(app: AppData, corpus: set[str], public: set[str]) -> dict[str, int]:
+    """Cuántas candidatas y seguidas públicas de la app quedan fuera de la medición por no tener trozos vigentes."""
+    candidates = app.candidates - app.followed - app.notified - app.discarded
+    return {
+        "candidatas_total": len(candidates),
+        "candidatas_sin_trozos": len(candidates - corpus),
+        "seguidas_publicas_sin_trozos": len((app.followed & public) - corpus),
+    }
+
+
 def synthetic_app(apps: list[AppData]) -> AppData:
     """Una app inventada con el perfil unido de las apps elegidas, para que los topes corten."""
     entries = sorted(
@@ -555,6 +589,7 @@ def synthetic_app(apps: list[AppData]) -> AppData:
         discarded=set().union(*(app.discarded for app in apps)),
         suggestions={},
         candidates=set().union(*(app.candidates for app in apps)),
+        related=set().union(*(app.related for app in apps)),
         synthetic=True,
     )
 
@@ -755,10 +790,11 @@ ENTRIES_QUERY = """
     WHERE e.company_id = ANY(%(companies)s::uuid[])
 """
 
-# LinkedArticles.Of: los artículos de cuerpos legales que la app sigue, de su propia empresa.
+# LinkedArticles.Of: los artículos de cuerpos legales que la app sigue, de su propia empresa. source_id solo sirve
+# para avisar si una vinculación apunta a un artículo de otra norma.
 LINKED_QUERY = f"""
     SELECT DISTINCT v.rrll_id::text AS app_id, v.article_id::text AS article_id,
-           a.legal_body_id::text AS legal_body_id
+           a.legal_body_id::text AS legal_body_id, v.source_id::text AS source_id
     FROM legal_requirement_vinculations v
     JOIN legal_requirements lr ON lr.id = v.rrll_id AND lr.company_id = v.company_id
     LEFT JOIN articles a ON a.id = v.article_id
@@ -1090,18 +1126,26 @@ def load_dataset(db: Database, requested: list[str], unrelated_sample: int, need
     if missing_roots:
         raise DatabaseError(f"{len(missing_roots)} raíces de los perfiles no están en ai_taxonomy_values")
 
-    # Candidatas de la taxonomía: CandidateNormsAsync en un cruce completo, con el perfil que arma prof-v1.
-    roots_by_app = {}
+    # Candidatas de la taxonomía: CandidateNormsAsync en un cruce completo, con el perfil que arma prof-v1. Con la
+    # misma consulta, las normas que solo comparten con el perfil una raíz de actividad o instalación: van al
+    # texto pero no generan candidatas, así que quedan aparte y no ensucian el grupo sin relación.
+    roots_by_app: dict[str, tuple[set[str], set[str]]] = {}
     for app in apps:
         entries, occurrences = app_profile(app, PROF_V1)
-        roots_by_app[app.id] = match_roots(entries, occurrences, country_roots)
-    all_match_roots = sorted(set().union(*roots_by_app.values())) if roots_by_app else []
+        roots_by_app[app.id] = (
+            match_roots(entries, occurrences, country_roots),
+            text_only_roots(entries, occurrences, country_roots),
+        )
+    all_roots = sorted({root for pair in roots_by_app.values() for group in pair for root in group})
     norms_by_root: dict[str, set[str]] = defaultdict(set)
-    for row in db.rows(CANDIDATE_ROOTS_QUERY, {"roots": all_match_roots}):
+    for row in db.rows(CANDIDATE_ROOTS_QUERY, {"roots": all_roots}):
         norms_by_root[row["root_id"]].add(row["legal_body_id"])
     for app in apps:
-        reachable = set().union(*(norms_by_root.get(root, set()) for root in roots_by_app[app.id]))
+        match, text_only = roots_by_app[app.id]
+        reachable = set().union(*(norms_by_root.get(root, set()) for root in match))
         app.candidates = reachable - app.followed - app.notified - app.discarded
+        related = set().union(*(norms_by_root.get(root, set()) for root in text_only))
+        app.related = related - reachable - app.followed - app.notified - app.discarded
 
     norms = {
         row["id"]: NormInfo(row["id"], row["title"], row["type"], row["number"], row["bcn_id"], bool(row["is_global"]))
@@ -1130,12 +1174,34 @@ def load_dataset(db: Database, requested: list[str], unrelated_sample: int, need
         "test_norms": sum(1 for norm in norms.values() if norm.is_test),
     }
 
+    corpus_norms = {article.norm for article in articles.values()}
     for app in apps:
+        label = f"AVISO {app.company} / {app.name}"
         private = app.followed - set(norms)
         if private:
             warnings.append(
-                f"AVISO {app.company} / {app.name}: {len(private)} normas seguidas no son públicas; el cruce nunca las "
-                "sugiere y quedan fuera de los grupos y de la evaluación que deja una norma afuera."
+                f"{label}: {len(private)} normas seguidas no son públicas; el cruce nunca las sugiere y quedan fuera "
+                "de los grupos y de la evaluación que deja una norma afuera."
+            )
+        coverage = chunk_coverage(app, corpus_norms, set(norms))
+        if coverage["seguidas_publicas_sin_trozos"]:
+            warnings.append(
+                f"{label}: {coverage['seguidas_publicas_sin_trozos']} normas seguidas públicas no tienen trozos art-v2 "
+                "vigentes; quedan fuera del grupo de seguidas y de la evaluación que deja una norma afuera."
+            )
+        total, missing = coverage["candidatas_total"], coverage["candidatas_sin_trozos"]
+        if total and missing / total > MISSING_CHUNKS_SHARE:
+            warnings.append(
+                f"{label}: {missing} de {total} candidatas no tienen trozos art-v2 vigentes; la distribución y la AUC "
+                "de las candidatas salen de las demás."
+            )
+        foreign = foreign_links(linked_rows, app.id)
+        if foreign:
+            warnings.append(
+                f"{label}: {len(foreign)} artículos vinculados son de otra norma que la de su vinculación. La "
+                "evaluación que deja una norma afuera aparta cada artículo con su propia norma: al apartar la de la "
+                "vinculación, el derived los conserva, y si la app no sigue la norma del artículo, esa norma compite "
+                "como no seguida."
             )
 
     tax_vectors: dict[str, list[float]] = {}
@@ -1278,6 +1344,8 @@ class Groups:
 
     followed: set[str]
     candidates: set[str]
+    # Comparten con el perfil una raíz que va al texto pero no cruza: no sirven de control negativo.
+    related: set[str]
     unrelated: set[str]
     # Notificadas o descartadas en la app: fuera de los grupos; en el orden por similitud aparecen con su rótulo.
     other: set[str]
@@ -1285,17 +1353,18 @@ class Groups:
 
 
 def app_groups(app: AppData, norm_articles: dict[str, list[str]], unrelated_sample: int) -> Groups:
-    """Los grupos son disjuntos. En una app real las candidatas ya excluyen las seguidas, las notificadas y las
-    descartadas; en el caso sintético, que une varias apps, la resta lo asegura."""
+    """Los grupos son disjuntos. En una app real las candidatas y las relacionadas ya excluyen las seguidas, las
+    notificadas y las descartadas; en el caso sintético, que une varias apps, la resta lo asegura."""
     corpus = set(norm_articles)
     followed = app.followed & corpus
     other = (app.notified | app.discarded) & corpus - followed
     candidates = app.candidates & corpus - followed - other
-    unrelated = corpus - followed - candidates - other
+    related = app.related & corpus - followed - other - candidates
+    unrelated = corpus - followed - candidates - related - other
     total = len(unrelated)
     if unrelated_sample and len(unrelated) > unrelated_sample:
         unrelated = set(sorted(unrelated, key=sample_key)[:unrelated_sample])
-    return Groups(followed, candidates, unrelated, other, total)
+    return Groups(followed, candidates, related, unrelated, other, total)
 
 
 def norm_group(norm: str, app: AppData, groups: Groups) -> str:
@@ -1307,6 +1376,8 @@ def norm_group(norm: str, app: AppData, groups: Groups) -> str:
         return "descartada"
     if norm in groups.candidates:
         return "candidata"
+    if norm in groups.related:
+        return "relacionada_fuera_del_cruce"
     if norm in groups.unrelated:
         return "sin_relacion"
     return "sin_relacion_fuera_de_muestra"
@@ -1347,6 +1418,7 @@ def evaluate_main(
     linked = cosines(groups.followed, set(app.linked))
     candidates = cosines(groups.candidates)
     suggested = cosines({norm for norm in groups.candidates if norm in app.suggestions})
+    related = cosines(groups.related)
     unrelated = cosines(groups.unrelated)
     unrelated_norms = [best[norm] for norm in groups.unrelated if norm in best]
     p90 = percentile(unrelated_norms, 0.90)
@@ -1360,16 +1432,19 @@ def evaluate_main(
             "seguidas_vinculados": describe(linked),
             "candidatas": describe(candidates),
             "candidatas_con_sugerencia": describe(suggested),
+            "relacionadas_fuera_del_cruce": describe(related),
             "sin_relacion": describe(unrelated),
         },
         "norm_cosine": {
             "seguidas": describe([best[norm] for norm in groups.followed if norm in best]),
             "candidatas": describe([best[norm] for norm in groups.candidates if norm in best]),
+            "relacionadas_fuera_del_cruce": describe([best[norm] for norm in groups.related if norm in best]),
             "sin_relacion": describe(unrelated_norms),
         },
         "auc": {
             "seguidas_vs_sin_relacion": rounded(auc(followed, unrelated)),
             "candidatas_vs_sin_relacion": rounded(auc(candidates, unrelated)),
+            "relacionadas_vs_sin_relacion": rounded(auc(related, unrelated)),
         },
         "ranking": {
             "norms": len(ranked),
@@ -1465,6 +1540,9 @@ def norm_detail(
     }
 
 
+REVIEW_GROUPS = ("seguidas", "candidatas", "relacionadas_fuera_del_cruce", "sin_relacion")
+
+
 def review_bins(
     sims: dict[str, Similarity], norm_articles: dict[str, list[str]], groups: Groups, per_group: int = 2
 ) -> tuple[list[dict], list[tuple[str, int]]]:
@@ -1474,6 +1552,7 @@ def review_bins(
     for group, norms in (
         ("seguidas", groups.followed),
         ("candidatas", groups.candidates),
+        ("relacionadas_fuera_del_cruce", groups.related),
         ("sin_relacion", groups.unrelated),
     ):
         for norm in norms:
@@ -1484,14 +1563,14 @@ def review_bins(
     pairs = []
     for index in sorted(members):
         sample = []
-        for group in ("seguidas", "candidatas", "sin_relacion"):
+        for group in REVIEW_GROUPS:
             for article in sorted(members[index][group], key=sample_key)[:per_group]:
                 sample.append({"group": group, "article_id": article})
                 pairs.append((article, sims[article].chunk_index))
         bins.append(
             {
                 "range": bin_label(index),
-                "counts": {group: len(members[index][group]) for group in ("seguidas", "candidatas", "sin_relacion")},
+                "counts": {group: len(members[index][group]) for group in REVIEW_GROUPS},
                 "sample": sample,
             }
         )
@@ -1621,10 +1700,12 @@ def app_header(app: AppData, dataset: Dataset, groups: Groups) -> dict:
         "groups": {
             "seguidas": len(groups.followed),
             "candidatas": len(groups.candidates),
+            "relacionadas_fuera_del_cruce": len(groups.related),
             "sin_relacion": len(groups.unrelated),
             "sin_relacion_total": groups.unrelated_total,
             "notificadas_o_descartadas": len(groups.other),
             "seguidas_no_publicas": len(app.followed - set(dataset.norms)),
+            **chunk_coverage(app, {article.norm for article in dataset.articles.values()}, set(dataset.norms)),
         },
         "variants": {},
     }
@@ -1638,7 +1719,7 @@ def pooled_summary(apps: list[dict], variants: list[str]) -> dict:
         norms = [item for report in reports for item in report["holdout"]["norms"]]
         aucs = {
             name: [report["auc"][name] for report in reports if report.get("auc", {}).get(name) is not None]
-            for name in ("seguidas_vs_sin_relacion", "candidatas_vs_sin_relacion")
+            for name in ("seguidas_vs_sin_relacion", "candidatas_vs_sin_relacion", "relacionadas_vs_sin_relacion")
         }
         summary[variant] = {
             "apps_with_vector": sum(1 for report in reports if "auc" in report),
@@ -1691,8 +1772,11 @@ def print_report(report: dict) -> None:
         print()
         print(
             f"{app['company']} / {app['app']}: {app['linked_articles']} artículos vinculados; normas seguidas "
-            f"{groups['seguidas']}, candidatas {groups['candidatas']}, sin relación {groups['sin_relacion']} "
-            f"(de {groups['sin_relacion_total']}), notificadas o descartadas {groups['notificadas_o_descartadas']}."
+            f"{groups['seguidas']}, candidatas {groups['candidatas']}, relacionadas fuera del cruce "
+            f"{groups['relacionadas_fuera_del_cruce']}, sin relación {groups['sin_relacion']} "
+            f"(de {groups['sin_relacion_total']}), notificadas o descartadas {groups['notificadas_o_descartadas']}. "
+            f"Fuera por no tener trozos vigentes: {groups['seguidas_publicas_sin_trozos']} seguidas públicas y "
+            f"{groups['candidatas_sin_trozos']} de {groups['candidatas_total']} candidatas."
         )
         print(
             f"  {'Variante':18}"
@@ -2107,15 +2191,39 @@ def self_test() -> int:
         (3.0, 0.375, 0.55),
     )
     groups = app_groups(
-        bare_app(followed={"n1"}, notified={"n3"}, candidates={"n1", "n2", "n3"}),
-        {norm: [f"a-{norm}"] for norm in ("n1", "n2", "n3", "n4")},
+        bare_app(followed={"n1"}, notified={"n3"}, candidates={"n1", "n2", "n3"}, related={"n2", "n3", "n5"}),
+        {norm: [f"a-{norm}"] for norm in ("n1", "n2", "n3", "n4", "n5")},
         0,
     )
     check(
         "grupos disjuntos aunque las candidatas traigan seguidas o notificadas",
-        (groups.followed, groups.candidates, groups.other, groups.unrelated),
-        ({"n1"}, {"n2"}, {"n3"}, {"n4"}),
+        (groups.followed, groups.candidates, groups.related, groups.other, groups.unrelated),
+        ({"n1"}, {"n2"}, {"n5"}, {"n3"}, {"n4"}),
     )
+    check(
+        "raíces del texto que no cruzan: actividad e instalación con peso",
+        text_only_roots(
+            [
+                Entry("r1", SCOPE, DERIVED),
+                Entry("r2", ACTIVITY, DERIVED),
+                Entry("r3", FACILITY, STRUCTURED),
+                Entry("r4", FACILITY, DERIVED),
+                Entry("r4", FACILITY, EXCLUDED),
+                Entry("r5", TERRITORY, STRUCTURED),
+                Entry("r6", "others", DECLARED),
+            ],
+            {"r1": 1, "r2": 1, "r4": 1},
+            set(),
+        ),
+        {"r2", "r3"},
+    )
+    link_rows = [
+        {"app_id": "x", "article_id": "a1", "legal_body_id": "n1", "source_id": "n1"},
+        {"app_id": "x", "article_id": "a2", "legal_body_id": "n2", "source_id": "n1"},
+        {"app_id": "x", "article_id": "a2", "legal_body_id": "n2", "source_id": "n2"},
+        {"app_id": "y", "article_id": "a3", "legal_body_id": "n3", "source_id": "n4"},
+    ]
+    check("vinculaciones a un artículo de otra norma, por artículo", foreign_links(link_rows, "x"), {"a2"})
 
     # Apps elegibles.
     def app_row(app_id: str, company: str, **changes: object) -> dict:
@@ -2212,8 +2320,9 @@ PIPELINE_NORMS = (
 def pipeline_rows() -> dict[str, list[dict]]:
     """Las filas de la base inventada. Litoral sigue n-trans y n-carga; su perfil es solo su derived (Transporte en
     ámbito y Transporte de carga en actividad); llega a n-cand, n-cand2, n-notif (notificada) y n-desc (descartada)
-    por Transporte, y a n-rel por la actividad. Norte solo tiene el structured Minería. Litoral tiene otra app, de
-    catálogo, con su propio derived guardado."""
+    por Transporte, y a n-rel por la actividad. a3, de n-carga, está vinculado también con una vinculación de
+    n-trans. Norte solo tiene el structured Minería. Litoral tiene otra app, de catálogo, con su propio derived
+    guardado."""
     companies = [
         {"id": "c-lit", "name": "Empresa Litoral Ltda", "status": ACTIVE, "rut_key": DEMO_BY_KEY["litoral"].rut_key},
         {"id": "c-nor", "name": "Empresa Norte SpA", "status": ACTIVE, "rut_key": DEMO_BY_KEY["norte"].rut_key},
@@ -2258,8 +2367,9 @@ def pipeline_rows() -> dict[str, list[dict]]:
             entry("c-lit", "app-lit-cat", DERIVED, "v-carga", "r-carga", ACTIVITY, 1),
         ],
         LINKED_QUERY: [
-            {"app_id": LIT_APP, "article_id": "a1", "legal_body_id": "n-trans"},
-            {"app_id": LIT_APP, "article_id": "a3", "legal_body_id": "n-carga"},
+            {"app_id": LIT_APP, "article_id": "a1", "legal_body_id": "n-trans", "source_id": "n-trans"},
+            {"app_id": LIT_APP, "article_id": "a3", "legal_body_id": "n-carga", "source_id": "n-carga"},
+            {"app_id": LIT_APP, "article_id": "a3", "legal_body_id": "n-carga", "source_id": "n-trans"},
         ],
         FOLLOWED_QUERY: [
             {"app_id": LIT_APP, "legal_body_id": "n-trans"},
@@ -2347,6 +2457,7 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
         ("datos: lo de la empresa", apps[NOR_APP].company_entries, [Entry("r-min", SECTOR, STRUCTURED)]),
         ("datos: candidatas sin seguidas, notificadas ni descartadas", apps[LIT_APP].candidates, {"n-cand", "n-cand2"}),
         ("datos: candidatas por un structured", apps[NOR_APP].candidates, {"n-min"}),
+        ("datos: relacionadas por la actividad", (apps[LIT_APP].related, apps[NOR_APP].related), ({"n-rel"}, set())),
         (
             "datos: corpus",
             dataset.corpus,
@@ -2361,7 +2472,18 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
                 "test_norms": 1,
             },
         ),
-        ("datos: sin avisos", dataset.warnings, []),
+        (
+            "datos: avisos",
+            dataset.warnings,
+            [
+                "AVISO Empresa Litoral Ltda / Requisitos: 1 de 2 candidatas no tienen trozos art-v2 vigentes; la "
+                "distribución y la AUC de las candidatas salen de las demás.",
+                "AVISO Empresa Litoral Ltda / Requisitos: 1 artículos vinculados son de otra norma que la de su "
+                "vinculación. La evaluación que deja una norma afuera aparta cada artículo con su propia norma: al "
+                "apartar la de la vinculación, el derived los conserva, y si la app no sigue la norma del artículo, "
+                "esa norma compite como no seguida.",
+            ],
+        ),
         ("plan: el caso sintético solo con las variantes de topes", sorted(synthetic), ["prof-v1"]),
         (
             "plan: Norte sin señal mínima",
@@ -2389,13 +2511,24 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             {
                 "seguidas": 2,
                 "candidatas": 1,
-                "sin_relacion": 4,
-                "sin_relacion_total": 4,
+                "relacionadas_fuera_del_cruce": 1,
+                "sin_relacion": 3,
+                "sin_relacion_total": 3,
                 "notificadas_o_descartadas": 2,
                 "seguidas_no_publicas": 0,
+                "candidatas_total": 2,
+                "candidatas_sin_trozos": 1,
+                "seguidas_publicas_sin_trozos": 0,
             },
         ),
-        ("AUC de las candidatas", lit["prof-v1"]["auc"]["candidatas_vs_sin_relacion"] is not None, True),
+        (
+            "AUC de las candidatas y de las relacionadas",
+            [
+                lit["prof-v1"]["auc"][name] is not None
+                for name in ("candidatas_vs_sin_relacion", "relacionadas_vs_sin_relacion")
+            ],
+            [True, True],
+        ),
         ("control «emblema» rotulado", [item["test_norm"] for item in lit["prof-v1"]["control"]], [True]),
         # Transporte de minerales trae «miner», de Norte, pero también «transport», de Litoral: no cuenta. Código de
         # minería queda séptima entre las siete normas que la app no sigue, notificadas y descartadas incluidas.
