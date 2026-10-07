@@ -334,7 +334,8 @@ def build_profile_text(
     4. Mientras el texto pase de max_length unidades UTF-16, se quita el último según global_rank.
     5. Señal mínima (si la receta la exige), sobre los candidatos, antes de los topes: alguno tiene una entrada
        declared o derived, gane la procedencia que gane. Con los pesos por defecto da lo mismo que mirar la
-       procedencia ganadora de los valores del texto final.
+       procedencia ganadora de los valores del texto final. Se aparta a propósito de esa lectura (regla 10 de
+       requirements.md): con pesos propios, el texto puede quedar solo con valores que ganaron como structured (P4).
     """
     weights = profile_source_weights(entries, occurrences, settings)
     dimension_of: dict[str, str] = {}
