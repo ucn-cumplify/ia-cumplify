@@ -131,6 +131,20 @@ uv run python scripts/chat_eval.py --base-url http://127.0.0.1:8000
 - `--case E01` ejecuta solo ese caso (se puede repetir). `--repeat-case E01` repite ese pedido idéntico al final y compara su `cached_tokens` con el límite de "Privacidad" de `docs/Chat/api.md`; solo sirve si se acuerda un modo explícito de caché.
 - Para probar el script sin gastar tokens, el servicio va con `CHAT_FAKE_RESPONDER=true` y sin `OPENAI_API_KEY`; sin base, `--without-db` usa pasajes simulados. El informe marca la ejecución como simulada (`chat_version` `fake-v1@fake`, `usage` en cero).
 
+### Evaluación de recuperación de los embeddings
+
+`scripts/retrieval_eval.py` compara a mano las recetas de embeddings de artículos que `backend-cumplify` guarda en `ai_embeddings` (por defecto `text-embedding-3-large@1024#art-v1` y `#art-v2`) con un conjunto fijo de preguntas (`scripts/retrieval_eval_set.json`), y mide recall@k y MRR por receta y por tipo de pregunta. Es el script del caso AI-044 del backend y cubre EMB-007 de `docs/Embeddings/test.csv`. No es parte de pytest y gasta pocos tokens: solo los de las preguntas, que embebe un ia-cumplify ya en marcha; los vectores de los artículos ya están guardados.
+
+```bash
+export SERVICE_API_KEY=...        # la misma del servicio
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cumplify_db
+uv run python scripts/retrieval_eval.py --base-url http://127.0.0.1:8000
+```
+
+- Lee la base local con una conexión propia de solo lectura. No lee `.env`: las variables van exportadas o como argumentos (`--api-key`, `--database-url`).
+- Por consola muestra solo métricas y los tokens que informa el endpoint. El detalle por pregunta va a `--out` (por defecto, un archivo del directorio temporal), siempre fuera del repositorio.
+- Qué mide, el formato del conjunto y las opciones están en "Evaluación de recuperación" de `docs/Embeddings/requirements.md`. `--self-test` comprueba el cálculo de las métricas con datos inventados, sin servicio ni base.
+
 ## Endpoints
 
 | Método | Ruta | Uso |
@@ -156,7 +170,7 @@ ia-cumplify/
 │   ├── config/
 │   └── cli.py
 ├── tests/                       # pytest, con un OpenAI simulado en 127.0.0.1
-├── scripts/                     # Set de evaluación del chat, manual y con tokens reales
+├── scripts/                     # Evaluaciones manuales con tokens reales: el chat y la recuperación de embeddings
 ├── docs/
 ├── pyproject.toml
 ├── .env.example
