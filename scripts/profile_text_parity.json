@@ -1,0 +1,642 @@
+{
+  "version": 1,
+  "recipe": "prof-v1",
+  "embedding_model": "text-embedding-3-large@1024#prof-v1",
+  "description": "Casos de paridad de la receta prof-v1 (tarea 2.3 de backend-cumplify). Los usa la autoprueba de scripts/profile_retrieval_eval.py, y la PR del backend que implemente prof-v1 tiene que dar, con las mismas entradas, el mismo texto y el mismo SHA-256. Cada caso trae las entradas del perfil ya resueltas a su raíz (root, dimension, source: el ProfileValue del backend), el value y el family_article_count de cada raíz, y las ocurrencias de derived por raíz (artículos vinculados distintos de la familia). Los ids son inventados y no influyen en el texto. Las reglas están en «Evaluación del perfil embebido» de docs/Embeddings/requirements.md.",
+  "settings": {
+    "declared": 1.0,
+    "derived_min": 0.5,
+    "derived_saturation": 5.0,
+    "structured": 0.4
+  },
+  "caps": {
+    "scope": 20,
+    "productive_sector": 10,
+    "activity_action": 30,
+    "facility_installation_equipment": 20
+  },
+  "max_length_utf16": 8000,
+  "cases": [
+    {
+      "id": "P1",
+      "description": "Perfil completo: exclusión por familia (Medio ambiente, Extracción de áridos), máximo entre procedencias (Laboral), tope de sector con empate de peso resuelto por el IDF y, con el mismo IDF, por el orden ordinal (Turismo queda fuera), orden ordinal UTF-16 dentro de la línea (Área portuaria al final; el valor fuera del plano básico antes que el de U+FF27), territorio y others fuera, tope de instalaciones (la 21) y recorte por largo que quita primero Laboral (mismo peso, familia más grande) y después las instalaciones 20 y 19.",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000001",
+          "dimension": "scope",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000002",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000003",
+          "dimension": "scope",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000003",
+          "dimension": "scope",
+          "source": "excluded"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000004",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000004",
+          "dimension": "scope",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000010",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000011",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000012",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000013",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000014",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000015",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000016",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000017",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000018",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000019",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000020",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000021",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000030",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000031",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000032",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000033",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000034",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000034",
+          "dimension": "activity_action",
+          "source": "excluded"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000040",
+          "dimension": "territorial_coverage",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000041",
+          "dimension": "others",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000101",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000102",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000103",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000104",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000105",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000106",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000107",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000108",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000109",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000110",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000111",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000112",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000113",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000114",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000115",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000116",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000117",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000118",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000119",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000120",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000121",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000001": {
+          "value": "Seguridad vial",
+          "dimension": "scope",
+          "family_article_count": 12
+        },
+        "00000000-0000-4000-8000-000000000002": {
+          "value": "Transporte y tránsito",
+          "dimension": "scope",
+          "family_article_count": 40
+        },
+        "00000000-0000-4000-8000-000000000003": {
+          "value": "Medio ambiente",
+          "dimension": "scope",
+          "family_article_count": 100
+        },
+        "00000000-0000-4000-8000-000000000004": {
+          "value": "Laboral",
+          "dimension": "scope",
+          "family_article_count": 80
+        },
+        "00000000-0000-4000-8000-000000000010": {
+          "value": "Minería",
+          "dimension": "productive_sector",
+          "family_article_count": 30
+        },
+        "00000000-0000-4000-8000-000000000011": {
+          "value": "Logística",
+          "dimension": "productive_sector",
+          "family_article_count": 5
+        },
+        "00000000-0000-4000-8000-000000000012": {
+          "value": "Área portuaria",
+          "dimension": "productive_sector",
+          "family_article_count": 5
+        },
+        "00000000-0000-4000-8000-000000000013": {
+          "value": "Energía",
+          "dimension": "productive_sector",
+          "family_article_count": 7
+        },
+        "00000000-0000-4000-8000-000000000014": {
+          "value": "Agricultura",
+          "dimension": "productive_sector",
+          "family_article_count": 9
+        },
+        "00000000-0000-4000-8000-000000000015": {
+          "value": "Construcción",
+          "dimension": "productive_sector",
+          "family_article_count": 9
+        },
+        "00000000-0000-4000-8000-000000000016": {
+          "value": "Pesca",
+          "dimension": "productive_sector",
+          "family_article_count": 11
+        },
+        "00000000-0000-4000-8000-000000000017": {
+          "value": "Comercio",
+          "dimension": "productive_sector",
+          "family_article_count": 13
+        },
+        "00000000-0000-4000-8000-000000000018": {
+          "value": "Telecomunicaciones",
+          "dimension": "productive_sector",
+          "family_article_count": 15
+        },
+        "00000000-0000-4000-8000-000000000019": {
+          "value": "Educación",
+          "dimension": "productive_sector",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000020": {
+          "value": "Salud",
+          "dimension": "productive_sector",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000021": {
+          "value": "Turismo",
+          "dimension": "productive_sector",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000030": {
+          "value": "Transporte de carga por carretera",
+          "dimension": "activity_action",
+          "family_article_count": 8
+        },
+        "00000000-0000-4000-8000-000000000031": {
+          "value": "Mantención de vehículos de carga",
+          "dimension": "activity_action",
+          "family_article_count": 3
+        },
+        "00000000-0000-4000-8000-000000000032": {
+          "value": "Ｇrúas horquilla",
+          "dimension": "activity_action",
+          "family_article_count": 2
+        },
+        "00000000-0000-4000-8000-000000000033": {
+          "value": "𝐆rúas portacontenedores",
+          "dimension": "activity_action",
+          "family_article_count": 2
+        },
+        "00000000-0000-4000-8000-000000000034": {
+          "value": "Extracción de áridos",
+          "dimension": "activity_action",
+          "family_article_count": 6
+        },
+        "00000000-0000-4000-8000-000000000040": {
+          "value": "Región de Antofagasta",
+          "dimension": "territorial_coverage",
+          "family_article_count": 50
+        },
+        "00000000-0000-4000-8000-000000000041": {
+          "value": "Empresa Ejemplo SpA",
+          "dimension": "others",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000101": {
+          "value": "Instalación 01 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 51
+        },
+        "00000000-0000-4000-8000-000000000102": {
+          "value": "Instalación 02 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 52
+        },
+        "00000000-0000-4000-8000-000000000103": {
+          "value": "Instalación 03 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 53
+        },
+        "00000000-0000-4000-8000-000000000104": {
+          "value": "Instalación 04 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 54
+        },
+        "00000000-0000-4000-8000-000000000105": {
+          "value": "Instalación 05 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 55
+        },
+        "00000000-0000-4000-8000-000000000106": {
+          "value": "Instalación 06 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 56
+        },
+        "00000000-0000-4000-8000-000000000107": {
+          "value": "Instalación 07 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 57
+        },
+        "00000000-0000-4000-8000-000000000108": {
+          "value": "Instalación 08 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 58
+        },
+        "00000000-0000-4000-8000-000000000109": {
+          "value": "Instalación 09 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 59
+        },
+        "00000000-0000-4000-8000-000000000110": {
+          "value": "Instalación 10 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 60
+        },
+        "00000000-0000-4000-8000-000000000111": {
+          "value": "Instalación 11 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 61
+        },
+        "00000000-0000-4000-8000-000000000112": {
+          "value": "Instalación 12 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 62
+        },
+        "00000000-0000-4000-8000-000000000113": {
+          "value": "Instalación 13 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 63
+        },
+        "00000000-0000-4000-8000-000000000114": {
+          "value": "Instalación 14 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 64
+        },
+        "00000000-0000-4000-8000-000000000115": {
+          "value": "Instalación 15 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 65
+        },
+        "00000000-0000-4000-8000-000000000116": {
+          "value": "Instalación 16 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 66
+        },
+        "00000000-0000-4000-8000-000000000117": {
+          "value": "Instalación 17 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 67
+        },
+        "00000000-0000-4000-8000-000000000118": {
+          "value": "Instalación 18 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 68
+        },
+        "00000000-0000-4000-8000-000000000119": {
+          "value": "Instalación 19 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 69
+        },
+        "00000000-0000-4000-8000-000000000120": {
+          "value": "Instalación 20 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 70
+        },
+        "00000000-0000-4000-8000-000000000121": {
+          "value": "Instalación 21 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 71
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000002": 3,
+        "00000000-0000-4000-8000-000000000004": 1,
+        "00000000-0000-4000-8000-000000000011": 1,
+        "00000000-0000-4000-8000-000000000012": 1,
+        "00000000-0000-4000-8000-000000000013": 1,
+        "00000000-0000-4000-8000-000000000014": 1,
+        "00000000-0000-4000-8000-000000000015": 1,
+        "00000000-0000-4000-8000-000000000016": 1,
+        "00000000-0000-4000-8000-000000000017": 1,
+        "00000000-0000-4000-8000-000000000018": 1,
+        "00000000-0000-4000-8000-000000000019": 1,
+        "00000000-0000-4000-8000-000000000020": 1,
+        "00000000-0000-4000-8000-000000000021": 1,
+        "00000000-0000-4000-8000-000000000030": 6,
+        "00000000-0000-4000-8000-000000000031": 2,
+        "00000000-0000-4000-8000-000000000032": 1,
+        "00000000-0000-4000-8000-000000000033": 1,
+        "00000000-0000-4000-8000-000000000034": 1,
+        "00000000-0000-4000-8000-000000000101": 1,
+        "00000000-0000-4000-8000-000000000102": 1,
+        "00000000-0000-4000-8000-000000000103": 1,
+        "00000000-0000-4000-8000-000000000104": 1,
+        "00000000-0000-4000-8000-000000000105": 1,
+        "00000000-0000-4000-8000-000000000106": 1,
+        "00000000-0000-4000-8000-000000000107": 1,
+        "00000000-0000-4000-8000-000000000108": 1,
+        "00000000-0000-4000-8000-000000000109": 1,
+        "00000000-0000-4000-8000-000000000110": 1,
+        "00000000-0000-4000-8000-000000000111": 1,
+        "00000000-0000-4000-8000-000000000112": 1,
+        "00000000-0000-4000-8000-000000000113": 1,
+        "00000000-0000-4000-8000-000000000114": 1,
+        "00000000-0000-4000-8000-000000000115": 1,
+        "00000000-0000-4000-8000-000000000116": 1,
+        "00000000-0000-4000-8000-000000000117": 1,
+        "00000000-0000-4000-8000-000000000118": 1,
+        "00000000-0000-4000-8000-000000000119": 1,
+        "00000000-0000-4000-8000-000000000120": 1,
+        "00000000-0000-4000-8000-000000000121": 1
+      },
+      "expected": {
+        "text": "Ámbito regulatorio: Seguridad vial; Transporte y tránsito\nSector productivo: Agricultura; Comercio; Construcción; Educación; Energía; Logística; Pesca; Salud; Telecomunicaciones; Área portuaria\nActividad: Mantención de vehículos de carga; Transporte de carga por carretera; 𝐆rúas portacontenedores; Ｇrúas horquilla\nObra, instalación o equipo: Instalación 01 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 02 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 03 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 04 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 05 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 06 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 07 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 08 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 09 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 10 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 11 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 12 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 13 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 14 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 15 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 16 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 17 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 18 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+        "sha256": "ce299d30f5e4d5635be05a7ed7a20f95880216b6536cbf7e7dbafcab61e8f9f6",
+        "length_utf16": 7686,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 0,
+          "productive_sector": 2,
+          "activity_action": 0,
+          "facility_installation_equipment": 1
+        },
+        "cut_by_length": {
+          "scope": 1,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 2
+        }
+      }
+    },
+    {
+      "id": "P2",
+      "description": "Sin señal mínima: solo un structured en las cuatro dimensiones; el declared es de territorio y de others, y el derived está excluido. No hay texto ni vector.",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000050",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000051",
+          "dimension": "territorial_coverage",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000052",
+          "dimension": "others",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000053",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000053",
+          "dimension": "scope",
+          "source": "excluded"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000050": {
+          "value": "Minería",
+          "dimension": "productive_sector",
+          "family_article_count": 30
+        },
+        "00000000-0000-4000-8000-000000000051": {
+          "value": "Región de Atacama",
+          "dimension": "territorial_coverage",
+          "family_article_count": 40
+        },
+        "00000000-0000-4000-8000-000000000052": {
+          "value": "Empresa Ejemplo SpA",
+          "dimension": "others",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000053": {
+          "value": "Medio ambiente",
+          "dimension": "scope",
+          "family_article_count": 100
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000053": 2
+      },
+      "expected": {
+        "text": null,
+        "sha256": null,
+        "length_utf16": 0,
+        "reason": "sin señal mínima: ningún valor declared ni derived"
+      }
+    },
+    {
+      "id": "P3",
+      "description": "Un solo valor declared: la forma mínima del texto.",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000060",
+          "dimension": "scope",
+          "source": "declared"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000060": {
+          "value": "Seguridad vial",
+          "dimension": "scope",
+          "family_article_count": 12
+        }
+      },
+      "occurrences": {},
+      "expected": {
+        "text": "Ámbito regulatorio: Seguridad vial",
+        "sha256": "dbf4d22984dd11c0a1a747267cbe1dd377f9ff9000e9c94632b6e6722599c1d8",
+        "length_utf16": 34,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        },
+        "cut_by_length": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        }
+      }
+    }
+  ]
+}
