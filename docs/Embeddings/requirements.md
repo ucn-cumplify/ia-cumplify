@@ -188,7 +188,7 @@ Para cada app elegible de Norte, Altiplano y Litoral, o para las de `--apps`:
    - **Seguidas:** las normas públicas que la app sigue.
    - **Candidatas de la taxonomía:** las de `CandidateNormsAsync` en un cruce completo. Son las normas con un artículo clasificado con una raíz del perfil de una dimensión con peso (ámbito, sector o territorio), sin el país, y que no están seguidas, notificadas ni descartadas en la app.
    - **Relacionadas fuera del cruce:** las normas con un artículo clasificado con una raíz con peso del perfil de actividad o instalación, esté o no en el texto después de los topes; el grupo es el mismo para todas las variantes. Esas dimensiones no pesan en el cruce, así que la raíz no genera candidatas. Tampoco están seguidas, notificadas ni descartadas, y no son candidatas. Su contenido coincide con un valor del perfil, así que no sirven de control negativo: se informan aparte.
-   - **Sin relación:** las demás, sin las notificadas ni las descartadas. Es el control negativo: de sus percentiles salen el piso provisional y el control entre rubros.
+   - **Sin relación:** las demás, sin las notificadas ni las descartadas. Es el control negativo: de sus percentiles salen el piso provisional (punto 8) y el control entre rubros.
    - **Sin trozos vigentes.** Las candidatas y las seguidas públicas sin trozos `art-v2` vigentes quedan fuera de los grupos. El informe de cada app las cuenta (`candidatas_total`, `candidatas_sin_trozos` y `seguidas_publicas_sin_trozos`). Avisa si falta más de un cuarto de las candidatas, o cualquier seguida pública.
 4. **(a) Distribución del coseno por grupo.**
    - Por artículo y por norma: cantidad, media, mínimo, percentiles del 5 al 95 y máximo.
@@ -200,6 +200,7 @@ Para cada app elegible de Norte, Altiplano y Litoral, o para las de `--apps`:
    - Se registra el puesto de la norma apartada, por similitud sola, entre las normas públicas del corpus que la app no sigue, más la apartada. Los empates exactos comparten el puesto.
    - También se registra su percentil entre las sin relación.
    - Por variante, se resume con la mediana del puesto, el MRR y el recall@1, 5, 10 y 25.
+   - Con `prof-v1`, la similitud del mejor artículo de las apartadas da el techo provisional (punto 8).
    - Una norma seguida que no es pública, o que no tiene trozos vigentes, se informa y no se cuenta.
    - Los artículos se apartan con su propia norma (`articles.legal_body_id`), y las normas seguidas salen de las vinculaciones (`source_id`). El backend no valida que el artículo de una vinculación sea de su norma, así que el script avisa cuántos artículos vinculados son de otra norma: al apartar la de la vinculación, el derived los conserva.
 6. **(c) Variantes** (`--variants`):
@@ -221,6 +222,12 @@ Para cada app elegible de Norte, Altiplano y Litoral, o para las de `--apps`:
    - Las normas no seguidas cuyo título trae una palabra clave de otra empresa de demostración y ninguna de la propia. Las palabras son las de `AiSuggestionsDemoCatalog` y se comparan sin tildes ni mayúsculas.
    - Cuántas quedan en el top 10 y en el top 25, y sobre los percentiles 90 y 95 de las sin relación.
    - La norma de control de AI-036, la que trae «emblema» en el título (sin tildes ni mayúsculas), con su puesto y su percentil. Se busca por el título porque su id cambia con la base. Si ninguna norma pública la trae, o ninguna de las que la traen tiene trozos `art-v2` vigentes, el script lo avisa y el informe dice, en la consola y en `--out` (`control`), que queda sin medir.
+8. **Piso y techo provisionales de la tarea 2.4**, solo con `prof-v1` y con todas las apps juntas, sin el caso sintético. Se miden por artículo, porque la 2.4 reescala entre el piso y el techo la similitud de cada artículo con el vector de la app, no la de la norma.
+   - **Piso:** el percentil 95 de la similitud de los artículos de las normas sin relación. Con ese piso, solo un 5 % de los artículos sin relación recibiría evidencia. Con `--unrelated-sample`, sale de la muestra.
+   - **Techo:** la mediana de la similitud del mejor artículo de las normas apartadas en el punto 5, con los cosenos que guarda el informe, de 4 decimales. Con ese techo, la mitad de las normas relevantes que el perfil no contiene llega a la evidencia completa.
+   - Si el techo no supera al piso, el informe lo avisa y no propone valores: la receta no separa. Con `--skip-holdout` no hay techo, y el informe lo dice.
+   - La consola y `--out` (`provisional_thresholds`) muestran los dos valores juntos, marcados como provisionales, y los de cada app como referencia.
+   - Los valores finales los fija la calibración de la 2.4 en el backend.
 
 ### Costo y uso
 
@@ -274,7 +281,7 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
 - **Base de solo lectura.** Usa una conexión propia de solo lectura, la de `retrieval_eval.py`. Si no puede conectarse, muestra solo el tipo del error.
 - **Comprobaciones antes del primer pedido.** Se ejecutan todas las consultas, incluida una búsqueda de prueba con un vector ya guardado, y se arman todos los textos: un error de configuración no gasta tokens.
 - **Lo que lee.** `companies`, `legal_requirements`, `legal_requirement_vinculations`, `company_profile_entries`, `ai_taxonomy_values`, `ai_article_classifications`, `cl_territories`, `legal_body_company_suggestions`, `regulatory_alerts`, `regulatory_alert_suggestions`, `regulatory_alert_suggestion_discards`, `legal_bodies`, `articles` y `ai_embeddings`.
-- **Consola y `--out`.** La consola muestra solo métricas: el corpus, los tokens, los avisos, si la norma de control queda sin medir y, por app y variante, el largo, los tokens, las AUC, las medianas por grupo y la evaluación que deja una norma afuera. En `--dry-run` muestra, por app, el SHA-256, el largo y los valores por dimensión del texto de `prof-v1`, y nunca el texto: sin `--out`, los textos no se guardan. Los textos de perfil son datos de empresas y van a `--out`, con las distribuciones, los primeros puestos, la muestra por tramo y el detalle de cada norma apartada. El informe se guarda después de mostrarse, para que una falla al escribirlo no se lleve las métricas ya pagadas.
+- **Consola y `--out`.** La consola muestra solo métricas: el corpus, los tokens, los avisos, si la norma de control queda sin medir y, por app y variante, el largo, los tokens, las AUC, las medianas por grupo y la evaluación que deja una norma afuera, y al final el piso y el techo provisionales. En `--dry-run` muestra, por app, el SHA-256, el largo y los valores por dimensión del texto de `prof-v1`, y nunca el texto: sin `--out`, los textos no se guardan. Los textos de perfil son datos de empresas y van a `--out`, con las distribuciones, los primeros puestos, la muestra por tramo, el detalle de cada norma apartada y el piso y el techo provisionales. El informe se guarda después de mostrarse, para que una falla al escribirlo no se lleve las métricas ya pagadas.
 - **Privacidad.** Las normas privadas de una empresa nunca aparecen con su título.
 - **Códigos de salida.** Termina con 0 aunque una app no tenga vector. Termina con 2 ante un error de configuración antes del primer pedido, sin gastar tokens: argumentos, `--out`, conexión o consultas a la base, ninguna app elegible o ningún trozo `art-v2` vigente. Termina con 1 si falla el endpoint o la base durante la evaluación, después de mostrar los tokens gastados, o si no puede guardar el informe.
 

@@ -17,6 +17,8 @@ trozos art-v2 vigentes que backend-cumplify guarda en ai_embeddings:
   (d) el control entre rubros: las normas cuyo título nombra el rubro de otra empresa de demostración, y
       la norma de control de AI-036 («emblemas»).
 
+De (a) y (b) salen, con prof-v1 y todas las apps juntas, el piso y el techo provisionales de la tarea 2.4.
+
     uv run python scripts/profile_retrieval_eval.py [--apps APP ...] [--variants V ...] [--skip-holdout]
         [--unrelated-sample N] [--out FILE] [--vectors-out FILE] [--base-url URL] [--api-key KEY]
         [--database-url URL] [--timeout S] [--dry-run] [--self-test]
@@ -779,6 +781,76 @@ def holdout_summary(results: list[dict], ks: tuple[int, ...] = (1, 5, 10, 25)) -
     return summary
 
 
+def provisional_thresholds(unrelated: list[float], held_out: list[float], holdout: bool = True) -> dict:
+    """El piso y el techo provisionales de la tarea 2.4. Se miden por artículo, porque la 2.4 reescala entre ellos la
+    similitud de cada artículo:
+
+    - piso: el percentil 95 de la similitud de los artículos de las normas sin relación (unrelated), así que solo un
+      5 % de ellos recibiría evidencia;
+    - techo: la mediana de la similitud del mejor artículo de las normas apartadas (held_out), así que la mitad de
+      las normas relevantes que el perfil no contiene llega a la evidencia completa.
+
+    Si el techo no supera al piso, la receta no separa: floor y ceiling quedan en None (no se proponen valores) y
+    unrelated_p95 y holdout_median guardan lo medido. Se comparan los valores redondeados que muestra el informe.
+    Sin la evaluación que deja una norma afuera (holdout falso) no hay apartadas ni techo, y el aviso lo dice."""
+    floor = rounded(percentile(unrelated, 0.95))
+    ceiling = rounded(percentile(held_out, 0.5))
+    warnings = []
+    if floor is None:
+        warnings.append("sin piso: ningún artículo de normas sin relación")
+    if not holdout:
+        warnings.append("con --skip-holdout no hay techo: no se ejecuta la evaluación que deja una norma afuera")
+    elif ceiling is None:
+        warnings.append("sin techo: ninguna norma apartada evaluada")
+    separates = None if floor is None or ceiling is None else ceiling > floor
+    if separates is False:
+        warnings.append("el techo no supera al piso: la receta no separa y no se proponen valores")
+    return {
+        "floor": None if separates is False else floor,
+        "ceiling": None if separates is False else ceiling,
+        "unrelated_p95": floor,
+        "holdout_median": ceiling,
+        "unrelated_articles": len(unrelated),
+        "holdout_norms": len(held_out),
+        "separates": separates,
+        "warning": "; ".join(warnings) or None,
+    }
+
+
+def threshold_report(apps: list[dict], unrelated: dict[str, list[float]], holdout: bool) -> dict:
+    """El piso y el techo provisionales, solo con prof-v1: con todas las apps reales juntas y, como referencia, los
+    de cada app. unrelated trae, por app con vector de prof-v1, la similitud de los artículos de sus normas sin
+    relación. El techo sale de los cosenos de las apartadas que guarda el informe, con 4 decimales: es la mediana
+    del resumen de las apartadas y se puede rehacer desde --out. Ni el caso sintético ni las apps sin vector
+    cuentan."""
+    per_app = []
+    pooled_unrelated: list[float] = []
+    pooled_held_out: list[float] = []
+    for app in apps:
+        if app["synthetic"] or app["app_id"] not in unrelated:
+            continue
+        held_out = [
+            item["cosine"]
+            for item in app["variants"]["prof-v1"]["holdout"]["norms"]
+            if item.get("position") is not None
+        ]
+        pooled_unrelated.extend(unrelated[app["app_id"]])
+        pooled_held_out.extend(held_out)
+        per_app.append(
+            {
+                "app_id": app["app_id"],
+                "company": app["company"],
+                "app": app["app"],
+                **provisional_thresholds(unrelated[app["app_id"]], held_out, holdout),
+            }
+        )
+    return {
+        "recipe": PROF_V1.name,
+        **provisional_thresholds(pooled_unrelated, pooled_held_out, holdout),
+        "apps": per_app,
+    }
+
+
 # --- la base -------------------------------------------------------------------------------------------
 
 # La regla de visibilidad del cruce, sobre el alias lb: sin empresa, y global o de la BCN
@@ -1459,6 +1531,18 @@ def norm_similarities(sims: dict[str, Similarity], norm_articles: dict[str, list
     return best, top3
 
 
+def article_cosines(
+    sims: dict[str, Similarity], norm_articles: dict[str, list[str]], norms: set[str], only: set[str] | None = None
+) -> list[float]:
+    """La similitud de cada artículo de esas normas que tiene trozos vigentes, o solo de los de only."""
+    return [
+        sims[article].cosine
+        for norm in norms
+        for article in norm_articles.get(norm, [])
+        if article in sims and (only is None or article in only)
+    ]
+
+
 def evaluate_main(
     unit: Unit,
     sims: dict[str, Similarity],
@@ -1471,12 +1555,7 @@ def evaluate_main(
     best, top3 = norm_similarities(sims, norm_articles)
 
     def cosines(norms: set[str], only: set[str] | None = None) -> list[float]:
-        return [
-            sims[article].cosine
-            for norm in norms
-            for article in norm_articles.get(norm, [])
-            if article in sims and (only is None or article in only)
-        ]
+        return article_cosines(sims, norm_articles, norms, only)
 
     followed = cosines(groups.followed)
     linked = cosines(groups.followed, set(app.linked))
@@ -1702,14 +1781,19 @@ def evaluate(
     read_chunks: Callable[[list[tuple[str, int]]], dict[tuple[str, int], str]],
     usage_by_text: dict[str, int],
     unrelated_sample: int,
+    holdout: bool = True,
     progress: Callable[[str], None] = lambda message: None,
-) -> list[dict]:
-    """Mide cada unidad con vector. similarity y read_chunks son la base (o sus dobles en la autoprueba)."""
+) -> tuple[list[dict], dict]:
+    """Mide cada unidad con vector. similarity y read_chunks son la base (o sus dobles en la autoprueba). Devuelve
+    el informe de cada app y el piso y el techo provisionales; holdout dice si se ejecutó la evaluación que deja una
+    norma afuera."""
     norm_articles = dataset.norm_articles()
     reports: dict[str, dict] = {}
     groups_by_app: dict[str, Groups] = {}
     review: list[tuple[list[dict], dict[str, Similarity]]] = []
     pairs: list[tuple[str, int]] = []
+    # Para el piso: la similitud de los artículos sin relación de cada app con vector de prof-v1.
+    unrelated: dict[str, list[float]] = {}
     for unit in units:
         app = unit.app
         if app.id not in reports:
@@ -1728,6 +1812,7 @@ def evaluate(
                     variant["bins"] = bins
                     review.append((bins, sims))
                     pairs.extend(new_pairs)
+                    unrelated[app.id] = article_cosines(sims, norm_articles, groups.unrelated)
             progress(f"{app.company} / {app.name}: {unit.variant} medida")
             continue
         info = dataset.norms.get(unit.held_out)
@@ -1749,7 +1834,8 @@ def evaluate(
     for report in reports.values():
         for variant in report["variants"].values():
             variant["holdout"]["summary"] = holdout_summary(variant["holdout"]["norms"])
-    return list(reports.values())
+    apps = list(reports.values())
+    return apps, threshold_report(apps, unrelated, holdout)
 
 
 def app_header(app: AppData, dataset: Dataset, groups: Groups) -> dict:
@@ -1812,6 +1898,19 @@ def table_row(name: str, cells: list[object], widths: list[int]) -> str:
 APP_COLUMNS = ["Largo", "Tokens", "AUC seg.", "AUC cand.", "p50 seg.", "p50 cand.", "p50 s/r", "p95 s/r"]
 APP_COLUMNS += ["Apartadas", "Mediana", "MRR"]
 SUMMARY_COLUMNS = ["Evaluadas", "Mediana", "MRR", "R@1", "R@5", "R@10", "R@25", "AUC seg."]
+
+
+def threshold_values(item: dict) -> str:
+    """El piso y el techo de todas las apps juntas o de una app, para la consola."""
+    counts = f"{item['unrelated_articles']} artículos sin relación y {item['holdout_norms']} normas apartadas"
+    if item["separates"] is False:
+        return (
+            f"sin valores; el techo medido, {fmt(item['holdout_median'], 4)}, no supera al piso medido, "
+            f"{fmt(item['unrelated_p95'], 4)} ({counts})"
+        )
+    floor = f"piso {fmt(item['floor'], 4)}" if item["floor"] is not None else "sin piso"
+    ceiling = f"techo {fmt(item['ceiling'], 4)}" if item["ceiling"] is not None else "sin techo"
+    return f"{floor} y {ceiling} ({counts})"
 
 
 def print_report(report: dict) -> None:
@@ -1897,6 +1996,17 @@ def print_report(report: dict) -> None:
         cells += [recall.get(k) for k in ("1", "5", "10", "25")]
         cells.append(item["auc_mean"]["seguidas_vs_sin_relacion"])
         print(table_row(name, cells, summary_widths))
+    thresholds = report["provisional_thresholds"]
+    print()
+    print(
+        "Piso y techo provisionales de la tarea 2.4, con prof-v1 y por artículo (los valores finales los fija la "
+        "calibración de la 2.4 en el backend):"
+    )
+    print(f"  Todas las apps juntas: {threshold_values(thresholds)}.")
+    if thresholds["warning"]:
+        print(f"  AVISO: {thresholds['warning']}.")
+    for app in thresholds["apps"]:
+        print(f"  {app['company']} / {app['app']}, como referencia: {threshold_values(app)}.")
 
 
 def print_dry_run(units: list[Unit], dataset: Dataset) -> None:
@@ -2302,6 +2412,88 @@ def self_test() -> int:
             },
         },
     )
+    # Piso y techo provisionales: el percentil 95 de las sin relación y la mediana de las apartadas.
+    check(
+        "piso y techo: el techo supera al piso",
+        provisional_thresholds([0.1, 0.2, 0.3, 0.4], [0.6, 0.7]),
+        {
+            "floor": 0.385,
+            "ceiling": 0.65,
+            "unrelated_p95": 0.385,
+            "holdout_median": 0.65,
+            "unrelated_articles": 4,
+            "holdout_norms": 2,
+            "separates": True,
+            "warning": None,
+        },
+    )
+    check(
+        "piso y techo: el techo no supera al piso, sin valores",
+        provisional_thresholds([0.1, 0.2, 0.3, 0.9], [0.5, 0.6]),
+        {
+            "floor": None,
+            "ceiling": None,
+            "unrelated_p95": 0.81,
+            "holdout_median": 0.55,
+            "unrelated_articles": 4,
+            "holdout_norms": 2,
+            "separates": False,
+            "warning": "el techo no supera al piso: la receta no separa y no se proponen valores",
+        },
+    )
+    check(
+        "piso y techo: un techo igual al piso no lo supera",
+        {key: value for key, value in provisional_thresholds([0.5], [0.5]).items() if key in ("floor", "separates")},
+        {"floor": None, "separates": False},
+    )
+    check(
+        "piso y techo: sin techo con --skip-holdout",
+        provisional_thresholds([0.1, 0.5], [], holdout=False),
+        {
+            "floor": 0.48,
+            "ceiling": None,
+            "unrelated_p95": 0.48,
+            "holdout_median": None,
+            "unrelated_articles": 2,
+            "holdout_norms": 0,
+            "separates": None,
+            "warning": "con --skip-holdout no hay techo: no se ejecuta la evaluación que deja una norma afuera",
+        },
+    )
+
+    def threshold_app(app_id: str, synthetic: bool, cosines: list[float]) -> dict:
+        norms = [{"position": 1, "cosine": cosine} for cosine in cosines]
+        norms.append({"position": None, "skipped": "sin trozos art-v2 vigentes"})
+        return {
+            "app_id": app_id,
+            "company": "Empresa",
+            "app": app_id,
+            "synthetic": synthetic,
+            "variants": {"prof-v1": {"holdout": {"norms": norms}}},
+        }
+
+    # Todas juntas: el percentil 95 de los 6 artículos sin relación (0,5375) no es el de ninguna app (0,385 y
+    # 0,5475) ni su promedio, y la mediana de las tres apartadas (0,7) tampoco. z no tiene vector de prof-v1.
+    joined = threshold_report(
+        [
+            threshold_app("x", False, [0.6, 0.7]),
+            threshold_app("y", False, [0.9]),
+            threshold_app("s", True, [0.1]),
+            threshold_app("z", False, [0.2]),
+        ],
+        {"x": [0.1, 0.2, 0.3, 0.4], "y": [0.5, 0.55], "s": [0.99]},
+        True,
+    )
+    check(
+        "piso y techo de todas las apps juntas, sin el caso sintético ni las apps sin vector",
+        (joined["floor"], joined["ceiling"], joined["unrelated_articles"], joined["holdout_norms"], joined["recipe"]),
+        (0.5375, 0.7, 6, 3, "prof-v1"),
+    )
+    check(
+        "piso y techo por app, como referencia",
+        [(item["app_id"], item["floor"], item["ceiling"], item["separates"]) for item in joined["apps"]],
+        [("x", 0.385, 0.65, True), ("y", 0.5475, 0.9, True)],
+    )
     sampled = app_groups(bare_app(), {norm: [f"a-{norm}"] for norm in ("n1", "n2", "n3", "n4", "n5")}, 2)
     # Las dos primeras por el SHA-256 de «prof-eval-v1:<id>», no las dos primeras por el id.
     check("muestra de sin relación por la semilla", (sampled.unrelated, sampled.unrelated_total), ({"n1", "n4"}, 5))
@@ -2563,9 +2755,11 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
     def fake_vector(text: str) -> list[float]:
         return [0.05, 1.0] if "Transporte" in text else [1.0, 0.0]
 
-    def run(rows: dict[str, list[dict]]) -> tuple[Dataset, list[Unit], dict, str]:
-        """Lo que hace main con una base inventada: lee, planifica, embebe, evalúa y arma el informe. Devuelve
-        también lo que muestra por consola."""
+    def run(
+        rows: dict[str, list[dict]], holdout: bool = True, vector_of: Callable[[str], list[float]] = fake_vector
+    ) -> tuple[Dataset, list[Unit], dict, str]:
+        """Lo que hace main con una base inventada: lee, planifica, embebe con vector_of, evalúa y arma el informe.
+        Devuelve también lo que muestra por consola."""
         dataset = load_dataset(FakeDatabase(rows), ["litoral", "norte"], 0, True)
 
         def fake_similarity(vector: list[float]) -> dict[str, Similarity]:
@@ -2577,14 +2771,14 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
                 result[article] = Similarity((vector[0] * x + vector[1] * y) / (norm * length), 0, None)
             return result
 
-        units = plan_units(dataset, variants, holdout=True)
+        units = plan_units(dataset, variants, holdout=holdout)
         for unit in units:
             if unit.text is not None:
-                unit.vector = fake_vector(unit.text)
-        reports = evaluate(dataset, units, fake_similarity, lambda pairs: {}, {}, 0)
-        args = argparse.Namespace(base_url="http://127.0.0.1:8000", skip_holdout=False, unrelated_sample=0)
+                unit.vector = vector_of(unit.text)
+        reports, thresholds = evaluate(dataset, units, fake_similarity, lambda pairs: {}, {}, 0, holdout)
+        args = argparse.Namespace(base_url="http://127.0.0.1:8000", skip_holdout=not holdout, unrelated_sample=0)
         usage = {"total_tokens": 0, "requests": len(texts_to_embed(units)), "model": MODEL}
-        report = measurement_report(args, dataset, units, variants, usage, reports)
+        report = measurement_report(args, dataset, units, variants, usage, reports, thresholds)
         printed = io.StringIO()
         with contextlib.redirect_stdout(printed):
             print_report(report)
@@ -2618,6 +2812,10 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
         for row in absent_rows[NORMS_QUERY]
     ]
     absent_dataset, _, absent_report, absent_printed = run(absent_rows)
+    _, _, skipped_report, skipped_printed = run(pipeline_rows(), holdout=False)
+    # Con un perfil que apunta a la minería, las normas apartadas se parecen menos que las sin relación.
+    _, _, flat_report, flat_printed = run(pipeline_rows(), vector_of=lambda text: [1.0, 0.0])
+    thresholds = report["provisional_thresholds"]
 
     # Lo que solo ejecuta main: el informe de --out, la consola, el archivo de --dry-run --out y el de
     # --vectors-out.
@@ -2629,7 +2827,13 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
         vectors_file = Path(folder) / "vectores.jsonl"
         write_vectors(vectors_file, units)
         saved = [json.loads(line) for line in vectors_file.read_text(encoding="utf-8").splitlines()]
-        out_files = {"base": report, "sin trozos": stale_report, "sin norma": absent_report}
+        out_files = {
+            "base": report,
+            "sin trozos": stale_report,
+            "sin norma": absent_report,
+            "sin techo": skipped_report,
+            "no separa": flat_report,
+        }
         written = {}
         for name, item in out_files.items():
             write_json(Path(folder) / "informe.json", item)
@@ -2817,9 +3021,102 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             (1, 2),
         ),
         (
-            "consola: el informe llega hasta el resumen conjunto, sin los textos",
-            (printed_lines[-1].startswith("  por-empresa"), any(line in printed for line in text_lines)),
-            (True, False),
+            "consola: el resumen conjunto y después el piso y el techo, sin los textos",
+            (
+                printed_lines[-5].startswith("  por-empresa"),
+                printed_lines[-3:],
+                any(line in printed for line in text_lines),
+            ),
+            (
+                True,
+                [
+                    "Piso y techo provisionales de la tarea 2.4, con prof-v1 y por artículo (los valores finales los "
+                    "fija la calibración de la 2.4 en el backend):",
+                    "  Todas las apps juntas: piso 0,8807 y techo 0,9970 (4 artículos sin relación y 2 normas "
+                    "apartadas).",
+                    "  Empresa Litoral Ltda / Requisitos, como referencia: piso 0,8807 y techo 0,9970 (4 artículos sin "
+                    "relación y 2 normas apartadas).",
+                ],
+                False,
+            ),
+        ),
+        # Piso y techo de prof-v1: solo Litoral tiene vector (Norte no tiene señal mínima y el caso sintético no
+        # cuenta). El piso es el percentil 95 de sus cuatro artículos sin relación; el techo, la mediana de los
+        # cosenos de Ley 1 y Ley 2 que guarda el informe (0,9988 y 0,9951), 0,99695, que se redondea a 0,997.
+        (
+            "piso y techo provisionales de todas las apps juntas, en --out",
+            written["base"]["provisional_thresholds"],
+            {
+                "recipe": "prof-v1",
+                "floor": 0.8807,
+                "ceiling": 0.997,
+                "unrelated_p95": 0.8807,
+                "holdout_median": 0.997,
+                "unrelated_articles": 4,
+                "holdout_norms": 2,
+                "separates": True,
+                "warning": None,
+                "apps": [
+                    {
+                        "app_id": LIT_APP,
+                        "company": "Empresa Litoral Ltda",
+                        "app": "Requisitos",
+                        "floor": 0.8807,
+                        "ceiling": 0.997,
+                        "unrelated_p95": 0.8807,
+                        "holdout_median": 0.997,
+                        "unrelated_articles": 4,
+                        "holdout_norms": 2,
+                        "separates": True,
+                        "warning": None,
+                    }
+                ],
+            },
+        ),
+        (
+            "piso y techo: el p95 de las sin relación y la mediana de las apartadas que el informe ya muestra",
+            (thresholds["apps"][0]["floor"], thresholds["apps"][0]["ceiling"], thresholds["ceiling"]),
+            (
+                prof["cosine"]["sin_relacion"]["p95"],
+                prof["holdout"]["summary"]["median_cosine"],
+                report["summary"]["prof-v1"]["holdout"]["median_cosine"],
+            ),
+        ),
+        # El percentil 95 de los cuatro artículos sin relación es 0,9518, y la mediana de las apartadas (0,5145 de
+        # a2 en Ley 1 y 0,1483 de a3 en Ley 2), 0,3314: no se proponen valores.
+        (
+            "piso y techo: el techo no supera al piso, sin valores, en --out y en la consola",
+            (
+                {
+                    key: written["no separa"]["provisional_thresholds"][key]
+                    for key in ("floor", "ceiling", "unrelated_p95", "holdout_median", "separates", "warning")
+                },
+                [line for line in flat_printed.split("\n") if line.startswith(("  Todas las apps", "  AVISO"))],
+            ),
+            (
+                {
+                    "floor": None,
+                    "ceiling": None,
+                    "unrelated_p95": 0.9518,
+                    "holdout_median": 0.3314,
+                    "separates": False,
+                    "warning": "el techo no supera al piso: la receta no separa y no se proponen valores",
+                },
+                [
+                    "  Todas las apps juntas: sin valores; el techo medido, 0,3314, no supera al piso medido, 0,9518 "
+                    "(4 artículos sin relación y 2 normas apartadas).",
+                    "  AVISO: el techo no supera al piso: la receta no separa y no se proponen valores.",
+                ],
+            ),
+        ),
+        (
+            "piso y techo con --skip-holdout: sin techo, en --out y en la consola",
+            (
+                {key: written["sin techo"]["provisional_thresholds"][key] for key in ("floor", "ceiling", "separates")},
+                "  AVISO: con --skip-holdout no hay techo: no se ejecuta la evaluación que deja una norma afuera."
+                in skipped_printed.split("\n"),
+            ),
+            ({"floor": 0.8807, "ceiling": None, "separates": None}, True),
         ),
         # (d) La norma de control: medida en la base inventada; sin trozos vigentes o ausente, sin medir, con un aviso
         # y una línea en la consola, y en --out.
@@ -3016,13 +3313,14 @@ def main(argv: list[str] | None = None) -> int:
             for unit in units:
                 if unit.text is not None:
                     unit.vector = vectors[unit.text]
-            reports = evaluate(
+            reports, thresholds = evaluate(
                 dataset,
                 units,
                 lambda vector: similarity_search(db, vector, article_ids),
                 lambda pairs: chunk_texts(db, pairs),
                 usage["by_text"],
                 args.unrelated_sample,
+                holdout=not args.skip_holdout,
                 progress=lambda message: print(message, file=sys.stderr),
             )
         except (ServiceError, DatabaseError) as exc:
@@ -3033,7 +3331,7 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         db.close()
 
-    report = measurement_report(args, dataset, units, variants, usage, reports)
+    report = measurement_report(args, dataset, units, variants, usage, reports, thresholds)
     # La consola primero: si --out no se puede escribir, las métricas pagadas no se pierden.
     print_report(report)
     try:
@@ -3056,6 +3354,7 @@ def measurement_report(
     variants: list[str],
     usage: dict,
     reports: list[dict],
+    thresholds: dict,
 ) -> dict:
     """El informe de una medición: lo que main muestra por consola y guarda en --out. La autoprueba lo arma igual."""
     texts = texts_to_embed(units)
@@ -3081,6 +3380,7 @@ def measurement_report(
         "warnings": dataset.warnings,
         "apps": reports,
         "summary": pooled_summary(reports, variants),
+        "provisional_thresholds": thresholds,
     }
 
 
