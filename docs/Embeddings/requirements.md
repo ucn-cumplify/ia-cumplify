@@ -50,7 +50,7 @@ Un modelo desconocido, un tamaño no soportado o un texto que supera el límite 
 
 ## Evaluación de recuperación
 
-`scripts/retrieval_eval.py` es una herramienta manual, fuera del servicio y de pytest, que compara las recetas de embeddings de artículos que `backend-cumplify` guarda en `ai_embeddings`. La usa el caso AI-044 del backend (`docs/AI/test.csv` de `backend-cumplify`): antes de purgar las filas `art-v1`, comprobar que `art-v2` iguala o mejora el recall@k de `art-v1` en todos los tipos de pregunta y lo mejora en los artículos largos. En este repositorio la cubre EMB-007 de `test.csv`.
+`scripts/retrieval_eval.py` es una herramienta manual, fuera del servicio y de pytest, que compara las recetas de embeddings de artículos que `backend-cumplify` guarda en `ai_embeddings`. La usa el caso AI-044 del backend (`docs/AI/test.csv` de `backend-cumplify`; AI-040 a AI-044 y la receta `art-v2` están en la rama `feat/ai-article-chunking` del backend, todavía sin integrar): antes de purgar las filas `art-v1`, comprobar que `art-v2` iguala o mejora el recall@k de `art-v1` en todos los tipos de pregunta y lo mejora en los artículos largos. En este repositorio la cubre EMB-007 de `test.csv`.
 
 **Qué mide.** Para cada pregunta del conjunto y cada identificador de `--recipes` (por defecto `text-embedding-3-large@1024#art-v1`, un vector por artículo con el texto recortado a 12.000 caracteres, y `text-embedding-3-large@1024#art-v2`, trozos de hasta 4.000):
 
