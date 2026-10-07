@@ -448,6 +448,9 @@ DEMO_COMPANIES = (
 DEMO_BY_KEY = {demo.key: demo for demo in DEMO_COMPANIES}
 # La norma de control de AI-036 se creó a mano, así que su id cambia con la base: se busca por el título.
 CONTROL_KEYWORD = "emblema"
+# Lo que dice el informe cuando no se puede medir.
+CONTROL_WITHOUT_CHUNKS = "sin trozos art-v2 vigentes, sin medir"
+CONTROL_ABSENT = "ninguna norma pública trae esa palabra en el título, sin medir"
 TEST_PREFIXES = ("[DEV]", "[PRUEBA E2E]")
 
 # Constantes del backend: LegalRequirementAppTypeCatalog, LegalRequirementSourceTypeCatalog, CompanyStatusCatalog
@@ -997,12 +1000,48 @@ class Dataset:
     country_roots: set[str]
     tax_vectors: dict[str, list[float]]
     warnings: list[str]
+    # La norma de control de AI-036 (control_norms): las normas públicas que la nombran y si se puede medir.
+    control: dict = field(default_factory=dict)
 
     def norm_articles(self) -> dict[str, list[str]]:
         result: dict[str, list[str]] = defaultdict(list)
         for article in self.articles.values():
             result[article.norm].append(article.id)
         return result
+
+
+def control_norms(norms: dict[str, NormInfo], corpus_norms: set[str]) -> tuple[dict, str | None]:
+    """La norma de control de AI-036: las normas públicas con CONTROL_KEYWORD en el título, sin tildes ni
+    mayúsculas, y si alguna está en el corpus. Si no hay ninguna, o ninguna tiene trozos art-v2 vigentes, el control
+    queda sin medir: devuelve lo que guarda el informe y el aviso."""
+    found = sorted(
+        (norm for norm in norms.values() if CONTROL_KEYWORD in fold(norm.title)), key=lambda norm: (norm.label, norm.id)
+    )
+    control: dict = {
+        "keyword": CONTROL_KEYWORD,
+        "norms": [
+            {
+                "norm": norm.label,
+                "title": norm.title,
+                "bcn_id": norm.bcn_id,
+                "test_norm": norm.is_test,
+                "with_current_chunks": norm.id in corpus_norms,
+            }
+            for norm in found
+        ],
+        "status": None,
+    }
+    if not found:
+        control["status"] = CONTROL_ABSENT
+        return control, f"AVISO: ninguna norma pública tiene «{CONTROL_KEYWORD}» en el título: no hay norma de control."
+    if not any(norm.id in corpus_norms for norm in found):
+        control["status"] = CONTROL_WITHOUT_CHUNKS
+        labels = ", ".join(norm.label for norm in found)
+        return control, (
+            f"AVISO: ninguna norma pública con «{CONTROL_KEYWORD}» en el título ({labels}) tiene trozos art-v2 "
+            "vigentes: el control queda sin medir."
+        )
+    return control, None
 
 
 def resolve_apps(rows: list[dict], requested: list[str], companies: dict[str, str]) -> tuple[list[dict], list[str]]:
@@ -1233,11 +1272,10 @@ def load_dataset(db: Database, requested: list[str], unrelated_sample: int, need
     if need_tax_vectors:
         for row in db.rows(TAX_VECTORS_QUERY, {"roots": root_ids, "tax_model": TAXONOMY_MODEL}):
             tax_vectors[row["id"]] = parse_vector(row["embedding"])
-    if not any(norm for norm in norms.values() if CONTROL_KEYWORD in fold(norm.title)):
-        warnings.append(
-            f"AVISO: ninguna norma pública tiene «{CONTROL_KEYWORD}» en el título: no hay norma de control."
-        )
-    return Dataset(apps, roots, norms, articles, corpus, country_roots, tax_vectors, warnings)
+    control, control_warning = control_norms(norms, corpus_norms)
+    if control_warning:
+        warnings.append(control_warning)
+    return Dataset(apps, roots, norms, articles, corpus, country_roots, tax_vectors, warnings, control)
 
 
 def similarity_search(db: Database, vector: list[float], article_ids: list[str]) -> dict[str, Similarity]:
@@ -1792,6 +1830,9 @@ def print_report(report: dict) -> None:
     )
     for warning in report["warnings"]:
         print(warning)
+    control_status = (report.get("control") or {}).get("status")
+    if control_status:
+        print(f"Control «{CONTROL_KEYWORD}»: {control_status}.")
     app_widths = [max(6, len(column)) for column in APP_COLUMNS]
     for app in report["apps"]:
         groups = app["groups"]
@@ -2514,29 +2555,44 @@ def pipeline_rows() -> dict[str, list[dict]]:
 def pipeline_checks() -> list[tuple[str, object, object]]:
     """Lee la base inventada con load_dataset, planifica y evalúa con vectores de dos dimensiones: la norma
     apartada que más se parece al perfil tiene que quedar primera. Después arma lo que muestra y guarda main: el
-    resumen conjunto, el informe por consola, el archivo de --dry-run --out y el de --vectors-out."""
-    dataset = load_dataset(FakeDatabase(pipeline_rows()), ["litoral", "norte"], 0, True)
-    apps = {app.id: app for app in dataset.apps}
+    informe de --out, con el resumen conjunto, el informe por consola, el archivo de --dry-run --out y el de
+    --vectors-out. Repite la medición sin trozos vigentes de la norma de control y sin norma de control."""
     directions = {article: xy for _, _, items in PIPELINE_NORMS for article, xy in items.items()}
+    variants = ["prof-v1", CENTROID, "por-empresa"]
 
     def fake_vector(text: str) -> list[float]:
         return [0.05, 1.0] if "Transporte" in text else [1.0, 0.0]
 
-    def fake_similarity(vector: list[float]) -> dict[str, Similarity]:
-        norm = math.sqrt(sum(value * value for value in vector))
-        result = {}
-        for article in dataset.articles:
-            x, y = directions[article]
-            length = math.sqrt(x * x + y * y)
-            result[article] = Similarity((vector[0] * x + vector[1] * y) / (norm * length), 0, None)
-        return result
+    def run(rows: dict[str, list[dict]]) -> tuple[Dataset, list[Unit], dict, str]:
+        """Lo que hace main con una base inventada: lee, planifica, embebe, evalúa y arma el informe. Devuelve
+        también lo que muestra por consola."""
+        dataset = load_dataset(FakeDatabase(rows), ["litoral", "norte"], 0, True)
 
-    variants = ["prof-v1", CENTROID, "por-empresa"]
-    units = plan_units(dataset, variants, holdout=True)
-    for unit in units:
-        if unit.text is not None:
-            unit.vector = fake_vector(unit.text)
-    reports = evaluate(dataset, units, fake_similarity, lambda pairs: {}, {}, 0)
+        def fake_similarity(vector: list[float]) -> dict[str, Similarity]:
+            norm = math.sqrt(sum(value * value for value in vector))
+            result = {}
+            for article in dataset.articles:
+                x, y = directions[article]
+                length = math.sqrt(x * x + y * y)
+                result[article] = Similarity((vector[0] * x + vector[1] * y) / (norm * length), 0, None)
+            return result
+
+        units = plan_units(dataset, variants, holdout=True)
+        for unit in units:
+            if unit.text is not None:
+                unit.vector = fake_vector(unit.text)
+        reports = evaluate(dataset, units, fake_similarity, lambda pairs: {}, {}, 0)
+        args = argparse.Namespace(base_url="http://127.0.0.1:8000", skip_holdout=False, unrelated_sample=0)
+        usage = {"total_tokens": 0, "requests": len(texts_to_embed(units)), "model": MODEL}
+        report = measurement_report(args, dataset, units, variants, usage, reports)
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            print_report(report)
+        return dataset, units, report, printed.getvalue()
+
+    dataset, units, report, printed = run(pipeline_rows())
+    reports = report["apps"]
+    apps = {app.id: app for app in dataset.apps}
     by_app = {report["app_id"]: report for report in reports}
     lit = by_app[LIT_APP]["variants"]
     prof = lit["prof-v1"]
@@ -2550,32 +2606,34 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
         print_dry_run(units, dataset)
     shown = console.getvalue()
 
-    # Lo que solo ejecuta main, con el informe armado como allí: el resumen conjunto, la consola, el archivo de
-    # --dry-run --out y el de --vectors-out.
+    # La norma de control sin trozos vigentes, porque su artículo cambió de texto, y sin norma de control.
+    stale_rows = pipeline_rows()
+    stale_rows[CORPUS_QUERY] = [
+        dict(row, current_chunks=0) if row["legal_body_id"] == "n-emb" else row for row in stale_rows[CORPUS_QUERY]
+    ]
+    stale_dataset, _, stale_report, stale_printed = run(stale_rows)
+    absent_rows = pipeline_rows()
+    absent_rows[NORMS_QUERY] = [
+        dict(row, title="[PRUEBA E2E] Uso de insignias") if row["id"] == "n-emb" else row
+        for row in absent_rows[NORMS_QUERY]
+    ]
+    absent_dataset, _, absent_report, absent_printed = run(absent_rows)
+
+    # Lo que solo ejecuta main: el informe de --out, la consola, el archivo de --dry-run --out y el de
+    # --vectors-out.
     texts = texts_to_embed(units)
-    report = {
-        "usage": {
-            "total_tokens": 0,
-            "requests": len(texts),
-            "model": MODEL,
-            "texts": len(texts),
-            "reused": sum(1 for unit in units if unit.text is not None) - len(texts),
-        },
-        "corpus": dataset.corpus,
-        "warnings": dataset.warnings,
-        "apps": reports,
-        "summary": pooled_summary(reports, variants),
-    }
-    printed = io.StringIO()
-    with contextlib.redirect_stdout(printed):
-        print_report(report)
-    printed_lines = printed.getvalue().rstrip("\n").split("\n")
+    printed_lines = printed.rstrip("\n").split("\n")
     dry = dry_run_report(units, dataset, variants)
     dry_lit = [item for item in dry["texts"] if item["app_id"] == LIT_APP and item["variant"] == "prof-v1"]
     with tempfile.TemporaryDirectory() as folder:
         vectors_file = Path(folder) / "vectores.jsonl"
         write_vectors(vectors_file, units)
         saved = [json.loads(line) for line in vectors_file.read_text(encoding="utf-8").splitlines()]
+        out_files = {"base": report, "sin trozos": stale_report, "sin norma": absent_report}
+        written = {}
+        for name, item in out_files.items():
+            write_json(Path(folder) / "informe.json", item)
+            written[name] = json.loads((Path(folder) / "informe.json").read_text(encoding="utf-8"))
     return [
         ("datos: apps elegibles", sorted(apps), sorted([LIT_APP, NOR_APP])),
         ("datos: sin el derived de ninguna app en lo de la empresa", apps[LIT_APP].company_entries, []),
@@ -2760,8 +2818,71 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
         ),
         (
             "consola: el informe llega hasta el resumen conjunto, sin los textos",
-            (printed_lines[-1].startswith("  por-empresa"), any(line in printed.getvalue() for line in text_lines)),
+            (printed_lines[-1].startswith("  por-empresa"), any(line in printed for line in text_lines)),
             (True, False),
+        ),
+        # (d) La norma de control: medida en la base inventada; sin trozos vigentes o ausente, sin medir, con un aviso
+        # y una línea en la consola, y en --out.
+        (
+            "control: medido, en --out y en la consola",
+            (
+                written["base"]["control"],
+                "  Control «emblema» (prof-v1): Ley 4, puesto 8 de 9," in printed,
+                "Control «emblema»: " in printed,
+            ),
+            (
+                {
+                    "keyword": "emblema",
+                    "norms": [
+                        {
+                            "norm": "Ley 4",
+                            "title": "[PRUEBA E2E] Uso de emblemas",
+                            "bcn_id": None,
+                            "test_norm": True,
+                            "with_current_chunks": True,
+                        }
+                    ],
+                    "status": None,
+                },
+                True,
+                False,
+            ),
+        ),
+        (
+            "control sin trozos vigentes: aviso, --out y consola",
+            (
+                stale_dataset.warnings[-1],
+                written["sin trozos"]["control"]["status"],
+                [norm["with_current_chunks"] for norm in written["sin trozos"]["control"]["norms"]],
+                next(app for app in stale_report["apps"] if app["app_id"] == LIT_APP)["variants"]["prof-v1"]["control"],
+                "Control «emblema»: sin trozos art-v2 vigentes, sin medir." in stale_printed.split("\n"),
+            ),
+            (
+                "AVISO: ninguna norma pública con «emblema» en el título (Ley 4) tiene trozos art-v2 vigentes: el "
+                "control queda sin medir.",
+                "sin trozos art-v2 vigentes, sin medir",
+                [False],
+                [],
+                True,
+            ),
+        ),
+        (
+            "sin norma de control: aviso, --out y consola",
+            (
+                absent_dataset.warnings[-1],
+                written["sin norma"]["control"],
+                "Control «emblema»: ninguna norma pública trae esa palabra en el título, sin medir."
+                in absent_printed.split("\n"),
+            ),
+            (
+                "AVISO: ninguna norma pública tiene «emblema» en el título: no hay norma de control.",
+                {
+                    "keyword": "emblema",
+                    "norms": [],
+                    "status": "ninguna norma pública trae esa palabra en el título, sin medir",
+                },
+                True,
+            ),
         ),
         ("--dry-run --out: un texto por unidad, sin el centroide", len(dry["texts"]), 13),
         # Las apartadas van en orden de su número como texto; la no pública, al final y con su id local.
@@ -2912,7 +3033,33 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         db.close()
 
-    report = {
+    report = measurement_report(args, dataset, units, variants, usage, reports)
+    # La consola primero: si --out no se puede escribir, las métricas pagadas no se pierden.
+    print_report(report)
+    try:
+        write_json(out, report)
+        if vectors_out:
+            write_vectors(vectors_out, units)
+    except OSError as exc:
+        print(f"\nFALLA al guardar el informe: {exc}", file=sys.stderr)
+        return 1
+    print(f"\nInforme completo en {out} (fuera del repositorio).")
+    if vectors_out:
+        print(f"Vectores en {vectors_out}.")
+    return 0
+
+
+def measurement_report(
+    args: argparse.Namespace,
+    dataset: Dataset,
+    units: list[Unit],
+    variants: list[str],
+    usage: dict,
+    reports: list[dict],
+) -> dict:
+    """El informe de una medición: lo que main muestra por consola y guarda en --out. La autoprueba lo arma igual."""
+    texts = texts_to_embed(units)
+    return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "recipe": recipe_description(),
         "article_recipe": ARTICLE_MODEL,
@@ -2930,23 +3077,11 @@ def main(argv: list[str] | None = None) -> int:
             "reused": sum(1 for unit in units if unit.text is not None) - len(texts),
         },
         "corpus": dataset.corpus,
+        "control": dataset.control,
         "warnings": dataset.warnings,
         "apps": reports,
         "summary": pooled_summary(reports, variants),
     }
-    # La consola primero: si --out no se puede escribir, las métricas pagadas no se pierden.
-    print_report(report)
-    try:
-        write_json(out, report)
-        if vectors_out:
-            write_vectors(vectors_out, units)
-    except OSError as exc:
-        print(f"\nFALLA al guardar el informe: {exc}", file=sys.stderr)
-        return 1
-    print(f"\nInforme completo en {out} (fuera del repositorio).")
-    if vectors_out:
-        print(f"Vectores en {vectors_out}.")
-    return 0
 
 
 def recipe_description() -> dict:
