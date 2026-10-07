@@ -8,7 +8,8 @@ running, and that service calls OpenAI. It is not part of pytest, which collects
 
 SERVICE_API_KEY and DATABASE_URL come from the environment or the arguments, never from .env. The
 passages come from the local database, read with this script's own read-only connection: the
-repository keeps only questions and queries. Each request follows the rules the backend mirrors
+repository keeps only questions and queries. A failed connection shows only the type of psycopg's
+error, whose message can repeat DATABASE_URL with its password. Each request follows the rules the backend mirrors
 (point 11 of "Consumo desde el backend" in docs/Chat/api.md), so a 422 is a defect of this script.
 Every request names the open app in context.app_name, as the backend does: the chat only lives inside
 Legal Requirements apps. It is the case's own app_name, or else the app whose data the case reads, or
@@ -126,6 +127,10 @@ def open_app_offset(case: dict) -> int:
 
 class NoData(LookupError):
     """A query found no row: the case cannot be built from this database."""
+
+
+class DatabaseError(RuntimeError):
+    """The connection to the database failed. The message never repeats DATABASE_URL."""
 
 
 @dataclass
@@ -294,8 +299,18 @@ class Passages:
             import psycopg
             from psycopg.rows import dict_row
 
-            # Not autocommit: psycopg opens each transaction with BEGIN READ ONLY, and none is committed.
-            self._connection = psycopg.connect(database_url, row_factory=dict_row)
+            try:
+                # Not autocommit: psycopg opens each transaction with BEGIN READ ONLY, and none is committed.
+                self._connection = psycopg.connect(database_url, row_factory=dict_row)
+            except psycopg.Error as exc:
+                # Only the type: libpq repeats a malformed URL whole, password included, and an unencoded @ in
+                # the password puts the rest of it in the host name of the message.
+                raise DatabaseError(
+                    f"no se pudo conectar con DATABASE_URL (o --database-url): {type(exc).__name__}, sin el detalle "
+                    "de psycopg, que puede repetir la URL con la contraseña. Revisar que la base esté en marcha y que "
+                    "la URL tenga la forma postgresql://usuario:contraseña@host:puerto/base, sin comillas y con los "
+                    "caracteres especiales de la contraseña codificados (@ como %40, / como %2F)"
+                ) from None
             self._connection.read_only = True
 
     @property
@@ -637,7 +652,10 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--repeat-case tiene que estar entre los casos que se ejecutan")
 
     limits = Limits.from_env()
-    passages = Passages(None if args.without_db else args.database_url)
+    try:
+        passages = Passages(None if args.without_db else args.database_url)
+    except DatabaseError as exc:
+        parser.error(str(exc))
     # Every query runs before the first request: a failing one stops the run before it spends tokens.
     built: dict[str, list[dict] | str] = {}
     app_names: dict[str, str] = {}
