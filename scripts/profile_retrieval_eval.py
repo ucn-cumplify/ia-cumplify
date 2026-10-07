@@ -2382,9 +2382,9 @@ def bare_app(**changes: object) -> AppData:
 LIT_APP = DEMO_BY_KEY["litoral"].app_id
 NOR_APP = DEMO_BY_KEY["norte"].app_id
 # Normas públicas de la base inventada: (id, título, artículos con su dirección en el plano). El transporte va
-# arriba y la minería a la derecha; n-cand2 no tiene trozos vigentes. n-cand3 es una candidata sin sugerencia que
-# queda por debajo de n-ajena, una norma sin relación que nombra la minería, y n-ajena queda por encima del
-# artículo a2 de una norma seguida: así las AUC de seguidas y candidatas no son 1.
+# arriba y la minería a la derecha; n-cand2 y n-seg2 no tienen trozos vigentes. n-cand3 es una candidata sin
+# sugerencia que queda por debajo de n-ajena, una norma sin relación que nombra la minería, y n-ajena queda por
+# encima del artículo a2 de una norma seguida: así las AUC de seguidas y candidatas no son 1.
 PIPELINE_NORMS = (
     ("n-trans", "Ley de transporte", {"a1": (0.1, 1.0), "a2": (0.6, 1.0)}),
     ("n-carga", "Ley de vehículos de carga", {"a3": (0.15, 1.0)}),
@@ -2398,6 +2398,7 @@ PIPELINE_NORMS = (
     ("n-desc", "Decreto de señalización", {"a11": (0.45, 1.0)}),
     ("n-cand3", "Reglamento de estacionamientos", {"a12": (0.7, 1.0)}),
     ("n-ajena", "Reglamento de seguridad minera", {"a13": (0.55, 1.0)}),
+    ("n-seg2", "Ley de puertos", {}),
 )
 
 
@@ -2406,7 +2407,9 @@ def pipeline_rows() -> dict[str, list[dict]]:
     ámbito y Transporte de carga en actividad); llega a n-cand, n-cand2, n-cand3, n-notif (notificada) y n-desc
     (descartada) por Transporte, y a n-rel por la actividad, que también trae n-cand: como cruza, n-cand es
     candidata y no relacionada. Solo n-cand tiene una sugerencia sin notificar. a3, de n-carga, está vinculado
-    también con una vinculación de n-trans. Norte solo tiene el structured Minería. Litoral tiene otra app, de
+    también con una vinculación de n-trans. Litoral sigue además n-seg2, pública y sin trozos, y n-priv, que no es
+    pública. Su derived guardado trae v-carga con 2 ocurrencias, aunque el rearmado da 1, y r-carga tiene guardado
+    un family_article_count desfasado. Norte solo tiene el structured Minería. Litoral tiene otra app, de
     catálogo, con su propio derived guardado."""
     companies = [
         {"id": "c-lit", "name": "Empresa Litoral Ltda", "status": ACTIVE, "rut_key": DEMO_BY_KEY["litoral"].rut_key},
@@ -2448,7 +2451,7 @@ def pipeline_rows() -> dict[str, list[dict]]:
         ENTRIES_QUERY: [
             entry("c-nor", None, STRUCTURED, "v-min", "r-min", SECTOR, None),
             entry("c-lit", LIT_APP, DERIVED, "v-trans", "r-trans", SCOPE, 2),
-            entry("c-lit", LIT_APP, DERIVED, "v-carga", "r-carga", ACTIVITY, 1),
+            entry("c-lit", LIT_APP, DERIVED, "v-carga", "r-carga", ACTIVITY, 2),
             entry("c-lit", "app-lit-cat", DERIVED, "v-carga", "r-carga", ACTIVITY, 1),
         ],
         LINKED_QUERY: [
@@ -2459,6 +2462,8 @@ def pipeline_rows() -> dict[str, list[dict]]:
         FOLLOWED_QUERY: [
             {"app_id": LIT_APP, "legal_body_id": "n-trans"},
             {"app_id": LIT_APP, "legal_body_id": "n-carga"},
+            {"app_id": LIT_APP, "legal_body_id": "n-seg2"},
+            {"app_id": LIT_APP, "legal_body_id": "n-priv"},
         ],
         SUGGESTIONS_QUERY: [
             {"app_id": LIT_APP, "legal_body_id": "n-notif", "score": 0.5, "status": "notificada", "notified": True},
@@ -2477,7 +2482,7 @@ def pipeline_rows() -> dict[str, list[dict]]:
                 "dimension": dimension,
                 "value": value,
                 "is_member": False,
-                "stored_family_count": count,
+                "stored_family_count": 1 if root == "r-carga" else count,
                 "family_count": count,
                 "has_tax_vector": root != "r-min",
             }
@@ -2586,7 +2591,7 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             "datos: corpus",
             dataset.corpus,
             {
-                "public_norms": 12,
+                "public_norms": 13,
                 "public_norms_with_chunks": 11,
                 "public_articles": 15,
                 "articles_with_current_chunks": 12,
@@ -2600,6 +2605,15 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             "datos: avisos",
             dataset.warnings,
             [
+                "AVISO Empresa Litoral Ltda / Requisitos: el derived guardado no coincide con el que se rearma desde "
+                "sus vinculaciones (valores con otras ocurrencias: 1): el script usa el rearmado, que es el que "
+                "dejaría la próxima ejecución.",
+                "AVISO: 1 raíces tienen family_article_count guardado distinto del conteo en vivo; el script usa el "
+                "conteo en vivo, el que recalcula la próxima ejecución.",
+                "AVISO Empresa Litoral Ltda / Requisitos: 1 normas seguidas no son públicas; el cruce nunca las "
+                "sugiere y quedan fuera de los grupos y de la evaluación que deja una norma afuera.",
+                "AVISO Empresa Litoral Ltda / Requisitos: 1 normas seguidas públicas no tienen trozos art-v2 "
+                "vigentes; quedan fuera del grupo de seguidas y de la evaluación que deja una norma afuera.",
                 "AVISO Empresa Litoral Ltda / Requisitos: 1 de 3 candidatas no tienen trozos art-v2 vigentes; la "
                 "distribución y la AUC de las candidatas salen de las demás.",
                 "AVISO Empresa Litoral Ltda / Requisitos: 1 artículos vinculados son de otra norma que la de su "
@@ -2628,7 +2642,17 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             (main_sha in shown, any(line in shown for line in text_lines)),
             (True, False),
         ),
-        ("apartada de Litoral evaluada", sorted(item["position"] for item in holdout.values()), [1, 1]),
+        (
+            "apartadas de Litoral evaluadas",
+            sorted(item["position"] for item in holdout.values() if item["position"] is not None),
+            [1, 1],
+        ),
+        # n-seg2 es pública pero no tiene trozos; n-priv no es pública, así que sale sin número.
+        (
+            "apartadas omitidas: sin trozos y no pública",
+            {item["norm"]: item.get("skipped") for item in holdout.values() if item["position"] is None},
+            {"Ley 13": "sin trozos art-v2 vigentes", None: "no es pública: el cruce nunca la sugiere"},
+        ),
         ("apartada: orden entre las no seguidas", holdout["Ley 1"]["ranked_norms"], 10),
         # Por el promedio de los tres mejores artículos, n-trans (0,998 y 0,882) queda detrás de n-cand y n-notif.
         ("apartada: puesto por los tres mejores artículos", holdout["Ley 1"]["position_top3"], 3),
@@ -2645,10 +2669,10 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
                 "sin_relacion": 4,
                 "sin_relacion_total": 4,
                 "notificadas_o_descartadas": 2,
-                "seguidas_no_publicas": 0,
+                "seguidas_no_publicas": 1,
                 "candidatas_total": 3,
                 "candidatas_sin_trozos": 1,
-                "seguidas_publicas_sin_trozos": 0,
+                "seguidas_publicas_sin_trozos": 1,
             },
         ),
         # (a) por artículo. n-ajena (0,899) supera a a2 de n-trans (0,882) y a n-cand3 (0,847), una candidata sin
@@ -2739,11 +2763,12 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             (printed_lines[-1].startswith("  por-empresa"), any(line in printed.getvalue() for line in text_lines)),
             (True, False),
         ),
-        ("--dry-run --out: un texto por unidad, sin el centroide", len(dry["texts"]), 9),
+        ("--dry-run --out: un texto por unidad, sin el centroide", len(dry["texts"]), 13),
+        # Las apartadas van en orden de su número como texto; la no pública, al final y con su id local.
         (
             "--dry-run --out: la apartada por su número y el SHA-256",
             [(item["held_out"], item["sha256"] == main_sha) for item in dry_lit],
-            [(None, True), ("Ley 1", True), ("Ley 2", False)],
+            [(None, True), ("Ley 1", True), ("Ley 13", False), ("Ley 2", False), ("n-priv", False)],
         ),
         (
             "--vectors-out: los vectores de las apps reales",
