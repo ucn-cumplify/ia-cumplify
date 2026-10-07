@@ -30,8 +30,8 @@ conexión propia de solo lectura (Database de retrieval_eval.py, que nunca repit
 todas sus consultas, incluida una prueba de la búsqueda por similitud, se ejecutan antes del primer pedido.
 
 prof-v1 es una reimplementación declarada, solo del texto: la PR del backend que la implemente tiene que dar el
-mismo texto y el mismo SHA-256 para las mismas apps y para los casos de profile_text_parity.json. El recorte por
-el total es provisional: su detalle lo fija esa PR, y los casos que dependen de él están marcados. Las reglas
+mismo texto y el mismo SHA-256 para las mismas apps y para los casos de profile_text_parity.json. El detalle del
+recorte por el total lo fija este script, como pide el plan del backend, y esa PR lo replica. Las reglas
 están en "Evaluación del perfil embebido" de docs/Embeddings/requirements.md. Las normas cuentan con la regla
 de visibilidad del cruce (sin empresa, y globales o de la BCN), no con la de retrieval_eval.py. La consola
 muestra solo métricas; los textos de perfil, que son datos de empresas, van a --out, fuera del repositorio.
@@ -294,8 +294,7 @@ def dimension_rank(candidate: Candidate) -> tuple:
 
 def global_rank(candidate: Candidate) -> tuple:
     """Orden entre dimensiones para el tope de largo: el mismo, con el orden fijo de las dimensiones antes del
-    value. El tope quita siempre el valor de este orden que queda último. Es provisional: el detalle del recorte
-    por el total lo fija la PR del backend que implemente prof-v1 (regla 8 de requirements.md)."""
+    value. El tope quita siempre el valor de este orden que queda último (regla 8 de requirements.md)."""
     return (
         -candidate.weight,
         candidate.family_count,
@@ -1863,8 +1862,6 @@ def print_dry_run(units: list[Unit], dataset: Dataset) -> None:
             "  Valores en el texto: "
             + ", ".join(f"{dimension} {len(profile.selected[dimension])}" for dimension in RECIPE_DIMENSIONS)
         )
-        if any(profile.cut_by_length.values()):
-            print("  Recortado por largo: el SHA-256 depende de la regla 8, que es provisional.")
     texts = texts_to_embed(units)
     with_text = [unit for unit in units if unit.text is not None]
     characters = sum(utf16_len(text) for text in texts)
