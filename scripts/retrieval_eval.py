@@ -13,16 +13,18 @@ is not part of pytest, which collects only tests/.
 SERVICE_API_KEY and DATABASE_URL come from the environment or the arguments, never from .env. The
 database is read with this script's own read-only connection, and its checks run before the first
 request: an --out that cannot be written, a database that fails, a recipe without vectors or a missing
-expected article shows up before any token is spent. A failed connection shows only the type of psycopg's error, whose message can
-repeat DATABASE_URL with its password.
+expected article shows up before any token is spent. A failed connection shows only the type of
+psycopg's error, whose message can repeat DATABASE_URL with its password.
 
 The search is exact, without an index: the question is compared with every chunk of the recipe with
-pgvector's cosine distance (<=>), each article keeps the distance of its closest chunk, and all the
-articles of the database are ranked by it; exact ties share a position. An expected article is
-identified as in any environment, by its norm's bcn_id and its "order" (its position, stable since
-the BCN hydration), checked against its readable number, and only among public BCN norms. A question
-with an expected article missing here is reported and left out of the metrics; an expected article
-without vectors of a recipe counts as not retrieved by that recipe.
+pgvector's cosine distance (<=>), each article keeps the distance of its closest chunk, and the
+articles of public BCN norms are ranked by it; exact ties share a position. Only public BCN norms
+count, in the ranking as among the expected articles: the test norms ([DEV], [PRUEBA E2E]) and the
+private norms of a company stay out, so the metrics do not depend on the environment and --out holds
+no company data. An expected article is identified as in any environment, by its norm's bcn_id and
+its "order" (its position, stable since the BCN hydration), checked against its readable number. A
+question with an expected article missing here is reported and left out of the metrics; an expected
+article without vectors of a recipe counts as not retrieved by that recipe.
 
 Metrics, per recipe and per question type: recall@k, the share of a question's expected articles
 among the first k, and MRR, the mean of 1/position of the first expected article in the whole
@@ -62,9 +64,12 @@ DEFAULT_BATCH = 256
 # What backend-cumplify stores in ai_embeddings.embedding_model: model, dimensions and recipe.
 RECIPE_ID = re.compile(r"^(?P<model>[^@#\s]+)@(?P<dimensions>[1-9][0-9]*)#(?P<recipe>\S+)$")
 
-# A public BCN norm, as lb. The test norms of a local database ([DEV], [PRUEBA E2E]) never count.
+# A public BCN norm, as lb: with bcn_id, of no company and without the prefixes of the test norms of a local
+# database ([DEV], [PRUEBA E2E]). The backend marks a company's private norm with company_id, and lets it carry
+# a bcn_id too. Other norms never count: neither as expected articles nor in the ranking.
 PUBLIC_NORM = (
     "lb.bcn_id IS NOT NULL"
+    " AND lb.company_id IS NULL"
     " AND NOT starts_with(coalesce(lb.title, ''), '[DEV]')"
     " AND NOT starts_with(coalesce(lb.title, ''), '[PRUEBA E2E]')"
 )
@@ -79,16 +84,17 @@ RESOLVE_QUERY = f"""
     WHERE lb.bcn_id = %(bcn_id)s AND {PUBLIC_NORM}
 """
 
-# The corpus of each recipe: articles that still exist, their chunks, those of norms that are not public
-# BCN norms, and those whose text changed after they were embedded (content_hash is the SHA-256 of the
-# text the vectors came from).
+# The corpus of each recipe, the articles that still exist: those of public BCN norms, which are ranked,
+# their chunks and those whose text changed after they were embedded (content_hash is the SHA-256 of the
+# text the vectors came from), and those of other norms, which stay out of the ranking.
 CORPUS_QUERY = f"""
     SELECT e.embedding_model AS recipe,
-           count(DISTINCT e.entity_id) AS articles,
-           count(*) AS chunks,
+           count(DISTINCT e.entity_id) FILTER (WHERE {PUBLIC_NORM}) AS articles,
+           count(*) FILTER (WHERE {PUBLIC_NORM}) AS chunks,
            count(DISTINCT e.entity_id) FILTER (WHERE NOT ({PUBLIC_NORM})) AS not_public,
            count(DISTINCT e.entity_id) FILTER (
-               WHERE e.content_hash <> encode(sha256(convert_to(a.text, 'UTF8')), 'hex')) AS changed
+               WHERE {PUBLIC_NORM}
+                 AND e.content_hash <> encode(sha256(convert_to(a.text, 'UTF8')), 'hex')) AS changed
     FROM ai_embeddings e
     JOIN articles a ON a.id = e.entity_id
     JOIN legal_bodies lb ON lb.id = a.legal_body_id
@@ -96,13 +102,18 @@ CORPUS_QUERY = f"""
     GROUP BY e.embedding_model
 """
 
-COMMON_QUERY = """
-    SELECT (SELECT count(*) FROM articles) AS articles,
+# The articles of public BCN norms, and those with vectors of every recipe.
+COMMON_QUERY = f"""
+    SELECT (SELECT count(*)
+            FROM articles a
+            JOIN legal_bodies lb ON lb.id = a.legal_body_id
+            WHERE {PUBLIC_NORM}) AS articles,
            (SELECT count(*) FROM (
                 SELECT e.entity_id
                 FROM ai_embeddings e
                 JOIN articles a ON a.id = e.entity_id
-                WHERE e.entity_type = 'article' AND e.embedding_model = ANY(%(recipes)s::text[])
+                JOIN legal_bodies lb ON lb.id = a.legal_body_id
+                WHERE e.entity_type = 'article' AND e.embedding_model = ANY(%(recipes)s::text[]) AND {PUBLIC_NORM}
                 GROUP BY e.entity_id
                 HAVING count(DISTINCT e.embedding_model) = %(count)s
            ) common) AS in_all
@@ -110,8 +121,9 @@ COMMON_QUERY = """
 
 # Exact search: the distance of every chunk of the recipe, then the closest chunk of each article. No
 # vector index (HNSW, IVFFlat) can serve this shape, so nothing is approximate; ai_embeddings has none
-# today either. The joins drop the vectors of articles that no longer exist. The id only fixes the order
-# of the rows: positions are assigned in Python, where exact ties share one.
+# today either. The joins drop the vectors of articles that no longer exist, and the filter those of
+# norms that are not public BCN norms, before any position is assigned. The id only fixes the order of
+# the rows: positions are assigned in Python, where exact ties share one.
 SEARCH_QUERY = f"""
     WITH best AS (
         SELECT DISTINCT ON (e.entity_id)
@@ -121,10 +133,11 @@ SEARCH_QUERY = f"""
         ORDER BY e.entity_id, distance, e.chunk_index
     )
     SELECT b.entity_id AS article_id, b.distance, b.chunk_index, b.locator, lb.bcn_id, a."order",
-           a.number, lb.type, lb.number AS law, lb.title, ({PUBLIC_NORM}) AS public
+           a.number, lb.type, lb.number AS law, lb.title
     FROM best b
     JOIN articles a ON a.id = b.entity_id
     JOIN legal_bodies lb ON lb.id = a.legal_body_id
+    WHERE {PUBLIC_NORM}
     ORDER BY b.distance, b.entity_id
 """
 
@@ -169,12 +182,11 @@ class Hit:
     distance: float
     chunk_index: int
     locator: str | None
-    bcn_id: str | None
+    bcn_id: str
     order: int
     number: str | None
     norm: str
     title: str | None
-    public: bool
     # Local id: never written out.
     article_id: object = None
 
@@ -381,7 +393,6 @@ def rank(db: Database, recipe: str, vector: list[float]) -> list[Hit]:
             number=row["number"],
             norm=norm_label(row["type"], row["law"]),
             title=row["title"],
-            public=bool(row["public"]),
             article_id=row["article_id"],
         )
         for position, row in zip(positions, rows)
@@ -499,7 +510,6 @@ def hit_detail(hit: Hit, expected: bool) -> dict:
         "distance": round(hit.distance, 6),
         "norm": hit.norm,
         "bcn_id": hit.bcn_id,
-        "public_bcn": hit.public,
         "title": hit.title,
         "order": hit.order,
         "number": hit.number,
@@ -556,11 +566,14 @@ def print_report(
     for recipe in recipes:
         stats = corpus[recipe.identifier]
         print(
-            f"Corpus de {recipe.label} ({recipe.identifier}): {stats['articles']} artículos en {stats['chunks']} "
-            f"trozos; {stats['not_public']} de normas que no son públicas de la BCN y {stats['changed']} con el "
-            "texto cambiado desde que se embebieron."
+            f"Corpus de {recipe.label} ({recipe.identifier}): {stats['articles']} artículos de normas públicas "
+            f"de la BCN en {stats['chunks']} trozos, {stats['changed']} con el texto cambiado desde que se "
+            f"embebieron; quedan fuera del orden {stats['not_public']} de normas que no son públicas de la BCN."
         )
-    print(f"Artículos de la base: {common['articles']}; con vectores de todas las recetas: {common['in_all']}.")
+    print(
+        f"Artículos de normas públicas de la BCN: {common['articles']}; "
+        f"con vectores de todas las recetas: {common['in_all']}."
+    )
     print(
         f"Tokens del endpoint de embeddings (usage.total_tokens): {usage['total_tokens']}; "
         f"pedidos: {usage['requests']}; modelo: {usage['model'] or '-'}."
@@ -631,7 +644,7 @@ def self_test() -> int:
     check("posiciones sin artículos", assign_positions([]), [])
 
     hits = [
-        Hit(position, distance, 0, None, "1", order, None, "Ley 1", None, True, article_id)
+        Hit(position, distance, 0, None, "1", order, None, "Ley 1", None, article_id)
         for position, distance, order, article_id in (
             (1, 0.10, 1, "a"),
             (2, 0.20, 2, "b"),
@@ -808,7 +821,7 @@ def main(argv: list[str] | None = None) -> int:
             corpus, common = corpus_stats(db, recipes)
             empty = [recipe.identifier for recipe in recipes if corpus[recipe.identifier]["articles"] == 0]
             if empty:
-                parser.error(f"sin vectores de artículos en esta base: {', '.join(empty)}")
+                parser.error(f"sin vectores de artículos de normas públicas de la BCN en esta base: {', '.join(empty)}")
             for question in questions:
                 for item in question.expected:
                     resolve(db, item)
