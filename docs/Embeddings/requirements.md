@@ -112,6 +112,13 @@ Es una reimplementación declarada, solo del texto. La PR del backend que implem
 
 El tope de largo (regla 8) es provisional: su detalle lo fija esa PR. Si el texto de una app de demostración se recorta por largo, su SHA-256 depende de esa regla, y `--dry-run` lo indica.
 
+**El `--dry-run` de referencia.** Para que el SHA-256 de cada app de demostración tenga que coincidir con el que arma el backend, el `--dry-run` se hace:
+
+- justo después de una ejecución de sugerencias, sin cambios posteriores en la ficha ni en las unidades de control de las empresas. El script lee el structured guardado, y cada ejecución lo regenera desde la ficha y las unidades de control (`CompanyProfileRegenerator`): un structured desactualizado no lo puede detectar. En cambio, el derived lo rearma desde las vinculaciones y el `family_article_count` lo cuenta en vivo, y en los dos casos avisa si no coincide con lo guardado;
+- con las variables `AI_SCORE_*` del backend en sus valores por defecto: el script usa esos valores fijos, y el backend, los de su configuración.
+
+Si no se cumplen, los SHA-256 no tienen por qué coincidir.
+
 Cada regla cambia el hash:
 
 1. **Unidad.** Un texto por app elegible: de Requisitos Legales (`app_type = legal_requirements`), que no es de catálogo, de una empresa `Activa` que no es la plantilla.
@@ -203,6 +210,8 @@ Para cada app elegible de Norte, Altiplano y Litoral, o para las de `--apps`:
    | `tope-alto` | Topes por dimensión y de largo al doble |
    | `tope-proporcional` | Los 80 valores de los topes se reparten entre las dimensiones en proporción a los valores disponibles, por el mayor resto (empates en el orden de las dimensiones). Si caben todos, cada dimensión toma los suyos |
 
+   `tope-proporcional` es el reparto proporcional puro que pide el plan. Puede dejar ámbito y sector, las dimensiones que pesan en el cruce, por debajo de lo que conserva `prof-v1`: con 30, 6, 110 y 60 valores disponibles da 12, 2, 43 y 23, y `prof-v1` conserva 20, 6, 30 y 20. Queda para decidir con el equipo un reparto con relleno: cada dimensión toma lo menor entre sus disponibles y su parte del total, y lo que sobra se reparte entre las dimensiones que todavía tienen valores. Si se elige, se documenta aquí.
+
    Con dos apps o más, un caso sintético une sus perfiles para que los topes corten. Se mide con `prof-v1`, `tope-alto` y `tope-proporcional`. Si la unión no supera ningún tope, el informe lo muestra con cero valores quitados.
 7. **(d) Control entre rubros**, con cada variante.
    - Las normas no seguidas cuyo título trae una palabra clave de otra empresa de demostración y ninguna de la propia. Las palabras son las de `AiSuggestionsDemoCatalog` y se comparan sin tildes ni mayúsculas.
@@ -221,9 +230,24 @@ Para cada app elegible de Norte, Altiplano y Litoral, o para las de `--apps`:
 
 **Con textos declarados.** Ningún seeder del backend crea textos de perfil, así que sin cargarlos la receta queda provisional. Se congela después de repetir la medición con los textos declarados de las tres empresas, que se cargan con `PUT /ai/profile/text` del backend y se analizan antes de la medición. Con datos reales hay que repetirla.
 
+**Rol de solo lectura.** Además de abrir transacciones de solo lectura, la ejecución real usa un rol temporal que solo puede leer las tablas de «Lo que lee», y que se borra al terminar. Como superusuario, con una contraseña que solo sirve para esta ejecución:
+
+```sql
+CREATE ROLE perfil_eval LOGIN PASSWORD '<contraseña temporal>';
+GRANT CONNECT ON DATABASE cumplify_db TO perfil_eval;
+GRANT USAGE ON SCHEMA public TO perfil_eval;
+GRANT SELECT ON companies, legal_requirements, legal_requirement_vinculations, company_profile_entries,
+    ai_taxonomy_values, ai_article_classifications, cl_territories, legal_body_company_suggestions,
+    regulatory_alerts, regulatory_alert_suggestions, regulatory_alert_suggestion_discards, legal_bodies,
+    articles, ai_embeddings TO perfil_eval;
+-- Al terminar:
+DROP OWNED BY perfil_eval;
+DROP ROLE perfil_eval;
+```
+
 ```bash
 export SERVICE_API_KEY=...        # la misma del servicio
-export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cumplify_db
+export DATABASE_URL='postgresql://perfil_eval:<contraseña temporal>@localhost:5432/cumplify_db'
 uv run python scripts/profile_retrieval_eval.py --dry-run
 uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000 --out /tmp/perfil.json
 ```
