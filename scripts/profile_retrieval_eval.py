@@ -1895,6 +1895,16 @@ def self_test() -> int:
         proportional_caps({SCOPE: 3, SECTOR: 1, ACTIVITY: 0, FACILITY: 2}, RECIPE_DIMENSIONS, 80),
         {SCOPE: 3, SECTOR: 1, ACTIVITY: 0, FACILITY: 2},
     )
+    check(
+        "restos empatados: en el orden de las dimensiones",
+        proportional_caps({SCOPE: 1, SECTOR: 1, ACTIVITY: 1, FACILITY: 1}, RECIPE_DIMENSIONS, 2),
+        {SCOPE: 1, SECTOR: 1, ACTIVITY: 0, FACILITY: 0},
+    )
+    check(
+        "piso y mayor resto, sin redondear",
+        proportional_caps({SCOPE: 1, SECTOR: 1, ACTIVITY: 1, FACILITY: 0}, RECIPE_DIMENSIONS, 2),
+        {SCOPE: 1, SECTOR: 1, ACTIVITY: 0, FACILITY: 0},
+    )
 
     # Casos de paridad: el texto y el SHA-256 que la PR del backend tiene que reproducir.
     try:
@@ -2015,6 +2025,23 @@ def self_test() -> int:
     check("percentil de uno", percentile([0.4], 0.95), 0.4)
     check("percentil vacío", percentile([], 0.5), None)
     check("describir vacío", describe([]), {"n": 0})
+    check(
+        "describir",
+        describe([0.4, 0.1, 0.3, 0.2]),
+        {
+            "n": 4,
+            "media": 0.25,
+            "min": 0.1,
+            "p05": 0.115,
+            "p10": 0.13,
+            "p25": 0.175,
+            "p50": 0.25,
+            "p75": 0.325,
+            "p90": 0.37,
+            "p95": 0.385,
+            "max": 0.4,
+        },
+    )
     check("AUC perfecta", auc([0.9, 0.8], [0.1, 0.2]), 1.0)
     check("AUC invertida", auc([0.1], [0.9, 0.8]), 0.0)
     check("AUC con empates", auc([0.5, 0.5], [0.5]), 0.5)
@@ -2036,7 +2063,8 @@ def self_test() -> int:
         [7, 6, 19, -1, 0],
     )
     check("rótulo del tramo", bin_label(7), "0,35-0,40")
-    check("muestra fija", sorted(["a", "b", "c"], key=sample_key) == sorted(["c", "b", "a"], key=sample_key), True)
+    # El SHA-256 de «prof-eval-v1:x»: la misma clave en cualquier proceso, a diferencia de hash().
+    check("muestra fija", sample_key("x"), "88f43ccac9e58bc1654761b54d76a7b3af3e6b6a455441a8c73092e844217cc3")
     check(
         "título sin tildes",
         title_keywords("Ley de Tránsito y VEHÍCULOS", ("de transito", "vehicul", "miner")),
@@ -2073,6 +2101,21 @@ def self_test() -> int:
     )
     check("apartadas: mediana y MRR", (summary["median_position"], summary["mrr"]), (2.5, 0.625))
     check("apartadas: recall", summary["recall"], {"1": 0.5, "5": 1.0, "10": 1.0, "25": 1.0})
+    check(
+        "apartadas: por los tres mejores artículos y coseno",
+        (summary["median_position_top3"], summary["mrr_top3"], summary["median_cosine"]),
+        (3.0, 0.375, 0.55),
+    )
+    groups = app_groups(
+        bare_app(followed={"n1"}, notified={"n3"}, candidates={"n1", "n2", "n3"}),
+        {norm: [f"a-{norm}"] for norm in ("n1", "n2", "n3", "n4")},
+        0,
+    )
+    check(
+        "grupos disjuntos aunque las candidatas traigan seguidas o notificadas",
+        (groups.followed, groups.candidates, groups.other, groups.unrelated),
+        ({"n1"}, {"n2"}, {"n3"}, {"n4"}),
+    )
 
     # Apps elegibles.
     def app_row(app_id: str, company: str, **changes: object) -> dict:
@@ -2115,69 +2158,165 @@ def self_test() -> int:
     return 1 if failures else 0
 
 
-def pipeline_checks() -> list[tuple[str, object, object]]:
-    """Planifica y evalúa dos apps inventadas con vectores de dos dimensiones: la norma apartada que más se parece
-    al perfil tiene que quedar primera."""
-    roots = {
-        "r-trans": RootInfo("Transporte", SCOPE, 3),
-        "r-carga": RootInfo("Transporte de carga", ACTIVITY, 2),
-        "r-min": RootInfo("Minería", SECTOR, 5),
+class FakeDatabase:
+    """Doble de Database para la autoprueba: devuelve las filas inventadas de cada consulta tal como las daría la
+    base, sin aplicar los parámetros. load_dataset filtra después por empresa y por app, como con la base real."""
+
+    def __init__(self, rows: dict[str, list[dict]]):
+        self.data = rows
+
+    def rows(self, query: str, params: dict) -> list[dict]:
+        return [dict(row) for row in self.data.get(query, [])]
+
+
+def bare_app(**changes: object) -> AppData:
+    """Una app inventada sin perfil ni normas, para probar una función con pocos campos."""
+    data: dict = {
+        "id": "app",
+        "company_id": "c",
+        "company": "Empresa",
+        "name": "Requisitos",
+        "demo": None,
+        "demo_app": False,
+        "company_entries": [],
+        "linked": {},
+        "article_values": {},
+        "stored_derived": {},
+        "followed": set(),
+        "notified": set(),
+        "discarded": set(),
+        "suggestions": {},
     }
-    norms = {
-        norm: NormInfo(norm, title, "Ley N 1", number, None, True)
-        for norm, title, number in (
-            ("n-trans", "Ley de transporte", "1"),
-            ("n-carga", "Ley de vehículos de carga", "2"),
-            ("n-min", "Código de minería", "3"),
-            ("n-emb", "[PRUEBA E2E] Uso de emblemas", "4"),
-        )
-    }
-    articles = {
-        article: ArticleInfo(article, norm, f"Artículo {index}", index)
+    data.update(changes)
+    return AppData(**data)
+
+
+LIT_APP = DEMO_BY_KEY["litoral"].app_id
+NOR_APP = DEMO_BY_KEY["norte"].app_id
+# Normas públicas de la base inventada: (id, título, artículos con su dirección en el plano). El transporte va
+# arriba y la minería a la derecha; n-cand2 no tiene trozos vigentes.
+PIPELINE_NORMS = (
+    ("n-trans", "Ley de transporte", {"a1": (0.1, 1.0), "a2": (0.6, 1.0)}),
+    ("n-carga", "Ley de vehículos de carga", {"a3": (0.15, 1.0)}),
+    ("n-min", "Código de minería", {"a4": (1.0, 0.1)}),
+    ("n-emb", "[PRUEBA E2E] Uso de emblemas", {"a5": (0.7, 0.7)}),
+    ("n-cand", "Reglamento de tránsito urbano", {"a6": (0.3, 1.0)}),
+    ("n-notif", "Ley de seguridad vial", {"a7": (0.4, 1.0)}),
+    ("n-rel", "Reglamento de grúas", {"a8": (0.5, 1.0)}),
+    ("n-mix", "Transporte de minerales", {"a9": (0.9, 1.0)}),
+    ("n-cand2", "Ordenanza de tránsito", {}),
+    ("n-desc", "Decreto de señalización", {"a11": (0.45, 1.0)}),
+)
+
+
+def pipeline_rows() -> dict[str, list[dict]]:
+    """Las filas de la base inventada. Litoral sigue n-trans y n-carga; su perfil es solo su derived (Transporte en
+    ámbito y Transporte de carga en actividad); llega a n-cand, n-cand2, n-notif (notificada) y n-desc (descartada)
+    por Transporte, y a n-rel por la actividad. Norte solo tiene el structured Minería. Litoral tiene otra app, de
+    catálogo, con su propio derived guardado."""
+    companies = [
+        {"id": "c-lit", "name": "Empresa Litoral Ltda", "status": ACTIVE, "rut_key": DEMO_BY_KEY["litoral"].rut_key},
+        {"id": "c-nor", "name": "Empresa Norte SpA", "status": ACTIVE, "rut_key": DEMO_BY_KEY["norte"].rut_key},
+    ]
+    apps = [
+        {"id": LIT_APP, "name": "Requisitos", "app_type": APP_TYPE, "is_catalog": False, "company_id": "c-lit"},
+        {"id": "app-lit-cat", "name": "Catálogo", "app_type": APP_TYPE, "is_catalog": True, "company_id": "c-lit"},
+        {"id": NOR_APP, "name": "Requisitos", "app_type": APP_TYPE, "is_catalog": False, "company_id": "c-nor"},
+    ]
+    for app in apps:
+        company = next(item for item in companies if item["id"] == app["company_id"])
+        app.update({"company": company["name"], "status": company["status"]})
+
+    def entry(company: str, app: str | None, source: str, value: str, root: str, dimension: str, occ: int | None):
+        return {
+            "company_id": company,
+            "app_id": app,
+            "source": source,
+            "value_id": value,
+            "root_id": root,
+            "dimension": dimension,
+            "occurrences": occ,
+        }
+
+    roots = (("r-trans", SCOPE, "Transporte", 3), ("r-carga", ACTIVITY, "Transporte de carga", 2))
+    roots += (("r-min", SECTOR, "Minería", 5),)
+    articles = [
+        {"article_id": article, "legal_body_id": norm, "number": f"Artículo {index}", "order": index}
         for index, (article, norm) in enumerate(
-            (("a1", "n-trans"), ("a2", "n-trans"), ("a3", "n-carga"), ("a4", "n-min"), ("a5", "n-emb")), start=1
+            ((article, norm) for norm, _, directions in PIPELINE_NORMS for article in directions), start=1
         )
+    ]
+    reach = {"r-trans": ("n-trans", "n-carga", "n-cand", "n-cand2", "n-notif", "n-desc")}
+    reach |= {"r-carga": ("n-carga", "n-rel"), "r-min": ("n-min",)}
+    return {
+        COMPANIES_QUERY: companies,
+        APPS_QUERY: apps,
+        ENTRIES_QUERY: [
+            entry("c-nor", None, STRUCTURED, "v-min", "r-min", SECTOR, None),
+            entry("c-lit", LIT_APP, DERIVED, "v-trans", "r-trans", SCOPE, 2),
+            entry("c-lit", LIT_APP, DERIVED, "v-carga", "r-carga", ACTIVITY, 1),
+            entry("c-lit", "app-lit-cat", DERIVED, "v-carga", "r-carga", ACTIVITY, 1),
+        ],
+        LINKED_QUERY: [
+            {"app_id": LIT_APP, "article_id": "a1", "legal_body_id": "n-trans"},
+            {"app_id": LIT_APP, "article_id": "a3", "legal_body_id": "n-carga"},
+        ],
+        FOLLOWED_QUERY: [
+            {"app_id": LIT_APP, "legal_body_id": "n-trans"},
+            {"app_id": LIT_APP, "legal_body_id": "n-carga"},
+        ],
+        SUGGESTIONS_QUERY: [
+            {"app_id": LIT_APP, "legal_body_id": "n-notif", "score": 0.5, "status": "notificada", "notified": True},
+            {"app_id": LIT_APP, "legal_body_id": "n-cand", "score": 0.4, "status": "pendiente", "notified": False},
+        ],
+        DISCARDED_QUERY: [{"app_id": LIT_APP, "legal_body_id": "n-desc"}],
+        CLASSIFICATIONS_QUERY: [
+            {"article_id": "a1", "value_id": "v-trans", "root_id": "r-trans", "dimension": SCOPE},
+            {"article_id": "a3", "value_id": "v-carga", "root_id": "r-carga", "dimension": ACTIVITY},
+            {"article_id": "a3", "value_id": "v-trans", "root_id": "r-trans", "dimension": SCOPE},
+        ],
+        COUNTRY_QUERY: [{"id": "r-cl"}],
+        ROOTS_QUERY: [
+            {
+                "id": root,
+                "dimension": dimension,
+                "value": value,
+                "is_member": False,
+                "stored_family_count": count,
+                "family_count": count,
+                "has_tax_vector": root != "r-min",
+            }
+            for root, dimension, value, count in roots
+        ],
+        CANDIDATE_ROOTS_QUERY: [
+            {"legal_body_id": norm, "root_id": root} for root, norms in reach.items() for norm in norms
+        ],
+        NORMS_QUERY: [
+            {"id": norm, "title": title, "type": "Ley", "number": str(index), "bcn_id": None, "is_global": True}
+            for index, (norm, title, _) in enumerate(PIPELINE_NORMS, start=1)
+        ],
+        CORPUS_QUERY: [{**article, "chunks": 1, "current_chunks": 1} for article in articles]
+        + [
+            {
+                "article_id": "a10",
+                "legal_body_id": "n-min",
+                "number": "Artículo 10",
+                "order": 10,
+                "chunks": 1,
+                "current_chunks": 0,
+            }
+        ],
+        PUBLIC_ARTICLES_QUERY: [{"articles": len(articles) + 3}],
+        TAX_VECTORS_QUERY: [{"id": "r-trans", "embedding": "[0,1]"}, {"id": "r-carga", "embedding": "[0.1,1]"}],
     }
-    # Dirección de cada artículo en el plano: el transporte arriba, la minería a la derecha.
-    directions = {"a1": (0.1, 1.0), "a2": (0.2, 1.0), "a3": (0.15, 1.0), "a4": (1.0, 0.1), "a5": (0.7, 0.7)}
-    litoral = AppData(
-        "app-lit",
-        "c-lit",
-        "Empresa Litoral Ltda",
-        "Requisitos",
-        "litoral",
-        True,
-        company_entries=[],
-        linked={"a1": "n-trans", "a3": "n-carga"},
-        article_values={
-            "a1": {("v-trans", "r-trans", SCOPE)},
-            "a3": {("v-carga", "r-carga", ACTIVITY), ("v-trans", "r-trans", SCOPE)},
-        },
-        stored_derived={},
-        followed={"n-trans", "n-carga"},
-        notified=set(),
-        discarded=set(),
-        suggestions={},
-    )
-    norte = AppData(
-        "app-nor",
-        "c-nor",
-        "Empresa Norte SpA",
-        "Requisitos",
-        "norte",
-        True,
-        company_entries=[Entry("r-min", SECTOR, STRUCTURED)],
-        linked={},
-        article_values={},
-        stored_derived={},
-        followed=set(),
-        notified=set(),
-        discarded=set(),
-        suggestions={},
-    )
-    dataset = Dataset(
-        [litoral, norte], roots, norms, articles, {}, set(), {"r-trans": [0.0, 1.0], "r-carga": [0.1, 1.0]}, []
-    )
+
+
+def pipeline_checks() -> list[tuple[str, object, object]]:
+    """Lee la base inventada con load_dataset, planifica y evalúa con vectores de dos dimensiones: la norma
+    apartada que más se parece al perfil tiene que quedar primera."""
+    dataset = load_dataset(FakeDatabase(pipeline_rows()), ["litoral", "norte"], 0, True)
+    apps = {app.id: app for app in dataset.apps}
+    directions = {article: xy for _, _, items in PIPELINE_NORMS for article, xy in items.items()}
 
     def fake_vector(text: str) -> list[float]:
         return [0.05, 1.0] if "Transporte" in text else [1.0, 0.0]
@@ -2185,7 +2324,8 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
     def fake_similarity(vector: list[float]) -> dict[str, Similarity]:
         norm = math.sqrt(sum(value * value for value in vector))
         result = {}
-        for article, (x, y) in directions.items():
+        for article in dataset.articles:
+            x, y = directions[article]
             length = math.sqrt(x * x + y * y)
             result[article] = Similarity((vector[0] * x + vector[1] * y) / (norm * length), 0, None)
         return result
@@ -2196,24 +2336,75 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             unit.vector = fake_vector(unit.text)
     reports = evaluate(dataset, units, fake_similarity, lambda pairs: {}, {}, 0)
     by_app = {report["app_id"]: report for report in reports}
-    lit = by_app["app-lit"]["variants"]
+    lit = by_app[LIT_APP]["variants"]
     holdout = {item["norm"]: item for item in lit["prof-v1"]["holdout"]["norms"]}
     synthetic = by_app.get("sintetica", {}).get("variants", {})
+    cross = lit["prof-v1"]["cross_rubro"]
+    main_sha = lit["prof-v1"]["sha256"]
     return [
+        ("datos: apps elegibles", sorted(apps), sorted([LIT_APP, NOR_APP])),
+        ("datos: sin el derived de ninguna app en lo de la empresa", apps[LIT_APP].company_entries, []),
+        ("datos: lo de la empresa", apps[NOR_APP].company_entries, [Entry("r-min", SECTOR, STRUCTURED)]),
+        ("datos: candidatas sin seguidas, notificadas ni descartadas", apps[LIT_APP].candidates, {"n-cand", "n-cand2"}),
+        ("datos: candidatas por un structured", apps[NOR_APP].candidates, {"n-min"}),
+        (
+            "datos: corpus",
+            dataset.corpus,
+            {
+                "public_norms": 10,
+                "public_norms_with_chunks": 9,
+                "public_articles": 13,
+                "articles_with_current_chunks": 10,
+                "current_chunks": 10,
+                "articles_with_stale_chunks": 1,
+                "articles_without_chunks": 2,
+                "test_norms": 1,
+            },
+        ),
+        ("datos: sin avisos", dataset.warnings, []),
         ("plan: el caso sintético solo con las variantes de topes", sorted(synthetic), ["prof-v1"]),
         (
             "plan: Norte sin señal mínima",
-            by_app["app-nor"]["variants"]["prof-v1"]["reason"],
+            by_app[NOR_APP]["variants"]["prof-v1"]["reason"],
             "sin señal mínima: ningún valor declared ni derived",
         ),
-        ("plan: Norte por empresa sí tiene vector", "auc" in by_app["app-nor"]["variants"]["por-empresa"], True),
+        ("plan: Norte por empresa sí tiene vector", "auc" in by_app[NOR_APP]["variants"]["por-empresa"], True),
+        # La apartada Ley 1 (n-trans) deja el mismo texto, porque a3 trae las dos raíces; la Ley 2 (n-carga) se
+        # lleva la actividad.
+        (
+            "apartadas: el texto sin la norma apartada",
+            (holdout["Ley 1"]["sha256"] == main_sha, holdout["Ley 2"]["sha256"] == main_sha),
+            (True, False),
+        ),
+        ("plan: textos distintos, un pedido por texto", len(texts_to_embed(units)), 4),
         ("apartada de Litoral evaluada", sorted(item["position"] for item in holdout.values()), [1, 1]),
-        ("apartada: orden entre las no seguidas", holdout["Ley 1"]["ranked_norms"], 3),
+        ("apartada: orden entre las no seguidas", holdout["Ley 1"]["ranked_norms"], 8),
+        # Por el promedio de los tres mejores artículos, n-trans (0,998 y 0,882) queda detrás de n-cand y n-notif.
+        ("apartada: puesto por los tres mejores artículos", holdout["Ley 1"]["position_top3"], 3),
+        ("apartada: percentil entre las sin relación", holdout["Ley 1"]["percentile_vs_unrelated"], 100.0),
         ("centroide sin tokens", lit[CENTROID]["tokens"], 0),
-        ("grupos de Litoral", by_app["app-lit"]["groups"]["seguidas"], 2),
+        (
+            "grupos de Litoral",
+            by_app[LIT_APP]["groups"],
+            {
+                "seguidas": 2,
+                "candidatas": 1,
+                "sin_relacion": 4,
+                "sin_relacion_total": 4,
+                "notificadas_o_descartadas": 2,
+                "seguidas_no_publicas": 0,
+            },
+        ),
+        ("AUC de las candidatas", lit["prof-v1"]["auc"]["candidatas_vs_sin_relacion"] is not None, True),
         ("control «emblema» rotulado", [item["test_norm"] for item in lit["prof-v1"]["control"]], [True]),
-        ("entre rubros: Código de minería es de otro rubro", lit["prof-v1"]["cross_rubro"]["norms"], 1),
-        ("tramos de revisión", sum(sum(item["counts"].values()) for item in lit["prof-v1"]["bins"]), 5),
+        # Transporte de minerales trae «miner», de Norte, pero también «transport», de Litoral: no cuenta. Código de
+        # minería queda séptima entre las siete normas que la app no sigue, notificadas y descartadas incluidas.
+        (
+            "entre rubros: solo Código de minería",
+            (cross["norms"], cross["in_top_10"], cross["in_top_25"], [item["position"] for item in cross["top"]]),
+            (1, 1, 1, [7]),
+        ),
+        ("tramos de revisión", sum(sum(item["counts"].values()) for item in lit["prof-v1"]["bins"]), 8),
     ]
 
 
