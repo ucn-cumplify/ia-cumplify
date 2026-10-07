@@ -12,8 +12,8 @@ is not part of pytest, which collects only tests/.
 
 SERVICE_API_KEY and DATABASE_URL come from the environment or the arguments, never from .env. The
 database is read with this script's own read-only connection, and its checks run before the first
-request: a database that fails, a recipe without vectors or a missing expected article shows up before
-any token is spent. A failed connection shows only the type of psycopg's error, whose message can
+request: an --out that cannot be written, a database that fails, a recipe without vectors or a missing
+expected article shows up before any token is spent. A failed connection shows only the type of psycopg's error, whose message can
 repeat DATABASE_URL with its password.
 
 The search is exact, without an index: the question is compared with every chunk of the recipe with
@@ -764,6 +764,11 @@ def main(argv: list[str] | None = None) -> int:
     out = (args.out or default_out()).resolve()
     if out == REPO or REPO in out.parents:
         parser.error("--out tiene que quedar fuera del repositorio: guarda resultados de la base")
+    # --out is written after the last request: a path that cannot be written stops the run before it spends tokens.
+    if out.is_dir() or not out.parent.is_dir():
+        parser.error(f"--out tiene que ser un archivo en un directorio que exista: {out}")
+    if not os.access(out.parent, os.W_OK) or (out.exists() and not os.access(out, os.W_OK)):
+        parser.error(f"no se puede escribir --out: {out}")
     if not args.api_key:
         parser.error("falta SERVICE_API_KEY (o --api-key)")
     if not args.database_url:
@@ -838,45 +843,48 @@ def main(argv: list[str] | None = None) -> int:
         )
         for recipe in recipes
     }
-    write_out(
-        out,
-        {
-            "generated_at": datetime.now().isoformat(timespec="seconds"),
-            "set": {"path": str(args.question_set), "version": data["version"], "description": data["description"]},
-            "service": {"base_url": args.base_url, "model": args.model, "dimensions": args.dimensions},
-            "usage": usage,
-            "recipes": [recipe.identifier for recipe in recipes],
-            "k": ks,
-            "top": top,
-            "corpus": corpus,
-            "articles": common,
-            "metrics": summary,
-            "warnings": warnings,
-            "questions": [
-                {
-                    "id": question.id,
-                    "type": question.type,
-                    "question": question.text,
-                    "note": question.note,
-                    "expected": [
-                        {
-                            "bcn_id": item.bcn_id,
-                            "order": item.order,
-                            "number": item.number,
-                            "norm": item.norm,
-                            "found_number": item.found_number,
-                            "problem": item.problem,
-                        }
-                        for item in question.expected
-                    ],
-                    "excluded": question.excluded,
-                    "results": question.results,
-                }
-                for question in questions
-            ],
-        },
-    )
+    report = {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "set": {"path": str(args.question_set), "version": data["version"], "description": data["description"]},
+        "service": {"base_url": args.base_url, "model": args.model, "dimensions": args.dimensions},
+        "usage": usage,
+        "recipes": [recipe.identifier for recipe in recipes],
+        "k": ks,
+        "top": top,
+        "corpus": corpus,
+        "articles": common,
+        "metrics": summary,
+        "warnings": warnings,
+        "questions": [
+            {
+                "id": question.id,
+                "type": question.type,
+                "question": question.text,
+                "note": question.note,
+                "expected": [
+                    {
+                        "bcn_id": item.bcn_id,
+                        "order": item.order,
+                        "number": item.number,
+                        "norm": item.norm,
+                        "found_number": item.found_number,
+                        "problem": item.problem,
+                    }
+                    for item in question.expected
+                ],
+                "excluded": question.excluded,
+                "results": question.results,
+            }
+            for question in questions
+        ],
+    }
+    # The console first: if --out cannot be written after all, the metrics already paid for are not lost.
     print_report(args.question_set, questions, recipes, corpus, common, usage, warnings, summary, ks)
+    try:
+        write_out(out, report)
+    except OSError as exc:
+        print(f"\nFALLA al guardar el detalle por pregunta en {out}: {exc}", file=sys.stderr)
+        return 1
     print(f"\nDetalle por pregunta en {out} (fuera del repositorio).")
     return 0
 
