@@ -31,6 +31,10 @@ Estos tres archivos son el contrato mínimo de cada módulo. Si un módulo crece
 ```text
 docs/
 ├── README.md
+├── ApplicabilityReasons/
+│   ├── api.md
+│   ├── requirements.md
+│   └── test.csv
 ├── Chat/
 │   ├── api.md
 │   ├── requirements.md
@@ -49,7 +53,7 @@ docs/
     └── test.csv
 ```
 
-Este servicio no es dueño del esquema de PostgreSQL. Lee `legal_bodies` y `articles`, que define y migra `backend-cumplify`. Por eso no hay un diagrama de base propio. El chat, el perfil de empresa y los embeddings no leen la base: responden con lo que reciben en el pedido. El script manual del set de evaluación del chat (`scripts/chat_eval.py`) no es parte del servicio: arma sus pasajes con una conexión propia de solo lectura a `articles`, `legal_bodies`, `obligations`, `legal_requirements` y `legal_requirement_vinculations`. Tampoco lo es el de evaluación de recuperación de los embeddings (`scripts/retrieval_eval.py`), que lee `ai_embeddings`, `articles` y `legal_bodies` con otra conexión propia de solo lectura.
+Este servicio no es dueño del esquema de PostgreSQL. Lee `legal_bodies` y `articles`, que define y migra `backend-cumplify`. Por eso no hay un diagrama de base propio. La clasificación y los motivos de aplicabilidad leen esas tablas (los motivos, solo los artículos pedidos). El chat, el perfil de empresa y los embeddings no leen la base: responden con lo que reciben en el pedido. El script manual del set de evaluación del chat (`scripts/chat_eval.py`) no es parte del servicio: arma sus pasajes con una conexión propia de solo lectura a `articles`, `legal_bodies`, `obligations`, `legal_requirements` y `legal_requirement_vinculations`. Tampoco lo es el de evaluación de recuperación de los embeddings (`scripts/retrieval_eval.py`), que lee `ai_embeddings`, `articles` y `legal_bodies` con otra conexión propia de solo lectura.
 
 ---
 
