@@ -2328,9 +2328,9 @@ PIPELINE_NORMS = (
 def pipeline_rows() -> dict[str, list[dict]]:
     """Las filas de la base inventada. Litoral sigue n-trans y n-carga; su perfil es solo su derived (Transporte en
     ámbito y Transporte de carga en actividad); llega a n-cand, n-cand2, n-notif (notificada) y n-desc (descartada)
-    por Transporte, y a n-rel por la actividad. a3, de n-carga, está vinculado también con una vinculación de
-    n-trans. Norte solo tiene el structured Minería. Litoral tiene otra app, de catálogo, con su propio derived
-    guardado."""
+    por Transporte, y a n-rel por la actividad, que también trae n-cand: como cruza, n-cand es candidata y no
+    relacionada. a3, de n-carga, está vinculado también con una vinculación de n-trans. Norte solo tiene el
+    structured Minería. Litoral tiene otra app, de catálogo, con su propio derived guardado."""
     companies = [
         {"id": "c-lit", "name": "Empresa Litoral Ltda", "status": ACTIVE, "rut_key": DEMO_BY_KEY["litoral"].rut_key},
         {"id": "c-nor", "name": "Empresa Norte SpA", "status": ACTIVE, "rut_key": DEMO_BY_KEY["norte"].rut_key},
@@ -2364,7 +2364,7 @@ def pipeline_rows() -> dict[str, list[dict]]:
         )
     ]
     reach = {"r-trans": ("n-trans", "n-carga", "n-cand", "n-cand2", "n-notif", "n-desc")}
-    reach |= {"r-carga": ("n-carga", "n-rel"), "r-min": ("n-min",)}
+    reach |= {"r-carga": ("n-carga", "n-rel", "n-cand"), "r-min": ("n-min",)}
     return {
         COMPANIES_QUERY: companies,
         APPS_QUERY: apps,
