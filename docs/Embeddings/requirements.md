@@ -133,14 +133,17 @@ Cada regla cambia el hash:
    - el orden de las dimensiones del punto 4;
    - el `value`, en orden ordinal UTF-16.
 9. **Texto.** Una línea por dimensión con valores, en el orden del punto 4: `etiqueta: valor; valor`, con los valores en orden ordinal UTF-16 y separados por `"; "`. Una dimensión sin valores no deja línea. Las líneas se unen con `"\n"`, sin salto al final.
-10. **Señal mínima.** Se evalúa sobre el texto ya recortado por los topes. Si ningún valor del texto tiene como procedencia ganadora declared o derived, la app no tiene texto ni vector.
+10. **Señal mínima.** Si ninguna raíz con peso de las dimensiones del punto 4 tiene una entrada declared o derived, gane la procedencia que gane, la app no tiene texto ni vector. Se evalúa antes de los topes, como dice el plan de la recuperación semántica del backend (`docs/AI/plan-recuperacion-semantica.md`): «sin al menos una raíz con entrada declared o derived en esas cuatro dimensiones».
+    - Con los pesos por defecto da lo mismo evaluarla antes o después de los topes, o mirar la procedencia ganadora. Declared (1,0) y derived (0,5 o más) siempre quedan antes que structured (0,4) en su dimensión, y el recorte por largo quita primero lo de menor peso.
+    - Con otros pesos, por ejemplo con `AI_SCORE_W_SRC_STRUCTURED` mayor o igual que `AI_SCORE_W_SRC_DERIVED_MIN`, esas lecturas se separan. El caso P4 lo fija con pesos propios.
 11. **Hash.** SHA-256 del texto en UTF-8, en hexadecimal en minúsculas, como el `content_hash` de `ai_embeddings`. El identificador de la receta es `text-embedding-3-large@1024#prof-v1`.
 
-**Casos de paridad.** `scripts/profile_text_parity.json` trae tres casos. Cada uno tiene:
+**Casos de paridad.** `scripts/profile_text_parity.json` trae cuatro casos. Cada uno tiene:
 
 - las entradas del perfil (`root`, `dimension` y `source`);
 - el `value` y el `family_article_count` de cada raíz;
 - las ocurrencias de derived por raíz;
+- `settings`, solo si el caso usa pesos propios: los aplica en lugar de los de la raíz del archivo, que son los valores por defecto de `AI_SCORE_W_SRC_*` y `AI_SCORE_DERIVED_SATURATION`;
 - el texto, el SHA-256 y el largo esperados.
 
 Los ids son inventados y no influyen en el texto.
@@ -150,8 +153,9 @@ Los ids son inventados y no influyen en el texto.
 | P1 | Exclusión por familia; máximo entre procedencias; tope de sector con empate de peso resuelto por `family_article_count` y, con el mismo conteo, por el orden ordinal; orden ordinal UTF-16 dentro de la línea («Área portuaria» al final; un valor con un carácter fuera del plano básico antes que uno con U+FF27); territorio y `others` fuera; tope de instalaciones; recorte por largo que quita primero un valor de ámbito y después dos instalaciones. Largo de 7.686 unidades UTF-16 y 7.685 caracteres de Python |
 | P2 | Sin señal mínima: solo un structured en las cuatro dimensiones. Sin texto |
 | P3 | Un solo valor declared: la forma mínima del texto |
+| P4 | Señal mínima con pesos propios (structured 0,8): la única raíz con una entrada derived gana como structured y queda fuera por el tope de sector. Igual hay texto, solo con valores structured, porque la señal se evalúa antes de los topes y basta la entrada |
 
-La autoprueba los comprueba. La PR del backend tiene que cargarlos en una prueba de la función pura de la receta.
+La autoprueba los comprueba. La PR del backend tiene que cargarlos en una prueba de la función pura de la receta, con los pesos de cada caso.
 
 ### Qué mide
 

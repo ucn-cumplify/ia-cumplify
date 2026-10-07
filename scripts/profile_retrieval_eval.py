@@ -99,7 +99,8 @@ STRUCTURED = "structured"
 EXCLUDED = "excluded"
 # Desempate de procedencias con el mismo peso (SuggestionScoring.SourcePriority).
 SOURCE_PRIORITY = {DECLARED: 0, DERIVED: 1, STRUCTURED: 2}
-# Señal mínima: el texto tiene al menos un valor cuya procedencia ganadora es una de estas.
+# Señal mínima: alguna raíz con peso de las dimensiones de la receta tiene una entrada de una de estas
+# procedencias, gane la que gane.
 SIGNAL_SOURCES = (DECLARED, DERIVED)
 
 
@@ -324,7 +325,9 @@ def build_profile_text(
     2. Candidatos: las raíces con peso de las dimensiones de la receta, con el value de la raíz.
     3. Por dimensión, los primeros según dimension_rank, hasta su tope.
     4. Mientras el texto pase de max_length unidades UTF-16, se quita el último según global_rank.
-    5. Señal mínima (si la receta la exige): algún valor del texto final con procedencia declared o derived.
+    5. Señal mínima (si la receta la exige), sobre los candidatos, antes de los topes: alguno tiene una entrada
+       declared o derived, gane la procedencia que gane. Con los pesos por defecto da lo mismo que mirar la
+       procedencia ganadora de los valores del texto final.
     """
     weights = profile_source_weights(entries, occurrences, settings)
     dimension_of: dict[str, str] = {}
@@ -343,6 +346,8 @@ def build_profile_text(
         )
     for values in candidates.values():
         values.sort(key=dimension_rank)
+    signal_roots = {entry.root for entry in entries if entry.source in SIGNAL_SOURCES}
+    signal = any(candidate.root in signal_roots for values in candidates.values() for candidate in values)
 
     available = {dimension: len(values) for dimension, values in candidates.items()}
     caps = recipe.caps_for(available)
@@ -357,7 +362,6 @@ def build_profile_text(
         cut_by_length[last.dimension] += 1
         text = render(selected, recipe)
 
-    signal = any(candidate.source in SIGNAL_SOURCES for values in selected.values() for candidate in values)
     result = ProfileText(text, None, selected, available, cut_by_cap, cut_by_length, signal)
     if not text:
         result.text, result.reason = None, "sin valores en las dimensiones de la receta"
@@ -1823,6 +1827,17 @@ def parity_case_inputs(case: dict) -> tuple[list[Entry], dict[str, int], dict[st
     return entries, {root: int(count) for root, count in case.get("occurrences", {}).items()}, roots
 
 
+def parity_settings(case: dict, default: dict) -> Settings:
+    """Los pesos de un caso: los suyos si trae settings; si no, los de la raíz del archivo."""
+    data = case.get("settings", default)
+    return Settings(
+        declared=float(data["declared"]),
+        derived_min=float(data["derived_min"]),
+        derived_saturation=float(data["derived_saturation"]),
+        structured=float(data["structured"]),
+    )
+
+
 def self_test() -> int:
     """--self-test: la receta, los casos de paridad y las métricas, con datos inventados, sin servicio ni base."""
     failures: list[str] = []
@@ -1891,7 +1906,7 @@ def self_test() -> int:
         )
         for case in parity["cases"]:
             entries, occurrences, roots = parity_case_inputs(case)
-            built = build_profile_text(entries, occurrences, roots, PROF_V1)
+            built = build_profile_text(entries, occurrences, roots, PROF_V1, parity_settings(case, parity["settings"]))
             expected = case["expected"]
             check(f"paridad {case['id']}: texto", built.text, expected["text"])
             check(f"paridad {case['id']}: SHA-256", built.sha256, expected["sha256"])

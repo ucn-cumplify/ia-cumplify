@@ -2,7 +2,7 @@
   "version": 1,
   "recipe": "prof-v1",
   "embedding_model": "text-embedding-3-large@1024#prof-v1",
-  "description": "Casos de paridad de la receta prof-v1 (tarea 2.3 de backend-cumplify). Los usa la autoprueba de scripts/profile_retrieval_eval.py, y la PR del backend que implemente prof-v1 tiene que dar, con las mismas entradas, el mismo texto y el mismo SHA-256. Cada caso trae las entradas del perfil ya resueltas a su raíz (root, dimension, source: el ProfileValue del backend), el value y el family_article_count de cada raíz, y las ocurrencias de derived por raíz (artículos vinculados distintos de la familia). Los ids son inventados y no influyen en el texto. Las reglas están en «Evaluación del perfil embebido» de docs/Embeddings/requirements.md.",
+  "description": "Casos de paridad de la receta prof-v1 (tarea 2.3 de backend-cumplify). Los usa la autoprueba de scripts/profile_retrieval_eval.py, y la PR del backend que implemente prof-v1 tiene que dar, con las mismas entradas, el mismo texto y el mismo SHA-256. Cada caso trae las entradas del perfil ya resueltas a su raíz (root, dimension, source: el ProfileValue del backend), el value y el family_article_count de cada raíz, y las ocurrencias de derived por raíz (artículos vinculados distintos de la familia). Un caso puede traer sus propios pesos en settings; si no los trae, valen los de la raíz del archivo, que son los valores por defecto de AI_SCORE_W_SRC_* y AI_SCORE_DERIVED_SATURATION. Los ids son inventados y no influyen en el texto. Las reglas están en «Evaluación del perfil embebido» de docs/Embeddings/requirements.md.",
   "settings": {
     "declared": 1.0,
     "derived_min": 0.5,
@@ -627,6 +627,156 @@
         "cut_by_cap": {
           "scope": 0,
           "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        },
+        "cut_by_length": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        }
+      }
+    },
+    {
+      "id": "P4",
+      "description": "Señal mínima con pesos propios (structured 0,8, mayor que cualquier derived): Turismo, la única raíz con una entrada derived, gana como structured y queda fuera por el tope de sector, detrás de diez structured con familias más chicas. La señal se evalúa sobre las raíces de las cuatro dimensiones antes de los topes, y basta una entrada declared o derived, gane la procedencia que gane: hay texto, solo con valores structured. Mirando la procedencia ganadora, o solo los valores del texto ya recortado, no habría texto. Con los pesos por defecto esas lecturas coinciden, por eso el caso trae los suyos.",
+      "settings": {
+        "declared": 1.0,
+        "derived_min": 0.5,
+        "derived_saturation": 5.0,
+        "structured": 0.8
+      },
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000201",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000202",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000203",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000204",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000205",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000206",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000207",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000208",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000209",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000210",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000211",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000211",
+          "dimension": "productive_sector",
+          "source": "structured"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000201": {
+          "value": "Sector 01",
+          "dimension": "productive_sector",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000202": {
+          "value": "Sector 02",
+          "dimension": "productive_sector",
+          "family_article_count": 2
+        },
+        "00000000-0000-4000-8000-000000000203": {
+          "value": "Sector 03",
+          "dimension": "productive_sector",
+          "family_article_count": 3
+        },
+        "00000000-0000-4000-8000-000000000204": {
+          "value": "Sector 04",
+          "dimension": "productive_sector",
+          "family_article_count": 4
+        },
+        "00000000-0000-4000-8000-000000000205": {
+          "value": "Sector 05",
+          "dimension": "productive_sector",
+          "family_article_count": 5
+        },
+        "00000000-0000-4000-8000-000000000206": {
+          "value": "Sector 06",
+          "dimension": "productive_sector",
+          "family_article_count": 6
+        },
+        "00000000-0000-4000-8000-000000000207": {
+          "value": "Sector 07",
+          "dimension": "productive_sector",
+          "family_article_count": 7
+        },
+        "00000000-0000-4000-8000-000000000208": {
+          "value": "Sector 08",
+          "dimension": "productive_sector",
+          "family_article_count": 8
+        },
+        "00000000-0000-4000-8000-000000000209": {
+          "value": "Sector 09",
+          "dimension": "productive_sector",
+          "family_article_count": 9
+        },
+        "00000000-0000-4000-8000-000000000210": {
+          "value": "Sector 10",
+          "dimension": "productive_sector",
+          "family_article_count": 10
+        },
+        "00000000-0000-4000-8000-000000000211": {
+          "value": "Turismo",
+          "dimension": "productive_sector",
+          "family_article_count": 50
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000211": 1
+      },
+      "expected": {
+        "text": "Sector productivo: Sector 01; Sector 02; Sector 03; Sector 04; Sector 05; Sector 06; Sector 07; Sector 08; Sector 09; Sector 10",
+        "sha256": "98ce94adefed97188f1f2b4f9a3cb09bee9ec76fa29bcdc01a469c928ca85b92",
+        "length_utf16": 127,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 0,
+          "productive_sector": 1,
           "activity_action": 0,
           "facility_installation_equipment": 0
         },
