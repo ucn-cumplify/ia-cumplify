@@ -107,10 +107,10 @@ No reimplementa el puntaje del cruce. La combinación con la taxonomía, el peso
 
 Es una reimplementación declarada, solo del texto. La PR del backend que implemente `prof-v1` tiene que dar el mismo texto y el mismo SHA-256:
 
-- para las apps de demostración de una misma base: `--dry-run` muestra los textos y sus SHA-256;
+- para las apps de demostración de una misma base: `--dry-run` muestra sus SHA-256 por consola y guarda los textos en `--out`;
 - para los casos de `scripts/profile_text_parity.json`, que no necesitan base.
 
-El tope de largo (regla 8) es provisional: su detalle lo fija esa PR. Si el texto de una app de demostración se recorta por largo, su SHA-256 depende de esa regla.
+El tope de largo (regla 8) es provisional: su detalle lo fija esa PR. Si el texto de una app de demostración se recorta por largo, su SHA-256 depende de esa regla, y `--dry-run` lo indica.
 
 Cada regla cambia el hash:
 
@@ -237,7 +237,7 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
 | `--out FILE` | Un archivo del directorio temporal | Informe completo; fuera del repositorio, en un directorio que exista. En `--dry-run`, solo si se indica |
 | `--vectors-out FILE` | Ninguno | Los vectores, uno por línea (app, variante, norma apartada y SHA-256 del texto), para la simulación del backend. Fuera del repositorio |
 | `--timeout S` | 120 | Segundos por pedido |
-| `--dry-run` | | Arma los textos, muestra los de `prof-v1` con su SHA-256 y estima el costo, sin el endpoint ni `SERVICE_API_KEY` |
+| `--dry-run` | | Arma los textos y muestra, de los de `prof-v1`, el SHA-256, el largo y los valores por dimensión, con el costo estimado, sin el endpoint ni `SERVICE_API_KEY`. Los textos van solo a `--out` |
 | `--self-test` | | Comprueba la receta, los casos de paridad y las métricas con datos inventados, sin servicio ni base |
 
 **Comportamiento.**
@@ -246,7 +246,7 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
 - **Base de solo lectura.** Usa una conexión propia de solo lectura, la de `retrieval_eval.py`. Si no puede conectarse, muestra solo el tipo del error.
 - **Comprobaciones antes del primer pedido.** Se ejecutan todas las consultas, incluida una búsqueda de prueba con un vector ya guardado, y se arman todos los textos: un error de configuración no gasta tokens.
 - **Lo que lee.** `companies`, `legal_requirements`, `legal_requirement_vinculations`, `company_profile_entries`, `ai_taxonomy_values`, `ai_article_classifications`, `cl_territories`, `legal_body_company_suggestions`, `regulatory_alerts`, `regulatory_alert_suggestions`, `regulatory_alert_suggestion_discards`, `legal_bodies`, `articles` y `ai_embeddings`.
-- **Consola y `--out`.** La consola muestra solo métricas: el corpus, los tokens, los avisos y, por app y variante, el largo, los tokens, las AUC, las medianas por grupo y la evaluación que deja una norma afuera. Los textos de perfil son datos de empresas y van a `--out`, con las distribuciones, los primeros puestos, la muestra por tramo y el detalle de cada norma apartada. El informe se guarda después de mostrarse, para que una falla al escribirlo no se lleve las métricas ya pagadas.
+- **Consola y `--out`.** La consola muestra solo métricas: el corpus, los tokens, los avisos y, por app y variante, el largo, los tokens, las AUC, las medianas por grupo y la evaluación que deja una norma afuera. En `--dry-run` muestra, por app, el SHA-256, el largo y los valores por dimensión del texto de `prof-v1`, y nunca el texto: sin `--out`, los textos no se guardan. Los textos de perfil son datos de empresas y van a `--out`, con las distribuciones, los primeros puestos, la muestra por tramo y el detalle de cada norma apartada. El informe se guarda después de mostrarse, para que una falla al escribirlo no se lleve las métricas ya pagadas.
 - **Privacidad.** Las normas privadas de una empresa nunca aparecen con su título.
 - **Códigos de salida.** Termina con 0 aunque una app no tenga vector. Termina con 2 ante un error de configuración antes del primer pedido, sin gastar tokens: argumentos, `--out`, conexión o consultas a la base, ninguna app elegible o ningún trozo `art-v2` vigente. Termina con 1 si falla el endpoint o la base durante la evaluación, después de mostrar los tokens gastados, o si no puede guardar el informe.
 

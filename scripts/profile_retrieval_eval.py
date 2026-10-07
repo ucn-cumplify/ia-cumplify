@@ -22,7 +22,8 @@ trozos art-v2 vigentes que backend-cumplify guarda en ai_embeddings:
 
 Gasta tokens reales: un texto por app y variante, más uno por norma seguida y variante en (b). Cada texto
 distinto se embebe una sola vez, en su propio pedido, para informar sus tokens. --dry-run arma los textos,
-muestra los de prof-v1 con su SHA-256 y estima el costo, sin llamar al endpoint. No es parte de pytest.
+muestra de los de prof-v1 el SHA-256, el largo y los valores por dimensión, y estima el costo, sin llamar al
+endpoint; los textos van solo a --out. No es parte de pytest.
 
 SERVICE_API_KEY y DATABASE_URL vienen del entorno o de los argumentos, nunca de .env. La base se lee con una
 conexión propia de solo lectura (Database de retrieval_eval.py, que nunca repite DATABASE_URL en un error), y
@@ -41,7 +42,9 @@ base.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
+import io
 import json
 import math
 import os
@@ -1833,7 +1836,8 @@ def print_report(report: dict) -> None:
 
 
 def print_dry_run(units: list[Unit], dataset: Dataset) -> None:
-    """Los textos de prof-v1 con su SHA-256, y lo que costaría la medición."""
+    """De cada texto de prof-v1, el SHA-256, el largo y los valores por dimensión, y lo que costaría la medición. Los
+    textos no van a la consola: son datos de empresas."""
     for warning in dataset.warnings:
         print(warning)
     for unit in units:
@@ -1855,8 +1859,12 @@ def print_dry_run(units: list[Unit], dataset: Dataset) -> None:
             print(f"  Sin texto: {unit.reason}")
             continue
         print(f"  {PROFILE_MODEL}  SHA-256 {sha256_hex(unit.text)}  largo {utf16_len(unit.text)}")
-        for line in unit.text.split("\n"):
-            print(f"  | {line}")
+        print(
+            "  Valores en el texto: "
+            + ", ".join(f"{dimension} {len(profile.selected[dimension])}" for dimension in RECIPE_DIMENSIONS)
+        )
+        if any(profile.cut_by_length.values()):
+            print("  Recortado por largo: el SHA-256 depende de la regla 8, que es provisional.")
     texts = texts_to_embed(units)
     with_text = [unit for unit in units if unit.text is not None]
     characters = sum(utf16_len(text) for text in texts)
@@ -2451,6 +2459,10 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
     synthetic = by_app.get("sintetica", {}).get("variants", {})
     cross = lit["prof-v1"]["cross_rubro"]
     main_sha = lit["prof-v1"]["sha256"]
+    console = io.StringIO()
+    with contextlib.redirect_stdout(console):
+        print_dry_run(units, dataset)
+    shown = console.getvalue()
     return [
         ("datos: apps elegibles", sorted(apps), sorted([LIT_APP, NOR_APP])),
         ("datos: sin el derived de ninguna app en lo de la empresa", apps[LIT_APP].company_entries, []),
@@ -2499,6 +2511,11 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             (True, False),
         ),
         ("plan: textos distintos, un pedido por texto", len(texts_to_embed(units)), 4),
+        (
+            "--dry-run: el SHA-256 por consola, sin el texto",
+            (main_sha in shown, any(line in shown for line in lit["prof-v1"]["text"].split("\n"))),
+            (True, False),
+        ),
         ("apartada de Litoral evaluada", sorted(item["position"] for item in holdout.values()), [1, 1]),
         ("apartada: orden entre las no seguidas", holdout["Ley 1"]["ranked_norms"], 8),
         # Por el promedio de los tres mejores artículos, n-trans (0,998 y 0,882) queda detrás de n-cand y n-notif.
@@ -2578,7 +2595,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--database-url", default=os.environ.get("DATABASE_URL", ""), help="defecto: DATABASE_URL")
     parser.add_argument("--timeout", type=float, default=120.0, help="segundos por pedido")
     parser.add_argument(
-        "--dry-run", action="store_true", help="arma y muestra los textos de prof-v1 con su SHA-256, sin el endpoint"
+        "--dry-run",
+        action="store_true",
+        help="arma los textos y muestra el SHA-256 de los de prof-v1, sin el endpoint; los textos van solo a --out",
     )
     parser.add_argument(
         "--self-test", action="store_true", help="comprueba la receta y las métricas sin servicio ni base"
@@ -2636,6 +2655,8 @@ def main(argv: list[str] | None = None) -> int:
             if out:
                 write_json(out, dry_run_report(units, dataset, variants))
                 print(f"\nTextos en {out} (fuera del repositorio).")
+            else:
+                print("\nLos textos no se guardaron: van solo a --out, con un archivo fuera del repositorio.")
             return 0
 
         texts = texts_to_embed(units)

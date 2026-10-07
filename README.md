@@ -157,8 +157,8 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
 ```
 
 - Lee la base local con una conexión propia de solo lectura. No lee `.env`: las variables van exportadas o como argumentos (`--api-key`, `--database-url`).
-- `--dry-run` arma los textos, muestra los de `prof-v1` con su SHA-256 y estima el costo, sin llamar al endpoint ni pedir `SERVICE_API_KEY`.
-- Por consola muestra solo métricas. Los textos de perfil, que son datos de empresas, van a `--out` (por defecto, un archivo del directorio temporal), siempre fuera del repositorio.
+- `--dry-run` arma los textos y muestra, de los de `prof-v1`, el SHA-256, el largo y los valores por dimensión, con el costo estimado, sin llamar al endpoint ni pedir `SERVICE_API_KEY`. Los textos van solo a `--out`.
+- Por consola muestra solo métricas y, en `--dry-run`, hashes y conteos. Los textos de perfil, que son datos de empresas, van a `--out` (por defecto, un archivo del directorio temporal; en `--dry-run`, solo si se indica), siempre fuera del repositorio.
 - La receta, los casos de paridad (`scripts/profile_text_parity.json`), qué mide y las opciones están en "Evaluación del perfil embebido" de `docs/Embeddings/requirements.md`. `--self-test` comprueba la receta, esos casos y las métricas con datos inventados, sin servicio ni base.
 
 ## Endpoints
