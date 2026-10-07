@@ -97,6 +97,148 @@ uv run python scripts/retrieval_eval.py --base-url http://127.0.0.1:8000
 
 ---
 
+## Evaluación del perfil embebido
+
+`scripts/profile_retrieval_eval.py` es la fase 0 de la tarea 2.4 del backend (recuperación semántica en el cruce; tareas 2.3 y 2.4 de `docs/AI/plan-sprint-2-chatbot.md` de `backend-cumplify`). Es una herramienta manual, fuera del servicio y de pytest, sin código de producción. Antes de escribir el código del backend, mide si el vector del perfil de una app, armado con la receta `prof-v1` de la tarea 2.3, se parece más a los artículos que importan a la app que a los demás. La cubre EMB-008 de `test.csv`.
+
+No reimplementa el puntaje del cruce. La combinación con la taxonomía, el peso de la evidencia semántica y la compuerta se miden después en la simulación del backend, con los vectores que este script guarda (`--vectors-out`).
+
+### La receta `prof-v1`
+
+Es una reimplementación declarada, solo del texto. La PR del backend que implemente `prof-v1` tiene que dar el mismo texto y el mismo SHA-256:
+
+- para las apps de demostración de una misma base: `--dry-run` muestra los textos y sus SHA-256;
+- para los casos de `scripts/profile_text_parity.json`, que no necesitan base.
+
+Cada regla cambia el hash:
+
+1. **Unidad.** Un texto por app elegible: de Requisitos Legales (`app_type = legal_requirements`), que no es de catálogo, de una empresa `Activa` que no es la plantilla.
+2. **Entradas.** Las de la empresa (declared, structured y excluded, con `legal_requirement_id` nulo) más el derived de la app, todas resueltas a la raíz de su familia (`COALESCE(canonical_id, id)`), como `CompanyProfileQueries.LoadEntriesAsync`. El script rearma el derived desde las vinculaciones de la app, como el regenerador del perfil, y avisa si no coincide con el guardado: el rearmado es el que dejaría la próxima ejecución.
+3. **Pesos.** Los de `SuggestionScoring.ProfileSourceWeights`, con los valores por defecto de `AI_SCORE_*`:
+   - declared, 1,0;
+   - structured, 0,4;
+   - derived, 0,5 + 0,5 · mín(1, ln(1 + n) / ln 6), con n = artículos vinculados distintos que traen algún valor de la familia.
+
+   Se toma el máximo entre procedencias. En un empate gana declared, después derived y al final structured. Una entrada excluded quita toda la familia.
+4. **Dimensiones**, en este orden: `scope`, `productive_sector`, `activity_action` y `facility_installation_equipment`, con las etiquetas de tax-v1: «Ámbito regulatorio», «Sector productivo», «Actividad» y «Obra, instalación o equipo». Nunca `territorial_coverage` ni `others`.
+5. **Valor.** El `value` de la raíz, tal como está guardado. Nunca `display_value`, que cambia sin subir ninguna versión.
+6. **Orden dentro de una dimensión.**
+   - El peso, de mayor a menor.
+   - Después, `family_article_count`, de menor a mayor. Es el IDF de la familia de mayor a menor: se compara el entero para no depender del redondeo. Se cuenta en vivo, con el SQL de `RecalculateFamilyArticleCountsAsync`, que es lo que recalcula la ejecución antes del cruce.
+   - Al final, el `value` en orden ordinal por unidades UTF-16: `string.CompareOrdinal` en C#; en Python, comparar `value.encode("utf-16-be")`. No es el orden alfabético de una cultura, que depende de la versión de ICU, ni el de los puntos de código de Python, que difiere cuando hay caracteres fuera del plano básico.
+7. **Topes por dimensión.** 20 de ámbito, 10 de sector, 30 de actividad y 20 de instalación: quedan los primeros del orden del punto 6.
+8. **Tope de largo.** 8.000 unidades UTF-16: `string.Length` en C#; en Python, `len(texto.encode("utf-16-le")) // 2`. Mientras el texto lo supere, se quita el último valor de un orden global:
+   - el peso, de mayor a menor;
+   - `family_article_count`, de menor a mayor;
+   - el orden de las dimensiones del punto 4;
+   - el `value`, en orden ordinal UTF-16.
+9. **Texto.** Una línea por dimensión con valores, en el orden del punto 4: `etiqueta: valor; valor`, con los valores en orden ordinal UTF-16 y separados por `"; "`. Una dimensión sin valores no deja línea. Las líneas se unen con `"\n"`, sin salto al final.
+10. **Señal mínima.** Se evalúa sobre el texto ya recortado por los topes. Si ningún valor del texto tiene como procedencia ganadora declared o derived, la app no tiene texto ni vector.
+11. **Hash.** SHA-256 del texto en UTF-8, en hexadecimal en minúsculas, como el `content_hash` de `ai_embeddings`. El identificador de la receta es `text-embedding-3-large@1024#prof-v1`.
+
+**Casos de paridad.** `scripts/profile_text_parity.json` trae tres casos. Cada uno tiene:
+
+- las entradas del perfil (`root`, `dimension` y `source`);
+- el `value` y el `family_article_count` de cada raíz;
+- las ocurrencias de derived por raíz;
+- el texto, el SHA-256 y el largo esperados.
+
+Los ids son inventados y no influyen en el texto.
+
+| Caso | Qué fija |
+|---|---|
+| P1 | Exclusión por familia; máximo entre procedencias; tope de sector con empate de peso resuelto por `family_article_count` y, con el mismo conteo, por el orden ordinal; orden ordinal UTF-16 dentro de la línea («Área portuaria» al final; un valor con un carácter fuera del plano básico antes que uno con U+FF27); territorio y `others` fuera; tope de instalaciones; recorte por largo que quita primero un valor de ámbito y después dos instalaciones. Largo de 7.686 unidades UTF-16 y 7.685 caracteres de Python |
+| P2 | Sin señal mínima: solo un structured en las cuatro dimensiones. Sin texto |
+| P3 | Un solo valor declared: la forma mínima del texto |
+
+La autoprueba los comprueba. La PR del backend tiene que cargarlos en una prueba de la función pura de la receta.
+
+### Qué mide
+
+Para cada app elegible de Norte, Altiplano y Litoral, o para las de `--apps`:
+
+1. **Corpus.** Los artículos de normas públicas, con trozos `art-v2` del texto actual del artículo (su `content_hash` es el SHA-256 del texto) y sin las filas «Encabezado» y «Promulgación».
+   - Una norma es pública con la regla de visibilidad del cruce: sin empresa, y global o con `bcn_id`. Es la misma expresión que la constante `LegalBodyPublic` que propone la tarea 2.4.
+   - A diferencia de `retrieval_eval.py`, cuentan también las normas globales que no vienen de la BCN.
+   - Tampoco deja fuera las normas de prueba (`[DEV]`, `[PRUEBA E2E]`): el cruce no las excluye, y la norma de control de AI-036 es una. El informe las marca.
+   - Las empresas de demostración se buscan por RUT, como `AiSuggestionsDemoSeeder`.
+2. **Similitud.** La búsqueda es exacta, sin índice. Por artículo, cuenta el coseno con su trozo vigente más cercano. Por norma, el de su mejor artículo, que es la métrica principal, y el promedio de sus tres mejores artículos, que es un agregado de similitud y no el score del cruce.
+3. **Grupos, por app.** El filtro territorial y el puntaje no se aplican: el script no reimplementa el cruce.
+   - **Seguidas:** las normas públicas que la app sigue.
+   - **Candidatas de la taxonomía:** las de `CandidateNormsAsync` en un cruce completo. Son las normas con un artículo clasificado con una raíz del perfil de una dimensión con peso (ámbito, sector o territorio), sin el país, y que no están seguidas, notificadas ni descartadas en la app.
+   - **Sin relación:** las demás, sin las notificadas ni las descartadas.
+4. **(a) Distribución del coseno por grupo.**
+   - Por artículo y por norma: cantidad, media, mínimo, percentiles del 5 al 95 y máximo.
+   - El AUC de las seguidas y el de las candidatas contra las sin relación: la probabilidad de que un artículo del grupo tenga más similitud que uno sin relación. 0,5 es no separar.
+   - Con `prof-v1`, cuántos artículos de cada grupo caen en cada tramo de 0,05, con una muestra fija de dos por grupo y tramo para la revisión humana: norma, artículo, coseno y el comienzo del trozo.
+
+   El grupo de seguidas está contaminado por construcción, porque el vector sale de sus artículos. La medida limpia es la del punto 5.
+5. **(b) Evaluación que deja una norma afuera.** Por cada norma seguida, el derived se rearma sin sus artículos y el texto se vuelve a embeber.
+   - Se registra el puesto de la norma apartada, por similitud sola, entre las normas públicas del corpus que la app no sigue, más la apartada. Los empates exactos comparten el puesto.
+   - También se registra su percentil entre las sin relación.
+   - Por variante, se resume con la mediana del puesto, el MRR y el recall@1, 5, 10 y 25.
+   - Una norma seguida que no es pública, o que no tiene trozos vigentes, se informa y no se cuenta.
+6. **(c) Variantes** (`--variants`):
+
+   | Variante | Qué cambia |
+   |---|---|
+   | `prof-v1` | La receta. Va siempre: es la referencia |
+   | `sin-actividades` | Sin la línea de actividades |
+   | `sin-etiquetas` | Solo los valores en cada línea, sin la etiqueta |
+   | `por-empresa` | Solo declared y structured, sin el derived de la app. No exige la señal mínima: sin textos declarados, mide el supuesto de que un texto de structured se comporta como tax-v1. El informe dice si `prof-v1` lo aceptaría |
+   | `centroide-tax` | El promedio de los vectores tax-v1 ya guardados de los valores que elige `prof-v1`, ponderado por su peso. No gasta tokens |
+   | `tope-alto` | Topes por dimensión y de largo al doble |
+   | `tope-proporcional` | Los 80 valores de los topes se reparten entre las dimensiones en proporción a los valores disponibles, por el mayor resto (empates en el orden de las dimensiones). Si caben todos, cada dimensión toma los suyos |
+
+   Con dos apps o más, un caso sintético une sus perfiles para que los topes corten. Se mide con `prof-v1`, `tope-alto` y `tope-proporcional`. Si la unión no supera ningún tope, el informe lo muestra con cero valores quitados.
+7. **(d) Control entre rubros**, con cada variante.
+   - Las normas no seguidas cuyo título trae una palabra clave de otra empresa de demostración y ninguna de la propia. Las palabras son las de `AiSuggestionsDemoCatalog` y se comparan sin tildes ni mayúsculas.
+   - Cuántas quedan en el top 10 y en el top 25, y sobre los percentiles 90 y 95 de las sin relación.
+   - La norma de control de AI-036, la que trae «emblema» en el título, con su puesto y su percentil. Se busca por el título porque su id cambia con la base.
+
+### Costo y uso
+
+**Costo.** Cada texto distinto se embebe una sola vez, en su propio pedido, para conocer sus tokens.
+
+- Un texto por app y variante, más uno por norma seguida y variante en (b).
+- `centroide-tax` no gasta tokens.
+- Las variantes que dejan el texto igual (`tope-alto` y `tope-proporcional` cuando nada se corta, o `por-empresa` en (b)) no vuelven a pagar.
+
+`--dry-run` cuenta los textos distintos y estima los tokens con 3,8 caracteres por token. En la base local se esperan decenas de miles de tokens, menos de un centavo de dólar.
+
+**Con textos declarados.** Ningún seeder del backend crea textos de perfil, así que sin cargarlos la receta queda provisional. Se congela después de repetir la medición con los textos declarados de las tres empresas, que se cargan con `PUT /ai/profile/text` del backend y se analizan antes de la medición. Con datos reales hay que repetirla.
+
+```bash
+export SERVICE_API_KEY=...        # la misma del servicio
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cumplify_db
+uv run python scripts/profile_retrieval_eval.py --dry-run
+uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000 --out /tmp/perfil.json
+```
+
+| Opción | Defecto | Uso |
+|---|---|---|
+| `--apps APP ...` | `norte altiplano litoral` | Empresas de demostración (todas sus apps elegibles) o ids de apps. Una app pedida por id que no es elegible es un error |
+| `--variants V ...` | Todas | Variantes que se miden; `prof-v1` va siempre |
+| `--skip-holdout` | | Sin la evaluación que deja una norma afuera |
+| `--unrelated-sample N` | 0, todas | Normas sin relación por app, elegidas por el SHA-256 de una semilla fija con su id, para bases grandes |
+| `--out FILE` | Un archivo del directorio temporal | Informe completo; fuera del repositorio, en un directorio que exista. En `--dry-run`, solo si se indica |
+| `--vectors-out FILE` | Ninguno | Los vectores, uno por línea (app, variante, norma apartada y SHA-256 del texto), para la simulación del backend. Fuera del repositorio |
+| `--timeout S` | 120 | Segundos por pedido |
+| `--dry-run` | | Arma los textos, muestra los de `prof-v1` con su SHA-256 y estima el costo, sin el endpoint ni `SERVICE_API_KEY` |
+| `--self-test` | | Comprueba la receta, los casos de paridad y las métricas con datos inventados, sin servicio ni base |
+
+**Comportamiento.**
+
+- **Variables.** `SERVICE_API_KEY` y `DATABASE_URL` van exportadas o como argumentos (`--api-key`, `--database-url`): el script no lee `.env`.
+- **Base de solo lectura.** Usa una conexión propia de solo lectura, la de `retrieval_eval.py`. Si no puede conectarse, muestra solo el tipo del error.
+- **Comprobaciones antes del primer pedido.** Se ejecutan todas las consultas, incluida una búsqueda de prueba con un vector ya guardado, y se arman todos los textos: un error de configuración no gasta tokens.
+- **Lo que lee.** `companies`, `legal_requirements`, `legal_requirement_vinculations`, `company_profile_entries`, `ai_taxonomy_values`, `ai_article_classifications`, `cl_territories`, `legal_body_company_suggestions`, `regulatory_alerts`, `regulatory_alert_suggestions`, `regulatory_alert_suggestion_discards`, `legal_bodies`, `articles` y `ai_embeddings`.
+- **Consola y `--out`.** La consola muestra solo métricas: el corpus, los tokens, los avisos y, por app y variante, el largo, los tokens, las AUC, las medianas por grupo y la evaluación que deja una norma afuera. Los textos de perfil son datos de empresas y van a `--out`, con las distribuciones, los primeros puestos, la muestra por tramo y el detalle de cada norma apartada. El informe se guarda después de mostrarse, para que una falla al escribirlo no se lleve las métricas ya pagadas.
+- **Privacidad.** Las normas privadas de una empresa nunca aparecen con su título.
+- **Códigos de salida.** Termina con 0 aunque una app no tenga vector. Termina con 2 ante un error de configuración antes del primer pedido, sin gastar tokens: argumentos, `--out`, conexión o consultas a la base, ninguna app elegible o ningún trozo `art-v2` vigente. Termina con 1 si falla el endpoint o la base durante la evaluación, después de mostrar los tokens gastados, o si no puede guardar el informe.
+
+---
+
 ## Dentro de alcance
 
 - Llamar al endpoint de embeddings de OpenAI.
@@ -104,13 +246,14 @@ uv run python scripts/retrieval_eval.py --base-url http://127.0.0.1:8000
 - Ordenar los vectores por el índice que devuelve el proveedor, para no depender del orden de la respuesta.
 - Reportar `usage.total_tokens`.
 - El script manual de evaluación de recuperación (`scripts/retrieval_eval.py`), descrito en "Evaluación de recuperación".
+- El script manual de evaluación del perfil embebido (`scripts/profile_retrieval_eval.py`) y sus casos de paridad (`scripts/profile_text_parity.json`), descritos en "Evaluación del perfil embebido".
 
 ## Fuera de alcance
 
-- Armar el texto (prefijos de taxonomía, troceo de artículos). Lo hace el llamador.
+- Armar el texto (prefijos de taxonomía, troceo de artículos, perfil de una app). Lo hace el llamador; el script de evaluación del perfil solo reproduce `prof-v1` para medirla.
 - Guardar los vectores.
 - Autenticación.
-- Leer PostgreSQL. Este endpoint no usa `DATABASE_URL`; solo el script de evaluación de recuperación lee la base, con su propia conexión de solo lectura.
+- Leer PostgreSQL. Este endpoint no usa `DATABASE_URL`; solo los scripts de evaluación leen la base, cada uno con su propia conexión de solo lectura.
 
 ## Deuda técnica conocida
 
