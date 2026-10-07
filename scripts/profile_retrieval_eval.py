@@ -29,7 +29,8 @@ conexión propia de solo lectura (Database de retrieval_eval.py, que nunca repit
 todas sus consultas, incluida una prueba de la búsqueda por similitud, se ejecutan antes del primer pedido.
 
 prof-v1 es una reimplementación declarada, solo del texto: la PR del backend que la implemente tiene que dar el
-mismo texto y el mismo SHA-256 para las mismas apps y para los casos de profile_text_parity.json. Las reglas
+mismo texto y el mismo SHA-256 para las mismas apps y para los casos de profile_text_parity.json. El recorte por
+el total es provisional: su detalle lo fija esa PR, y los casos que dependen de él están marcados. Las reglas
 están en "Evaluación del perfil embebido" de docs/Embeddings/requirements.md. Las normas cuentan con la regla
 de visibilidad del cruce (sin empresa, y globales o de la BCN), no con la de retrieval_eval.py. La consola
 muestra solo métricas; los textos de perfil, que son datos de empresas, van a --out, fuera del repositorio.
@@ -290,7 +291,8 @@ def dimension_rank(candidate: Candidate) -> tuple:
 
 def global_rank(candidate: Candidate) -> tuple:
     """Orden entre dimensiones para el tope de largo: el mismo, con el orden fijo de las dimensiones antes del
-    value. El tope quita siempre el valor de este orden que queda último."""
+    value. El tope quita siempre el valor de este orden que queda último. Es provisional: el detalle del recorte
+    por el total lo fija la PR del backend que implemente prof-v1 (regla 8 de requirements.md)."""
     return (
         -candidate.weight,
         candidate.family_count,
@@ -1957,8 +1959,12 @@ def self_test() -> int:
     )
     short = replace(PROF_V1, max_length=60)
     trimmed = build_profile_text(entries, occurrences, roots, short)
+    # Quita Minería (structured) y después las dos derived de un artículo, hasta que el texto entra. El orden entre
+    # valores con el mismo peso y el mismo conteo lo fija el caso de paridad P6.
     check(
-        "tope de largo: quita el último del orden global", trimmed.text, "Ámbito regulatorio: Laboral; Seguridad vial"
+        "tope de largo: quita lo de menor peso hasta que entra",
+        trimmed.text,
+        "Ámbito regulatorio: Laboral; Seguridad vial",
     )
     check("tope de largo: cuenta lo quitado", trimmed.cut_by_length, {SCOPE: 0, SECTOR: 1, ACTIVITY: 1, FACILITY: 1})
     structured_only = build_profile_text([Entry("e1", SECTOR, STRUCTURED)], {}, roots, PROF_V1)

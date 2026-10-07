@@ -110,6 +110,8 @@ Es una reimplementación declarada, solo del texto. La PR del backend que implem
 - para las apps de demostración de una misma base: `--dry-run` muestra los textos y sus SHA-256;
 - para los casos de `scripts/profile_text_parity.json`, que no necesitan base.
 
+El tope de largo (regla 8) es provisional: su detalle lo fija esa PR. Si el texto de una app de demostración se recorta por largo, su SHA-256 depende de esa regla.
+
 Cada regla cambia el hash:
 
 1. **Unidad.** Un texto por app elegible: de Requisitos Legales (`app_type = legal_requirements`), que no es de catálogo, de una empresa `Activa` que no es la plantilla.
@@ -127,19 +129,20 @@ Cada regla cambia el hash:
    - Después, `family_article_count`, de menor a mayor. Es el IDF de la familia de mayor a menor: se compara el entero para no depender del redondeo. Se cuenta en vivo, con el SQL de `RecalculateFamilyArticleCountsAsync`, que es lo que recalcula la ejecución antes del cruce.
    - Al final, el `value` en orden ordinal por unidades UTF-16: `string.CompareOrdinal` en C#; en Python, comparar `value.encode("utf-16-be")`. No es el orden alfabético de una cultura, que depende de la versión de ICU, ni el de los puntos de código de Python, que difiere cuando hay caracteres fuera del plano básico.
 7. **Topes por dimensión.** 20 de ámbito, 10 de sector, 30 de actividad y 20 de instalación: quedan los primeros del orden del punto 6.
-8. **Tope de largo.** 8.000 unidades UTF-16: `string.Length` en C#; en Python, `len(texto.encode("utf-16-le")) // 2`. Mientras el texto lo supere, se quita el último valor de un orden global:
-   - el peso, de mayor a menor;
-   - `family_article_count`, de menor a mayor;
-   - el orden de las dimensiones del punto 4;
-   - el `value`, en orden ordinal UTF-16.
+8. **Tope de largo (provisional).** El plan del backend fija 8.000 caracteres en total y deja a la PR que implemente `prof-v1` el detalle del recorte («Selección» en `docs/AI/plan-recuperacion-semantica.md`). Hasta que esa PR lo fije, el script usa esta regla:
+   - 8.000 unidades UTF-16: `string.Length` en C#; en Python, `len(texto.encode("utf-16-le")) // 2`;
+   - mientras el texto supere el tope, se quita el último valor de un orden global: el peso, de mayor a menor; `family_article_count`, de menor a mayor; el orden de las dimensiones del punto 4; y el `value`, en orden ordinal UTF-16.
+
+   Si la PR del backend adopta otra regla, se actualizan esta regla, el script y los casos de paridad provisionales, para que el script siga dando el mismo SHA-256.
 9. **Texto.** Una línea por dimensión con valores, en el orden del punto 4: `etiqueta: valor; valor`, con los valores en orden ordinal UTF-16 y separados por `"; "`. Una dimensión sin valores no deja línea. Las líneas se unen con `"\n"`, sin salto al final.
 10. **Señal mínima.** Si ninguna raíz con peso de las dimensiones del punto 4 tiene una entrada declared o derived, gane la procedencia que gane, la app no tiene texto ni vector. Se evalúa antes de los topes, como dice el plan de la recuperación semántica del backend (`docs/AI/plan-recuperacion-semantica.md`): «sin al menos una raíz con entrada declared o derived en esas cuatro dimensiones».
     - Con los pesos por defecto da lo mismo evaluarla antes o después de los topes, o mirar la procedencia ganadora. Declared (1,0) y derived (0,5 o más) siempre quedan antes que structured (0,4) en su dimensión, y el recorte por largo quita primero lo de menor peso.
     - Con otros pesos, por ejemplo con `AI_SCORE_W_SRC_STRUCTURED` mayor o igual que `AI_SCORE_W_SRC_DERIVED_MIN`, esas lecturas se separan. El caso P4 lo fija con pesos propios.
 11. **Hash.** SHA-256 del texto en UTF-8, en hexadecimal en minúsculas, como el `content_hash` de `ai_embeddings`. El identificador de la receta es `text-embedding-3-large@1024#prof-v1`.
 
-**Casos de paridad.** `scripts/profile_text_parity.json` trae cuatro casos. Cada uno tiene:
+**Casos de paridad.** `scripts/profile_text_parity.json` trae siete casos. Cada uno tiene:
 
+- `provisional`: `true` si el caso depende del tope de largo (regla 8), y `false` si es contrato firme;
 - las entradas del perfil (`root`, `dimension` y `source`);
 - el `value` y el `family_article_count` de cada raíz;
 - las ocurrencias de derived por raíz;
@@ -148,14 +151,17 @@ Cada regla cambia el hash:
 
 Los ids son inventados y no influyen en el texto.
 
-| Caso | Qué fija |
-|---|---|
-| P1 | Exclusión por familia; máximo entre procedencias; tope de sector con empate de peso resuelto por `family_article_count` y, con el mismo conteo, por el orden ordinal; orden ordinal UTF-16 dentro de la línea («Área portuaria» al final; un valor con un carácter fuera del plano básico antes que uno con U+FF27); territorio y `others` fuera; tope de instalaciones; recorte por largo que quita primero un valor de ámbito y después dos instalaciones. Largo de 7.686 unidades UTF-16 y 7.685 caracteres de Python |
-| P2 | Sin señal mínima: solo un structured en las cuatro dimensiones. Sin texto |
-| P3 | Un solo valor declared: la forma mínima del texto |
-| P4 | Señal mínima con pesos propios (structured 0,8): la única raíz con una entrada derived gana como structured y queda fuera por el tope de sector. Igual hay texto, solo con valores structured, porque la señal se evalúa antes de los topes y basta la entrada |
+| Caso | Provisional | Qué fija |
+|---|---|---|
+| P1 | No | Exclusión por familia; una raíz con dos procedencias aparece una vez; tope de sector con empate de peso resuelto por `family_article_count`; orden ordinal UTF-16 dentro de la línea («Área portuaria» al final; un valor con un carácter fuera del plano básico antes que uno con U+FF27); territorio y `others` fuera; tope de instalaciones. Sin recorte por largo: 6.551 unidades UTF-16 y 6.550 caracteres de Python |
+| P2 | No | Sin señal mínima: solo un structured en las cuatro dimensiones. Sin texto |
+| P3 | No | Un solo valor declared: la forma mínima del texto |
+| P4 | No | Señal mínima con pesos propios (structured 0,8): la única raíz con una entrada derived gana como structured y queda fuera por el tope de sector. Igual hay texto, solo con valores structured, porque la señal se evalúa antes de los topes y basta la entrada |
+| P5 | No | Los tres criterios del punto 6 al borde de los topes, con las entradas en un orden que no es el del resultado. En sector, un structured con la familia más chica queda fuera porque pesa menos, y de tres derived empatados en peso y en conteo queda solo el primero en orden ordinal UTF-16, que no es el de entrada ni el alfabético de una cultura. En actividad, de dos empatados queda el que va primero en unidades UTF-16 y no en puntos de código |
+| P6 | Sí | Recorte por largo: antes de recortar, el texto mide 8.001 unidades UTF-16 y 8.000 caracteres de Python, así que se recorta. Se quita un solo valor, y el orden global decide entre tres derived con el mismo peso y el mismo conteo, por la dimensión y después por el `value`. Un declared con la familia más grande se queda porque pesa más |
+| P7 | Sí | Texto de exactamente 8.000 unidades UTF-16: no se recorta |
 
-La autoprueba los comprueba. La PR del backend tiene que cargarlos en una prueba de la función pura de la receta, con los pesos de cada caso.
+La autoprueba los comprueba. La PR del backend tiene que cargarlos en una prueba de la función pura de la receta, con los pesos de cada caso. Los provisionales los carga igual: si adopta la regla 8, tienen que pasar; si fija otra, se actualizan aquí la regla, el script y esos casos.
 
 ### Qué mide
 
