@@ -90,10 +90,10 @@ uv run python scripts/retrieval_eval.py --base-url http://127.0.0.1:8000
 | `--self-test` | | Comprueba el cálculo de las métricas con datos inventados, sin servicio ni base |
 
 - `SERVICE_API_KEY` y `DATABASE_URL` van exportadas o como argumentos (`--api-key`, `--database-url`): el script no lee `.env`. La base se lee con una conexión propia de solo lectura; el endpoint sigue sin usar `DATABASE_URL`.
-- Antes del primer pedido comprueba que cada receta tiene vectores y resuelve los artículos esperados: un error de configuración no gasta tokens.
+- Antes del primer pedido se conecta a la base, comprueba que cada receta tiene vectores y resuelve los artículos esperados: un error de configuración no gasta tokens. Si no puede conectarse, muestra solo el tipo del error de psycopg, porque su mensaje puede repetir `DATABASE_URL` con la contraseña.
 - Por consola muestra el corpus de cada receta (artículos, trozos, los de normas que no son públicas de la BCN y los que cambiaron de texto desde que se embebieron), los tokens, los avisos, la posición de los artículos esperados en cada pregunta y la tabla de recall@k y MRR por tipo y receta. El detalle por pregunta va a `--out`: la posición, la distancia y el trozo más cercano de cada artículo esperado, y los primeros resultados de cada receta.
 - El orden incluye todos los artículos de la base. En la base local también compiten las normas de prueba (`[DEV]`, `[PRUEBA E2E]`) y las privadas de una empresa, que pueden quedar delante del artículo esperado; en el detalle llevan `public_bcn` en `false`.
-- Termina con código 0 aunque deje preguntas fuera, y con 1 si falla el endpoint.
+- Termina con código 0 aunque deje preguntas fuera. Termina con 2 ante un error de configuración antes del primer pedido, sin gastar tokens: argumentos, conjunto, conexión o consultas a la base, o recetas sin vectores. Termina con 1 si falla el endpoint o la base durante la evaluación, después de mostrar los tokens gastados.
 
 ---
 

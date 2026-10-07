@@ -12,7 +12,9 @@ is not part of pytest, which collects only tests/.
 
 SERVICE_API_KEY and DATABASE_URL come from the environment or the arguments, never from .env. The
 database is read with this script's own read-only connection, and its checks run before the first
-request: a recipe without vectors or a missing expected article shows up before any token is spent.
+request: a database that fails, a recipe without vectors or a missing expected article shows up before
+any token is spent. A failed connection shows only the type of psycopg's error, whose message can
+repeat DATABASE_URL with its password.
 
 The search is exact, without an index: the question is compared with every chunk of the recipe with
 pgvector's cosine distance (<=>), each article keeps the distance of its closest chunk, and all the
@@ -133,6 +135,10 @@ class SetError(ValueError):
 
 class ServiceError(RuntimeError):
     """The embeddings endpoint failed or answered something this script cannot use."""
+
+
+class DatabaseError(RuntimeError):
+    """The database failed. The message never repeats DATABASE_URL."""
 
 
 @dataclass(frozen=True)
@@ -274,18 +280,36 @@ class Database:
         import psycopg
         from psycopg.rows import dict_row
 
-        # Not autocommit: psycopg opens each transaction with BEGIN READ ONLY, and none is committed.
-        self._connection = psycopg.connect(database_url, row_factory=dict_row)
+        self._error = psycopg.Error
+        try:
+            # Not autocommit: psycopg opens each transaction with BEGIN READ ONLY, and none is committed.
+            self._connection = psycopg.connect(database_url, row_factory=dict_row)
+        except psycopg.Error as exc:
+            # Only the type: libpq repeats a malformed URL whole, password included, and an unencoded @ in
+            # the password puts the rest of it in the host name of the message.
+            raise DatabaseError(
+                f"no se pudo conectar con DATABASE_URL (o --database-url): {type(exc).__name__}, sin el detalle de "
+                "psycopg, que puede repetir la URL con la contraseña. Revisar que la base esté en marcha y que la URL "
+                "tenga la forma postgresql://usuario:contraseña@host:puerto/base, sin comillas y con los caracteres "
+                "especiales de la contraseña codificados (@ como %40, / como %2F)"
+            ) from None
         self._connection.read_only = True
 
     def rows(self, query: str, params: dict) -> list[dict]:
-        with self._connection.cursor() as cursor:
-            cursor.execute(query, params)
-            return cursor.fetchall()
+        try:
+            with self._connection.cursor() as cursor:
+                cursor.execute(query, params)
+                return cursor.fetchall()
+        except self._error as exc:
+            # Once connected, psycopg's messages come from the server or the socket, never from the URL.
+            raise DatabaseError(f"{type(exc).__name__}: {exc}") from exc
 
     def end_transaction(self) -> None:
         """Ends the read-only transaction, so that it does not stay open while the endpoint answers."""
-        self._connection.rollback()
+        try:
+            self._connection.rollback()
+        except self._error as exc:
+            raise DatabaseError(f"{type(exc).__name__}: {exc}") from exc
 
     def close(self) -> None:
         self._connection.close()
@@ -768,35 +792,43 @@ def main(argv: list[str] | None = None) -> int:
 
     usage = {"total_tokens": 0, "requests": 0, "model": None}
     warnings: list[str] = []
-    db = Database(args.database_url)
     try:
-        # Every check runs before the first request: a recipe without vectors stops the run before it spends tokens.
-        corpus, common = corpus_stats(db, recipes)
-        empty = [recipe.identifier for recipe in recipes if corpus[recipe.identifier]["articles"] == 0]
-        if empty:
-            parser.error(f"sin vectores de artículos en esta base: {', '.join(empty)}")
-        for question in questions:
-            for item in question.expected:
-                resolve(db, item)
-            problems = [item.problem for item in question.expected if item.problem]
-            if problems:
-                question.excluded = "; ".join(problems)
-                warnings.append(f"AVISO {question.id}: fuera de las métricas: {question.excluded}.")
-        db.end_transaction()
+        db = Database(args.database_url)
+    except DatabaseError as exc:
+        parser.error(str(exc))
+    try:
+        # Every check runs before the first request: a recipe without vectors or a failing database stops the run
+        # before it spends tokens.
+        try:
+            corpus, common = corpus_stats(db, recipes)
+            empty = [recipe.identifier for recipe in recipes if corpus[recipe.identifier]["articles"] == 0]
+            if empty:
+                parser.error(f"sin vectores de artículos en esta base: {', '.join(empty)}")
+            for question in questions:
+                for item in question.expected:
+                    resolve(db, item)
+                problems = [item.problem for item in question.expected if item.problem]
+                if problems:
+                    question.excluded = "; ".join(problems)
+                    warnings.append(f"AVISO {question.id}: fuera de las métricas: {question.excluded}.")
+            db.end_transaction()
+        except DatabaseError as exc:
+            parser.error(f"falló la base antes del primer pedido: {exc}")
 
         evaluated = [question for question in questions if not question.excluded]
         texts = list(dict.fromkeys(question.text for question in evaluated))
         try:
             vectors = dict(zip(texts, embed_texts(texts, args, usage))) if texts else {}
-        except ServiceError as exc:
-            print(f"FALLA del endpoint de embeddings: {exc}", file=sys.stderr)
+            for question in evaluated:
+                for recipe in recipes:
+                    hits = rank(db, recipe.identifier, vectors[question.text])
+                    warnings.extend(evaluate(question, recipe, hits, ks, top))
+                print(f"{question.id}: evaluada", file=sys.stderr)
+        except (ServiceError, DatabaseError) as exc:
+            source = "del endpoint de embeddings" if isinstance(exc, ServiceError) else "de la base"
+            print(f"FALLA {source}: {exc}", file=sys.stderr)
             print(f"Tokens gastados antes de la falla (usage.total_tokens): {usage['total_tokens']}.", file=sys.stderr)
             return 1
-        for question in evaluated:
-            for recipe in recipes:
-                hits = rank(db, recipe.identifier, vectors[question.text])
-                warnings.extend(evaluate(question, recipe, hits, ks, top))
-            print(f"{question.id}: evaluada", file=sys.stderr)
     finally:
         db.close()
 
