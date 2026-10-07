@@ -1,37 +1,11 @@
 {
   "version": 1,
-  "description": "Conjunto de la evaluación de recuperación de los embeddings de artículos (AI-044 de backend-cumplify y EMB-007 de docs/Embeddings/test.csv). Lo ejecuta scripts/retrieval_eval.py. Cada artículo esperado se identifica igual en todos los ambientes: el bcn_id de una norma pública de la BCN, el order del artículo (su posición, estable desde la hidratación de la BCN) y su número legible; nunca un id local. Este archivo guarda solo preguntas e identificadores, nunca textos sacados de la base. Hoy trae tres preguntas de ejemplo para probar el script: el conjunto real de AI-044 las reemplaza.",
+  "description": "Conjunto de la evaluación de recuperación de los embeddings de artículos (AI-044 de backend-cumplify y EMB-007 de docs/Embeddings/test.csv). Lo ejecuta scripts/retrieval_eval.py. Cada artículo esperado se identifica igual en todos los ambientes: el bcn_id de una norma pública de la BCN, el order del artículo (su posición, estable desde la hidratación de la BCN) y su número legible; nunca un id local. Este archivo guarda preguntas, identificadores y notas breves, que pueden citar alguna frase corta para explicar la pregunta; nunca el texto de los artículos, que el script lee de la base. Tiene 40 preguntas: 15 sobre artículos largos (10 con la respuesta después del carácter 12.000, que art-v1 no embebía), 15 paráfrasis y 10 referencias exactas. Se armaron y verificaron contra la base local del 2026-10-07.",
   "questions": [
     {
       "id": "REC-001",
-      "type": "referencia",
-      "question": "¿Qué establece el artículo 1° de la Ley 21.813, sobre el uso de agua de mar para desalinización?",
-      "expected": [
-        {
-          "bcn_id": "1223983",
-          "order": 3,
-          "number": "Artículo 1°"
-        }
-      ],
-      "note": "Ejemplo para probar el script, no parte del conjunto real: referencia exacta a la norma y al artículo."
-    },
-    {
-      "id": "REC-002",
-      "type": "parafrasis",
-      "question": "¿Por cuánto tiempo puede congelar sus estudios una alumna universitaria que acaba de ser madre?",
-      "expected": [
-        {
-          "bcn_id": "1220529",
-          "order": 6,
-          "number": "Artículo 5"
-        }
-      ],
-      "note": "Ejemplo para probar el script, no parte del conjunto real: paráfrasis de la Ley 21.790 (estudiantes cuidadores de la educación superior), sin nombrar la norma ni el artículo."
-    },
-    {
-      "id": "REC-003",
       "type": "largo",
-      "question": "¿Quién responde si un municipio incumple el Plan de Transición al traspasar sus colegios a un Servicio Local de Educación Pública, y qué se considera infracción grave?",
+      "question": "¿Con qué recursos se financia el Fondo para la Infraestructura Escolar que paga la construcción y la mantención de los establecimientos de los Servicios Locales de Educación Pública?",
       "expected": [
         {
           "bcn_id": "1224471",
@@ -39,7 +13,514 @@
           "number": "Artículo 1°"
         }
       ],
-      "note": "Ejemplo para probar el script, no parte del conjunto real: el contenido está cerca del carácter 108.600 de los 135.423 del artículo 1° de la Ley 21.819, en el trozo 33 de 40 de art-v2 y más allá del recorte de 12.000 caracteres de art-v1."
+      "note": "Respuesta (art. 27 bis nuevo de la ley 21.040) en el carácter 29.105 de 135.423 del texto limpio, trozo 9 de 40 de art-v2; la evidencia ahora cubre los seis aportes (a a f). art-v1 cortó en 12.000 y en ese texto no aparecen «Fondo», «infraestructura» ni «donaciones». Offset corregido: el declarado (29.033) estaba medido sobre el texto colapsado de art-v1, sin los saltos de párrafo; answer_offset es base 0 sobre el texto limpio de art-v2 (ArticleChunker.Clean)."
+    },
+    {
+      "id": "REC-002",
+      "type": "largo",
+      "question": "¿Qué sanciones arriesga un alcalde o un gobernador regional que no designa a tiempo a sus representantes en el Comité Directivo Local de un Servicio Local de Educación Pública?",
+      "expected": [
+        {
+          "bcn_id": "1224471",
+          "order": 2,
+          "number": "Artículo 1°"
+        }
+      ],
+      "note": "Respuesta (art. 31 bis nuevo de la ley 21.040) en el carácter 36.635 de 135.423, trozo 12 de 40; la evidencia se amplió a la escala completa (amonestación, multa del 20 % y del 50 %) y empieza en 36.635 (el offset declarado, 36.710, además estaba medido sobre el texto colapsado de art-v1). Antes del corte de art-v1 no aparecen «alcalde», «gobernador», «multa» ni «amonestación» (el Comité Directivo Local se nombra una sola vez). El informe del Tribunal Constitucional de la ley solo declara conforme el inciso primero del 31 bis, sin las sanciones."
+    },
+    {
+      "id": "REC-003",
+      "type": "largo",
+      "question": "Cuando el Ministerio del Medio Ambiente declara un humedal urbano, ¿en qué plazo deben la municipalidad o la Secretaría Regional Ministerial de Vivienda y Urbanismo iniciar la modificación del plan regulador para incorporarlo?",
+      "expected": [
+        {
+          "bcn_id": "1221500",
+          "order": 6,
+          "number": "Artículo 5"
+        }
+      ],
+      "note": "Respuesta (art. 60 bis nuevo de la LGUC) en el carácter 57.864 de 84.428, trozo 17 de 25 (offset corregido desde 57.791); «humedal» no aparece en los 12.000 caracteres que embebió art-v1 ni en ningún otro artículo de la biblioteca. El plazo de treinta días rige para los instrumentos que no estaban en elaboración al declararse el humedal."
+    },
+    {
+      "id": "REC-004",
+      "type": "largo",
+      "question": "En una comuna que no está regida por un plan regulador metropolitano o intercomunal, ¿qué plazo tiene la Contraloría para pronunciarse sobre la legalidad del plan regulador comunal en la toma de razón?",
+      "expected": [
+        {
+          "bcn_id": "1221500",
+          "order": 6,
+          "number": "Artículo 5"
+        }
+      ],
+      "note": "Respuesta (art. 43 ter nuevo de la LGUC) en el carácter 45.270 de 84.428, trozo 13 de 25 (offset corregido desde 45.214); «Contraloría», «toma de razón» y «tres meses» no aparecen en el texto de art-v1, y ningún otro artículo fija este plazo."
+    },
+    {
+      "id": "REC-005",
+      "type": "largo",
+      "question": "En un sistema eléctrico mediano, ¿cada cuánto deben los promotores inscritos en el registro de proyectos de generación y transmisión actualizar el avance de sus proyectos?",
+      "expected": [
+        {
+          "bcn_id": "1221363",
+          "order": 2,
+          "number": "Artículo único"
+        }
+      ],
+      "note": "Respuesta (art. 176 bis nuevo de la LGSE) en el carácter 23.400 de 58.881, trozo 7 de 18 (offset corregido desde 23.326); «promotores», «registro» y «enero» no aparecen en los 12.000 caracteres de art-v1, y los artículos transitorios de la ley no tratan el registro."
+    },
+    {
+      "id": "REC-006",
+      "type": "largo",
+      "question": "¿Qué juez autoriza a los organismos de inteligencia del Estado a intervenir comunicaciones o sistemas informáticos mediante procedimientos especiales de obtención de información?",
+      "expected": [
+        {
+          "bcn_id": "1224631",
+          "order": 2,
+          "number": "Artículo 1°"
+        }
+      ],
+      "note": "Respuesta (art. 26 de la ley 19.974, reemplazado) en el carácter 29.382 de 45.738, trozo 9 de 13 (offset corregido desde 29.285); «Corte Suprema», «autorización judicial» y «procedimientos especiales» no aparecen en el texto de art-v1. El artículo sexto transitorio y el informe del Tribunal Constitucional solo nombran los procedimientos o el artículo 26, sin decir qué juez autoriza."
+    },
+    {
+      "id": "REC-007",
+      "type": "largo",
+      "question": "¿Puede una institución condicionar la calificación final de la práctica profesional de un estudiante a que éste entregue su evaluación de la práctica o de su tutor?",
+      "expected": [
+        {
+          "bcn_id": "1222799",
+          "order": 2,
+          "number": "Artículo 1"
+        }
+      ],
+      "note": "Respuesta (art. 44 bis nuevo de la LGE) en el carácter 44.421 de 45.550, trozo 13 de 14 (offset corregido desde 44.385); art-v1 solo vio convivencia escolar y no contiene «práctica profesional», «tutor» ni «calificación»; ningún otro artículo regula los convenios de práctica."
+    },
+    {
+      "id": "REC-008",
+      "type": "largo",
+      "question": "¿Cada cuánto tiempo debe una entidad externa evaluar el funcionamiento del Ministerio Público?",
+      "expected": [
+        {
+          "bcn_id": "1222840",
+          "order": 2,
+          "number": "Artículo 1°"
+        }
+      ],
+      "note": "Respuesta (art. 94 nuevo de la ley 19.640) en el carácter 21.101 de 23.268, trozo 7 de 7 (offset corregido desde 21.049); «externa» y «tres años» no aparecen en el texto de art-v1. Distractores que no responden igual: el artículo sexto transitorio de la misma ley (order 11) fija la primera evaluación al cuarto año y remite a la periodicidad del artículo 94 sin decirla, y el artículo 3° habla de la entidad evaluadora del bono."
+    },
+    {
+      "id": "REC-009",
+      "type": "largo",
+      "question": "Si un bombero sufre un accidente en un acto de servicio, ¿cuántas sesiones de atención en salud mental le cubren y cuántas veces se puede renovar esa cobertura?",
+      "expected": [
+        {
+          "bcn_id": "1226770",
+          "order": 2,
+          "number": "Artículo único"
+        }
+      ],
+      "note": "Respuesta (art. 5 bis nuevo del DL 1.757) en el carácter 16.588 de 22.586, trozo 5 de 7 (offset corregido desde 16.563); «salud mental» y «sesiones» no aparecen en los 12.000 caracteres de art-v1. El encabezado y el informe del Tribunal Constitucional solo nombran la cobertura en salud mental, sin el número de sesiones."
+    },
+    {
+      "id": "REC-010",
+      "type": "largo",
+      "question": "¿Está prohibido el comercio ambulante en los accesos y andenes de las estaciones de metro y de trenes?",
+      "expected": [
+        {
+          "bcn_id": "1224696",
+          "order": 2,
+          "number": "Artículo 1"
+        }
+      ],
+      "note": "Respuesta (art. 160 de la Ley de Tránsito) en el carácter 19.355 de 20.102, trozo 6 de 6 (offset corregido desde 19.323); art-v1 solo vio la evasión tarifaria y no contiene «comercio» ni «andenes» (sí nombra a Metro y a Ferrocarriles como fiscalizadores); el art. 34 de la Ley 21.802 regula el control municipal del comercio ambulante en la vía pública, no su prohibición en estaciones."
+    },
+    {
+      "id": "REC-011",
+      "type": "largo",
+      "question": "Si un buzo que trabaja para una empresa contratista se lesiona o muere en un centro de cultivo, ¿responde también la empresa dueña del centro por las indemnizaciones?",
+      "expected": [
+        {
+          "bcn_id": "1220531",
+          "order": 2,
+          "number": "Artículo 1"
+        }
+      ],
+      "note": "Artículo de 10.792 caracteres (texto limpio) con la respuesta en el carácter 7.831 (73 %), trozo 3 de 4 de art-v2 (offset corregido desde 7.823); la respuesta queda antes del carácter 12.000 y art-v1 la embebe diluida en un solo vector de todo el contrato de buceo."
+    },
+    {
+      "id": "REC-012",
+      "type": "largo",
+      "question": "¿Cuál es la multa máxima que puede aplicar la Superintendencia de Servicios Sanitarios a una empresa sanitaria por una infracción gravísima?",
+      "expected": [
+        {
+          "bcn_id": "1223368",
+          "order": 2,
+          "number": "Artículo 1"
+        }
+      ],
+      "note": "Artículo de 9.569 caracteres con la respuesta en el carácter 6.881 (72 %), trozo 2 de 3 de art-v2 (offset corregido desde 6.867); en art-v1 compite con la tipificación de infracciones que ocupa la primera mitad. El art. 34 de la Ley 21.813 fija el mismo tope de diez mil UTA, pero para la Dirección General de Aguas, no para la Superintendencia de Servicios Sanitarios."
+    },
+    {
+      "id": "REC-013",
+      "type": "largo",
+      "question": "En un juicio por abandono social de una persona mayor ante el tribunal de familia, ¿puede la sentencia ordenar que le devuelvan sus bienes?",
+      "expected": [
+        {
+          "bcn_id": "1224632",
+          "order": 36,
+          "number": "Artículo 28"
+        }
+      ],
+      "note": "Artículo de 10.497 caracteres con la respuesta en el carácter 7.633 (73 %), trozo 3 de 3 de art-v2 (offset corregido desde 7.612); el artículo 23 de la misma ley define el abandono social pero no regula la restitución."
+    },
+    {
+      "id": "REC-014",
+      "type": "largo",
+      "question": "¿Hasta qué fecha tienen los colegios para adecuar su reglamento interno a la prohibición del uso de celulares?",
+      "expected": [
+        {
+          "bcn_id": "1221284",
+          "order": 2,
+          "number": "Artículo único"
+        }
+      ],
+      "note": "Artículo de 8.257 caracteres con la respuesta en el carácter 7.550 (91 %), en el artículo 12 transitorio que cierra el texto, trozo 3 de 3 de art-v2 (offset corregido desde 7.532); ninguna otra ley de la biblioteca trata el uso de celulares."
+    },
+    {
+      "id": "REC-015",
+      "type": "largo",
+      "question": "¿Qué tope tiene el valor de los planes de inversión en calidad de servicio que el Ministerio de Energía puede aprobar a una distribuidora eléctrica?",
+      "expected": [
+        {
+          "bcn_id": "1226550",
+          "order": 2,
+          "number": "Artículo 1"
+        }
+      ],
+      "note": "Artículo de 11.491 caracteres con la respuesta en el carácter 7.160 (62 %), trozo 3 de 4 de art-v2 (offset corregido desde 7.155); el resto trata, entre otros, inventarios de transmisión y el Fondo de Estabilización de Tarifas, y ningún otro artículo regula estos planes."
+    },
+    {
+      "id": "REC-016",
+      "type": "parafrasis",
+      "question": "Tenemos una constructora con 80 empleados. ¿Estamos obligados a preparar todos los años un reporte sobre la igualdad entre hombres y mujeres en la compañía, o eso solo rige para las empresas grandes?",
+      "expected": [
+        {
+          "bcn_id": "1226327",
+          "order": 2,
+          "number": "Artículo único"
+        }
+      ],
+      "note": "Paráfrasis sin términos del texto: «reporte de igualdad entre hombres y mujeres» y «constructora con 80 empleados» en vez de «informe de equidad de género» y «cincuenta o más trabajadores de la construcción»; solo comparte palabras sueltas y ningún otro artículo exige el informe."
+    },
+    {
+      "id": "REC-017",
+      "type": "parafrasis",
+      "question": "Nuestra empresa vende comida en festivales de música y en fiestas tradicionales que duran unos pocos días. ¿Lo que el público come dentro de esos recintos cuenta como consumo para llevar?",
+      "expected": [
+        {
+          "bcn_id": "1220676",
+          "order": 2,
+          "number": "Artículo único"
+        }
+      ],
+      "note": "Paráfrasis: «festivales de música y fiestas tradicionales» y «consumo para llevar» en vez de «eventos que no son permanentes» y «consumo fuera del establecimiento»; la misma oración condiciona el sí a valorizar los residuos y ningún otro artículo trata el consumo en eventos."
+    },
+    {
+      "id": "REC-018",
+      "type": "parafrasis",
+      "question": "En nuestra empresa, ¿cuál es el sueldo más bajo que podemos pagar al mes a un empleado de 35 años desde mayo de 2026?",
+      "expected": [
+        {
+          "bcn_id": "1225354",
+          "order": 2,
+          "number": "Artículo 1"
+        }
+      ],
+      "note": "Paráfrasis: «sueldo más bajo» y «empleado de 35 años» en vez de «ingreso mínimo mensual» y «mayores de 18 y hasta 65 años»; la fecha «mayo de 2026» es lo único que coincide. Los montos de otras edades (arts. 2 y 3) y el valor de referencia del subsidio al empleo (Ley 21.808) no responden."
+    },
+    {
+      "id": "REC-019",
+      "type": "parafrasis",
+      "question": "Uno de nuestros choferes ocultó, al renovar su licencia, que tiene una enfermedad que le impide manejar con seguridad. ¿Qué consecuencia arriesga si se descubre?",
+      "expected": [
+        {
+          "bcn_id": "1221210",
+          "order": 2,
+          "number": "Artículo 1"
+        }
+      ],
+      "note": "Paráfrasis de seguridad laboral: «ocultó una enfermedad que le impide manejar» en vez de «declarado falsamente que no padece enfermedades inhabilitantes»; es un detalle de un artículo mediano (3.516 caracteres), que además tipifica la falsa declaración como infracción en el artículo 200."
+    },
+    {
+      "id": "REC-020",
+      "type": "parafrasis",
+      "question": "Somos una productora privada de conciertos y partidos. ¿Qué parte de las entradas debemos reservar para el público de 60 años o más y durante cuánto tiempo desde que abrimos la venta?",
+      "expected": [
+        {
+          "bcn_id": "1224632",
+          "order": 30,
+          "number": "Artículo 24"
+        }
+      ],
+      "note": "Paráfrasis: «productora de conciertos y partidos», «público de 60 años o más» y «reservar» en vez de «espectáculo cultural, artístico o deportivo», «personas mayores» y «cuota»; los artículos 25 y 26 tratan la rebaja de precio y la publicidad de la cuota, y el artículo 11 solo promueve las cuotas en general, sin porcentaje de entradas ni plazo."
+    },
+    {
+      "id": "REC-021",
+      "type": "parafrasis",
+      "question": "Somos una constructora. ¿Qué papeles de la arena y la grava que compramos debemos tener a la vista en cada obra?",
+      "expected": [
+        {
+          "bcn_id": "1221719",
+          "order": 18,
+          "number": "Artículo 14"
+        }
+      ],
+      "note": "Paráfrasis: «papeles de la arena y la grava» y «a la vista en cada obra» en vez de «certificado de origen de los áridos» y «lugar visible en faenas de construcción»; el artículo 13 obliga al vendedor a entregar la copia, pero no trata la obra."
+    },
+    {
+      "id": "REC-022",
+      "type": "parafrasis",
+      "question": "Nuestra minera opera una planta que le quita la sal al agua de mar y devuelve al océano el residuo muy salino. ¿Está previsto que la autoridad ambiental dicte una regulación general con niveles permitidos para ese tipo de vertidos?",
+      "expected": [
+        {
+          "bcn_id": "1223983",
+          "order": 62,
+          "number": "Artículo quinto"
+        }
+      ],
+      "note": "Paráfrasis ambiental: «planta que le quita la sal al agua de mar», «residuo muy salino devuelto al océano» y «regulación general con niveles permitidos» en vez de «planta desaladora», «descarga de salmueras» y «norma de emisión»; se reemplazó «potabiliza», que no describe con precisión una desaladora minera. Otros artículos de la norma nombran las salmueras, pero tratan la ubicación y el informe de cada proyecto."
+    },
+    {
+      "id": "REC-023",
+      "type": "parafrasis",
+      "question": "La municipalidad evalúa instalar una feria de frutas y verduras a dos cuadras de nuestras oficinas. ¿Tiene que preguntar antes a las organizaciones vecinales cercanas?",
+      "expected": [
+        {
+          "bcn_id": "1225210",
+          "order": 13,
+          "number": "Artículo 9"
+        }
+      ],
+      "note": "Paráfrasis municipal: «preguntar antes a las organizaciones vecinales cercanas» en vez de «consultas a las juntas de vecinos en un rango de mil doscientos metros»; el artículo 17 trata la modificación o el cierre de ferias y el informe del Tribunal Constitucional solo cita la frase de la consulta, sin el rango ni la feria proyectada."
+    },
+    {
+      "id": "REC-024",
+      "type": "parafrasis",
+      "question": "Tenemos unos 350 empleados que podrían calificar para el nuevo apoyo estatal a la contratación. ¿Podemos recibirlo por todos o hay un número máximo de trabajadores por empresa?",
+      "expected": [
+        {
+          "bcn_id": "1222281",
+          "order": 17,
+          "number": "Artículo 12"
+        }
+      ],
+      "note": "Paráfrasis: «apoyo estatal a la contratación» y «número máximo de trabajadores» en vez de «subsidio unificado de empleo» y «límite máximo de doscientas personas beneficiarias»; ningún otro artículo fija el tope (el artículo 13 solo regula el calendario de pagos de las empresas grandes)."
+    },
+    {
+      "id": "REC-025",
+      "type": "parafrasis",
+      "question": "Frente a nuestra tienda se instalan vendedores callejeros que ofrecen productos sin respetar las reglas. ¿Los fiscalizadores del municipio pueden requisarles la mercadería?",
+      "expected": [
+        {
+          "bcn_id": "1221320",
+          "order": 42,
+          "number": "Artículo 34"
+        }
+      ],
+      "note": "Paráfrasis: «vendedores callejeros», «fiscalizadores del municipio» y «requisar la mercadería» en vez de «comercio ambulante», «inspectores municipales» e «incautar las mercancías»; ningún otro artículo faculta a incautar mercancías."
+    },
+    {
+      "id": "REC-026",
+      "type": "parafrasis",
+      "question": "Nuestra empresa ofrece cuidadoras a domicilio para personas dependientes y queremos participar en los programas estatales de cuidados. ¿Necesitamos figurar en algún listado oficial para eso?",
+      "expected": [
+        {
+          "bcn_id": "1221443",
+          "order": 48,
+          "number": "Artículo 38"
+        }
+      ],
+      "note": "Paráfrasis: «figurar en un listado oficial» y «participar en programas estatales» en vez de «inscripción en el Registro» y «ejecutoras de los programas del Sistema». Distractores que no responden igual: el artículo 39 fija la multa por no inscribirse y el artículo quinto transitorio (order 67) la fecha desde la que la inscripción es exigible; ninguno liga la inscripción con ejecutar programas."
+    },
+    {
+      "id": "REC-027",
+      "type": "parafrasis",
+      "question": "En nuestro colegio, un apoderado insultó y empujó a una profesora. ¿Podemos impedirle por un tiempo que entre al recinto?",
+      "expected": [
+        {
+          "bcn_id": "1226950",
+          "order": 8,
+          "number": "Artículo 7"
+        }
+      ],
+      "note": "Paráfrasis de educación: «insultó y empujó» e «impedirle que entre al recinto» en vez de «agredido física o verbalmente» y «suspender el derecho de ingreso al establecimiento»; el artículo transitorio solo condiciona la medida a su incorporación en el reglamento interno."
+    },
+    {
+      "id": "REC-028",
+      "type": "parafrasis",
+      "question": "Administramos un edificio de departamentos. ¿Podemos prohibir en las normas internas del condominio que los residentes pongan redes en balcones y ventanas para evitar que los niños se caigan?",
+      "expected": [
+        {
+          "bcn_id": "1228370",
+          "order": 2,
+          "number": "Artículo único"
+        }
+      ],
+      "note": "Paráfrasis: «normas internas del condominio» y «redes en balcones y ventanas» en vez de «reglamento de copropiedad» y «mallas de protección y sistemas de bloqueo de ventanas»; el artículo transitorio solo fija un plazo de otra obligación."
+    },
+    {
+      "id": "REC-029",
+      "type": "parafrasis",
+      "question": "Somos una aerolínea con vuelos de pasajeros en Chile. ¿A qué instituciones tenemos que enviar los datos de los viajeros y en qué momento?",
+      "expected": [
+        {
+          "bcn_id": "1220530",
+          "order": 2,
+          "number": "Artículo único"
+        }
+      ],
+      "note": "Paráfrasis: «aerolínea» y «datos de los viajeros» en vez de «empresas de transporte aéreo» e «información anticipada de pasajeros (API) y registro de nombres (PNR)»; el encabezado solo menciona «las autoridades que indica», sin nombrarlas ni dar el momento."
+    },
+    {
+      "id": "REC-030",
+      "type": "parafrasis",
+      "question": "Nuestra empresa se dedica a llevar al mercado resultados de investigación, y en un estudio pagado con recursos del Estado nuestro equipo produjo manuales y videos. ¿Los derechos para explotar esas obras son de la empresa o de los empleados que las hicieron?",
+      "expected": [
+        {
+          "bcn_id": "1228258",
+          "order": 17,
+          "number": "Artículo 13"
+        }
+      ],
+      "note": "Paráfrasis: «empresa que se dedica a llevar al mercado resultados de investigación», «derechos para explotar esas obras» y «empleados que las hicieron» en vez de «empresa de base científico-tecnológica», «derechos patrimoniales de autor» y «dependientes»; se quitó «empresa de base tecnológica», casi literal del término que define la ley. El artículo vecino trata la propiedad industrial, no las obras."
+    },
+    {
+      "id": "REC-031",
+      "type": "referencia",
+      "question": "¿Qué establece el artículo 4 de la Ley 21840?",
+      "expected": [
+        {
+          "bcn_id": "1227843",
+          "order": 5,
+          "number": "Artículo 4"
+        }
+      ],
+      "note": "Referencia pura: nombra solo la ley y el número del artículo, sin palabras de su contenido, y el artículo es un único trozo en ambas recetas; mide la recuperación por referencia explícita."
+    },
+    {
+      "id": "REC-032",
+      "type": "referencia",
+      "question": "Resume el art. 1 de la Ley 21830.",
+      "expected": [
+        {
+          "bcn_id": "1225354",
+          "order": 2,
+          "number": "Artículo 1"
+        }
+      ],
+      "note": "Referencia pura con la abreviatura «art.»; los artículos 2 y 3 de la misma ley elevan otros montos del ingreso mínimo con la misma redacción y solo el número citado los separa del esperado."
+    },
+    {
+      "id": "REC-033",
+      "type": "referencia",
+      "question": "¿Qué dispone el artículo 22 de la Ley 21808?",
+      "expected": [
+        {
+          "bcn_id": "1222281",
+          "order": 28,
+          "number": "Artículo 22"
+        }
+      ],
+      "note": "Referencia pura; el artículo 17 de la misma ley lleva el mismo título («Transferencia monetaria no constitutiva de renta») y casi el mismo comienzo, así que solo el número citado distingue al esperado."
+    },
+    {
+      "id": "REC-034",
+      "type": "referencia",
+      "question": "¿Qué establece el artículo décimo tercero transitorio de la Ley 21809?",
+      "expected": [
+        {
+          "bcn_id": "1222799",
+          "order": 32,
+          "number": "Artículo décimo"
+        }
+      ],
+      "note": "Número repetido: en articles.number figura como «Artículo décimo», igual que el décimo transitorio (order 29) y los décimo cuarto a décimo séptimo (orders 33 a 36), y la ley tiene además un artículo 13 permanente; solo la referencia completa lo identifica."
+    },
+    {
+      "id": "REC-035",
+      "type": "referencia",
+      "question": "Explica el artículo tercero transitorio de la Ley 21800.",
+      "expected": [
+        {
+          "bcn_id": "1221719",
+          "order": 39,
+          "number": "Artículo tercero"
+        }
+      ],
+      "note": "Número repetido entre secciones: la ley tiene un artículo 3° permanente (principios, order 5) y este artículo tercero transitorio; la pregunta no da pistas de contenido y solo la referencia los separa."
+    },
+    {
+      "id": "REC-036",
+      "type": "referencia",
+      "question": "¿Qué señala el artículo primero transitorio de la Ley 21797?",
+      "expected": [
+        {
+          "bcn_id": "1221210",
+          "order": 6,
+          "number": "Primero"
+        }
+      ],
+      "note": "Número repetido: el transitorio figura en articles.number como «Primero», sin la palabra artículo, y la ley tiene también un artículo 1 permanente (order 2); mide si la referencia «primero transitorio» basta para recuperarlo."
+    },
+    {
+      "id": "REC-037",
+      "type": "referencia",
+      "question": "¿Qué establece el artículo 90 bis que la Ley 21793 incorpora en la ley de Tránsito?",
+      "expected": [
+        {
+          "bcn_id": "1220283",
+          "order": 2,
+          "number": "Artículo único"
+        }
+      ],
+      "note": "Caso bis: ningún articles.number público tiene «bis», así que el esperado es el artículo único que fija el texto del 90 bis, el único de la biblioteca que lo contiene; la pregunta solo nombra la ley y el artículo."
+    },
+    {
+      "id": "REC-038",
+      "type": "referencia",
+      "question": "Según la Ley 21818, ¿qué dispone el artículo 5 bis del decreto ley N° 3.500?",
+      "expected": [
+        {
+          "bcn_id": "1225211",
+          "order": 2,
+          "number": "Artículo único"
+        }
+      ],
+      "note": "Caso bis: ningún articles.number público tiene «bis»; el esperado es el artículo único que fija el texto del 5 bis, mientras el encabezado y el artículo transitorio de la ley solo lo nombran y los otros 5 bis de la biblioteca son de otras leyes."
+    },
+    {
+      "id": "REC-039",
+      "type": "referencia",
+      "question": "¿Qué señala el art. 2° de la Ley 21820?",
+      "expected": [
+        {
+          "bcn_id": "1224630",
+          "order": 3,
+          "number": "Artículo 2°"
+        }
+      ],
+      "note": "Referencia pura con la abreviatura «art.» y el signo de grado, como en articles.number («Artículo 2°»); artículo breve de un único trozo y sin pistas de contenido en la pregunta."
+    },
+    {
+      "id": "REC-040",
+      "type": "referencia",
+      "question": "Resume el artículo transitorio de la Ley 21827.",
+      "expected": [
+        {
+          "bcn_id": "1226950",
+          "order": 9,
+          "number": "Artículo transitorio"
+        }
+      ],
+      "note": "Número repetido entre leyes: «Artículo transitorio» es el número de un artículo en siete leyes de la biblioteca (21789, 21798, 21817, 21818, 21827, 21830 y 21842); sin pistas de contenido, solo la ley nombrada lo identifica."
     }
   ]
 }
