@@ -5,9 +5,10 @@ perfil con la receta prof-v1, la que embeberá la tarea 2.3; lo embebe con POST 
 ia-cumplify ya en marcha, y mide, sin reimplementar el puntaje del cruce, cuánto se parece ese vector a los
 trozos art-v2 vigentes que backend-cumplify guarda en ai_embeddings:
 
-  (a) la distribución del coseno entre el vector y el mejor trozo de cada artículo, en tres grupos: las
-      normas que la app sigue, las candidatas de la taxonomía y las normas públicas sin relación, con una
-      muestra por tramo de 0,05 para la revisión humana;
+  (a) la distribución del coseno entre el vector y el mejor trozo de cada artículo, en cuatro grupos: las
+      normas que la app sigue, las candidatas de la taxonomía, las relacionadas fuera del cruce (con una raíz
+      de actividad o instalación del perfil) y las normas públicas sin relación, con una muestra por tramo de
+      0,05 para la revisión humana;
   (b) la evaluación que deja afuera cada norma seguida: rearma el derived sin sus artículos, vuelve a
       embeber el texto y registra el puesto de la norma apartada, por similitud sola, entre las normas
       públicas que la app no sigue;
@@ -484,8 +485,8 @@ class AppData:
     # Sugerencias guardadas de la app, por norma: solo para marcar las candidatas, sin recalcular su score.
     suggestions: dict[str, dict]
     candidates: set[str] = field(default_factory=set)
-    # Normas que comparten con el perfil una raíz que va al texto pero no genera candidatas (actividad o
-    # instalación) y que no son candidatas, seguidas, notificadas ni descartadas.
+    # Normas con un artículo clasificado con una raíz con peso del perfil de actividad o instalación, esté o no en
+    # el texto después de los topes, que no son candidatas, seguidas, notificadas ni descartadas.
     related: set[str] = field(default_factory=set)
     synthetic: bool = False
 
@@ -541,8 +542,9 @@ def match_roots(
 def text_only_roots(
     entries: list[Entry], occurrences: dict[str, int], country_roots: set[str], settings: Settings = SETTINGS
 ) -> set[str]:
-    """Las raíces con peso que van al texto de prof-v1 pero no generan candidatas: las de las dimensiones de la
-    receta sin peso en el cruce (actividad e instalación, con los pesos por defecto)."""
+    """Las raíces con peso de las dimensiones de la receta que no generan candidatas: las de actividad e
+    instalación, que no pesan en el cruce con los pesos por defecto. No se aplican los topes: cuentan estén o no
+    en el texto."""
     weights = profile_source_weights(entries, occurrences, settings)
     recipe = {entry.root for entry in entries if entry.root in weights and entry.dimension in RECIPE_DIMENSIONS}
     return recipe - match_roots(entries, occurrences, country_roots, settings)
@@ -1134,8 +1136,9 @@ def load_dataset(db: Database, requested: list[str], unrelated_sample: int, need
         raise DatabaseError(f"{len(missing_roots)} raíces de los perfiles no están en ai_taxonomy_values")
 
     # Candidatas de la taxonomía: CandidateNormsAsync en un cruce completo, con el perfil que arma prof-v1. Con la
-    # misma consulta, las normas que solo comparten con el perfil una raíz de actividad o instalación: van al
-    # texto pero no generan candidatas, así que quedan aparte y no ensucian el grupo sin relación.
+    # misma consulta, las normas que solo comparten con el perfil una raíz con peso de actividad o instalación,
+    # esté o no en el texto después de los topes: no generan candidatas, así que quedan aparte y no ensucian el
+    # grupo sin relación. Se calculan una vez por app y valen para todas las variantes.
     roots_by_app: dict[str, tuple[set[str], set[str]]] = {}
     for app in apps:
         entries, occurrences = app_profile(app, PROF_V1)
@@ -1351,7 +1354,8 @@ class Groups:
 
     followed: set[str]
     candidates: set[str]
-    # Comparten con el perfil una raíz que va al texto pero no cruza: no sirven de control negativo.
+    # Comparten con el perfil una raíz con peso de actividad o instalación, que no cruza: no sirven de control
+    # negativo.
     related: set[str]
     unrelated: set[str]
     # Notificadas o descartadas en la app: fuera de los grupos; en el orden por similitud aparecen con su rótulo.
@@ -2256,7 +2260,7 @@ def self_test() -> int:
         ({"n1"}, {"n2"}, {"n5"}, {"n3"}, {"n4"}),
     )
     check(
-        "raíces del texto que no cruzan: actividad e instalación con peso",
+        "raíces de la receta que no cruzan: actividad e instalación con peso",
         text_only_roots(
             [
                 Entry("r1", SCOPE, DERIVED),
