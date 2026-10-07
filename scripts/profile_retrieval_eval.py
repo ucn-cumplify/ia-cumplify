@@ -550,6 +550,21 @@ def text_only_roots(
     return recipe - match_roots(entries, occurrences, country_roots, settings)
 
 
+def derived_mismatch(stored: dict[str, int | None], rebuilt: dict[str, int]) -> str | None:
+    """Qué difiere entre el derived guardado y el rearmado desde las vinculaciones, por valor crudo: los valores que
+    solo están guardados, los que solo trae el rearmado y los que tienen otras ocurrencias. None si coinciden."""
+    counts = (
+        ("solo guardados", len(stored.keys() - rebuilt.keys())),
+        ("solo rearmados", len(rebuilt.keys() - stored.keys())),
+        (
+            "con otras ocurrencias",
+            sum(1 for value in stored.keys() & rebuilt.keys() if stored[value] != rebuilt[value]),
+        ),
+    )
+    parts = [f"{label}: {count}" for label, count in counts if count]
+    return "valores " + ", ".join(parts) if parts else None
+
+
 def foreign_links(rows: list[dict], app_id: str) -> set[str]:
     """Los artículos que la app vincula con una vinculación cuya norma (source_id) no es la del artículo
     (articles.legal_body_id). El backend no lo valida al crear la vinculación (CreateVinculationUseCase)."""
@@ -1103,11 +1118,11 @@ def load_dataset(db: Database, requested: list[str], unrelated_sample: int, need
 
     for app in apps:
         _, _, by_raw = derived_profile(app.article_values, app.linked)
-        if by_raw != app.stored_derived:
+        difference = derived_mismatch(app.stored_derived, by_raw)
+        if difference:
             warnings.append(
-                f"AVISO {app.company} / {app.name}: el derived guardado no coincide con sus vinculaciones "
-                f"({len(app.stored_derived)} valores guardados, {len(by_raw)} rearmados): el script usa el rearmado, "
-                "que es el que dejaría la próxima ejecución."
+                f"AVISO {app.company} / {app.name}: el derived guardado no coincide con el que se rearma desde sus "
+                f"vinculaciones ({difference}): el script usa el rearmado, que es el que dejaría la próxima ejecución."
             )
 
     # Las raíces de todos los perfiles, incluidas las de los derived con una norma apartada (son subconjuntos).
@@ -2283,6 +2298,12 @@ def self_test() -> int:
         {"app_id": "y", "article_id": "a3", "legal_body_id": "n3", "source_id": "n4"},
     ]
     check("vinculaciones a un artículo de otra norma, por artículo", foreign_links(link_rows, "x"), {"a2"})
+    check(
+        "derived guardado distinto: qué difiere",
+        derived_mismatch({"v1": 2, "v2": 1, "v3": None, "v5": 3}, {"v1": 1, "v2": 1, "v4": 1, "v6": 1, "v7": 2}),
+        "valores solo guardados: 2, solo rearmados: 3, con otras ocurrencias: 1",
+    )
+    check("derived guardado igual al rearmado", derived_mismatch({"v1": 2}, {"v1": 2}), None)
 
     # Apps elegibles.
     def app_row(app_id: str, company: str, **changes: object) -> dict:
