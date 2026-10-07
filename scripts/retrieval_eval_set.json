@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "description": "Conjunto de la evaluación de recuperación de los embeddings de artículos (AI-044 de backend-cumplify y EMB-007 de docs/Embeddings/test.csv). Lo ejecuta scripts/retrieval_eval.py. Cada artículo esperado se identifica igual en todos los ambientes: el bcn_id de una norma pública de la BCN, el order del artículo (su posición, estable desde la hidratación de la BCN) y su número legible; nunca un id local. Este archivo guarda solo preguntas e identificadores, nunca textos sacados de la base. Hoy trae tres preguntas de ejemplo para probar el script: el conjunto real de AI-044 las reemplaza.",
+  "questions": [
+    {
+      "id": "REC-001",
+      "type": "referencia",
+      "question": "¿Qué establece el artículo 1° de la Ley 21.813, sobre el uso de agua de mar para desalinización?",
+      "expected": [
+        {
+          "bcn_id": "1223983",
+          "order": 3,
+          "number": "Artículo 1°"
+        }
+      ],
+      "note": "Ejemplo para probar el script, no parte del conjunto real: referencia exacta a la norma y al artículo."
+    },
+    {
+      "id": "REC-002",
+      "type": "parafrasis",
+      "question": "¿Por cuánto tiempo puede congelar sus estudios una alumna universitaria que acaba de ser madre?",
+      "expected": [
+        {
+          "bcn_id": "1220529",
+          "order": 6,
+          "number": "Artículo 5"
+        }
+      ],
+      "note": "Ejemplo para probar el script, no parte del conjunto real: paráfrasis de la Ley 21.790 (estudiantes cuidadores de la educación superior), sin nombrar la norma ni el artículo."
+    },
+    {
+      "id": "REC-003",
+      "type": "largo",
+      "question": "¿Quién responde si un municipio incumple el Plan de Transición al traspasar sus colegios a un Servicio Local de Educación Pública, y qué se considera infracción grave?",
+      "expected": [
+        {
+          "bcn_id": "1224471",
+          "order": 2,
+          "number": "Artículo 1°"
+        }
+      ],
+      "note": "Ejemplo para probar el script, no parte del conjunto real: el contenido está cerca del carácter 108.600 de los 135.423 del artículo 1° de la Ley 21.819, en el trozo 33 de 40 de art-v2 y más allá del recorte de 12.000 caracteres de art-v1."
+    }
+  ]
+}
