@@ -2198,6 +2198,51 @@ def self_test() -> int:
         (summary["median_position_top3"], summary["mrr_top3"], summary["median_cosine"]),
         (3.0, 0.375, 0.55),
     )
+
+    # El resumen conjunto: solo las apps reales, la media de sus AUC (sin las que faltan) y sus apartadas.
+    def variant_report(aucs: tuple[float | None, ...], positions: list[int]) -> dict:
+        names = ("seguidas_vs_sin_relacion", "candidatas_vs_sin_relacion", "relacionadas_vs_sin_relacion")
+        return {
+            "auc": dict(zip(names, aucs, strict=True)),
+            "holdout": {"norms": [{"position": p, "position_top3": p, "cosine": 0.5} for p in positions]},
+        }
+
+    pooled = pooled_summary(
+        [
+            {"synthetic": False, "variants": {"prof-v1": variant_report((0.6, 0.8, None), [1, 3])}},
+            {"synthetic": False, "variants": {"prof-v1": variant_report((1.0, 1.0, 0.5), [2])}},
+            {"synthetic": False, "variants": {"prof-v1": {"reason": "sin señal mínima", "holdout": {"norms": []}}}},
+            {"synthetic": True, "variants": {"prof-v1": variant_report((0.0, 0.0, 0.0), [9])}},
+        ],
+        ["prof-v1", "sin-etiquetas"],
+    )
+    check("resumen conjunto: apps con vector, sin el caso sintético", pooled["prof-v1"]["apps_with_vector"], 2)
+    check(
+        "resumen conjunto: AUC media de las apps reales",
+        pooled["prof-v1"]["auc_mean"],
+        {"seguidas_vs_sin_relacion": 0.8, "candidatas_vs_sin_relacion": 0.9, "relacionadas_vs_sin_relacion": 0.5},
+    )
+    check(
+        "resumen conjunto: apartadas de las apps reales",
+        (pooled["prof-v1"]["holdout"]["evaluated"], pooled["prof-v1"]["holdout"]["median_position"]),
+        (3, 2.0),
+    )
+    check(
+        "resumen conjunto: una variante sin apps",
+        pooled["sin-etiquetas"],
+        {
+            "apps_with_vector": 0,
+            "holdout": {"evaluated": 0, "skipped": {}},
+            "auc_mean": {
+                "seguidas_vs_sin_relacion": None,
+                "candidatas_vs_sin_relacion": None,
+                "relacionadas_vs_sin_relacion": None,
+            },
+        },
+    )
+    sampled = app_groups(bare_app(), {norm: [f"a-{norm}"] for norm in ("n1", "n2", "n3", "n4", "n5")}, 2)
+    # Las dos primeras por el SHA-256 de «prof-eval-v1:<id>», no las dos primeras por el id.
+    check("muestra de sin relación por la semilla", (sampled.unrelated, sampled.unrelated_total), ({"n1", "n4"}, 5))
     groups = app_groups(
         bare_app(followed={"n1"}, notified={"n3"}, candidates={"n1", "n2", "n3"}, related={"n2", "n3", "n5"}),
         {norm: [f"a-{norm}"] for norm in ("n1", "n2", "n3", "n4", "n5")},
@@ -2310,7 +2355,9 @@ def bare_app(**changes: object) -> AppData:
 LIT_APP = DEMO_BY_KEY["litoral"].app_id
 NOR_APP = DEMO_BY_KEY["norte"].app_id
 # Normas públicas de la base inventada: (id, título, artículos con su dirección en el plano). El transporte va
-# arriba y la minería a la derecha; n-cand2 no tiene trozos vigentes.
+# arriba y la minería a la derecha; n-cand2 no tiene trozos vigentes. n-cand3 es una candidata sin sugerencia que
+# queda por debajo de n-ajena, una norma sin relación que nombra la minería, y n-ajena queda por encima del
+# artículo a2 de una norma seguida: así las AUC de seguidas y candidatas no son 1.
 PIPELINE_NORMS = (
     ("n-trans", "Ley de transporte", {"a1": (0.1, 1.0), "a2": (0.6, 1.0)}),
     ("n-carga", "Ley de vehículos de carga", {"a3": (0.15, 1.0)}),
@@ -2322,15 +2369,18 @@ PIPELINE_NORMS = (
     ("n-mix", "Transporte de minerales", {"a9": (0.9, 1.0)}),
     ("n-cand2", "Ordenanza de tránsito", {}),
     ("n-desc", "Decreto de señalización", {"a11": (0.45, 1.0)}),
+    ("n-cand3", "Reglamento de estacionamientos", {"a12": (0.7, 1.0)}),
+    ("n-ajena", "Reglamento de seguridad minera", {"a13": (0.55, 1.0)}),
 )
 
 
 def pipeline_rows() -> dict[str, list[dict]]:
     """Las filas de la base inventada. Litoral sigue n-trans y n-carga; su perfil es solo su derived (Transporte en
-    ámbito y Transporte de carga en actividad); llega a n-cand, n-cand2, n-notif (notificada) y n-desc (descartada)
-    por Transporte, y a n-rel por la actividad, que también trae n-cand: como cruza, n-cand es candidata y no
-    relacionada. a3, de n-carga, está vinculado también con una vinculación de n-trans. Norte solo tiene el
-    structured Minería. Litoral tiene otra app, de catálogo, con su propio derived guardado."""
+    ámbito y Transporte de carga en actividad); llega a n-cand, n-cand2, n-cand3, n-notif (notificada) y n-desc
+    (descartada) por Transporte, y a n-rel por la actividad, que también trae n-cand: como cruza, n-cand es
+    candidata y no relacionada. Solo n-cand tiene una sugerencia sin notificar. a3, de n-carga, está vinculado
+    también con una vinculación de n-trans. Norte solo tiene el structured Minería. Litoral tiene otra app, de
+    catálogo, con su propio derived guardado."""
     companies = [
         {"id": "c-lit", "name": "Empresa Litoral Ltda", "status": ACTIVE, "rut_key": DEMO_BY_KEY["litoral"].rut_key},
         {"id": "c-nor", "name": "Empresa Norte SpA", "status": ACTIVE, "rut_key": DEMO_BY_KEY["norte"].rut_key},
@@ -2363,7 +2413,7 @@ def pipeline_rows() -> dict[str, list[dict]]:
             ((article, norm) for norm, _, directions in PIPELINE_NORMS for article in directions), start=1
         )
     ]
-    reach = {"r-trans": ("n-trans", "n-carga", "n-cand", "n-cand2", "n-notif", "n-desc")}
+    reach = {"r-trans": ("n-trans", "n-carga", "n-cand", "n-cand2", "n-cand3", "n-notif", "n-desc")}
     reach |= {"r-carga": ("n-carga", "n-rel", "n-cand"), "r-min": ("n-min",)}
     return {
         COMPANIES_QUERY: companies,
@@ -2431,7 +2481,8 @@ def pipeline_rows() -> dict[str, list[dict]]:
 
 def pipeline_checks() -> list[tuple[str, object, object]]:
     """Lee la base inventada con load_dataset, planifica y evalúa con vectores de dos dimensiones: la norma
-    apartada que más se parece al perfil tiene que quedar primera."""
+    apartada que más se parece al perfil tiene que quedar primera. Después arma lo que muestra y guarda main: el
+    resumen conjunto, el informe por consola, el archivo de --dry-run --out y el de --vectors-out."""
     dataset = load_dataset(FakeDatabase(pipeline_rows()), ["litoral", "norte"], 0, True)
     apps = {app.id: app for app in dataset.apps}
     directions = {article: xy for _, _, items in PIPELINE_NORMS for article, xy in items.items()}
@@ -2448,37 +2499,71 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             result[article] = Similarity((vector[0] * x + vector[1] * y) / (norm * length), 0, None)
         return result
 
-    units = plan_units(dataset, ["prof-v1", CENTROID, "por-empresa"], holdout=True)
+    variants = ["prof-v1", CENTROID, "por-empresa"]
+    units = plan_units(dataset, variants, holdout=True)
     for unit in units:
         if unit.text is not None:
             unit.vector = fake_vector(unit.text)
     reports = evaluate(dataset, units, fake_similarity, lambda pairs: {}, {}, 0)
     by_app = {report["app_id"]: report for report in reports}
     lit = by_app[LIT_APP]["variants"]
-    holdout = {item["norm"]: item for item in lit["prof-v1"]["holdout"]["norms"]}
+    prof = lit["prof-v1"]
+    holdout = {item["norm"]: item for item in prof["holdout"]["norms"]}
     synthetic = by_app.get("sintetica", {}).get("variants", {})
-    cross = lit["prof-v1"]["cross_rubro"]
-    main_sha = lit["prof-v1"]["sha256"]
+    cross = prof["cross_rubro"]
+    main_sha = prof["sha256"]
+    text_lines = prof["text"].split("\n")
     console = io.StringIO()
     with contextlib.redirect_stdout(console):
         print_dry_run(units, dataset)
     shown = console.getvalue()
+
+    # Lo que solo ejecuta main, con el informe armado como allí: el resumen conjunto, la consola, el archivo de
+    # --dry-run --out y el de --vectors-out.
+    texts = texts_to_embed(units)
+    report = {
+        "usage": {
+            "total_tokens": 0,
+            "requests": len(texts),
+            "model": MODEL,
+            "texts": len(texts),
+            "reused": sum(1 for unit in units if unit.text is not None) - len(texts),
+        },
+        "corpus": dataset.corpus,
+        "warnings": dataset.warnings,
+        "apps": reports,
+        "summary": pooled_summary(reports, variants),
+    }
+    printed = io.StringIO()
+    with contextlib.redirect_stdout(printed):
+        print_report(report)
+    printed_lines = printed.getvalue().rstrip("\n").split("\n")
+    dry = dry_run_report(units, dataset, variants)
+    dry_lit = [item for item in dry["texts"] if item["app_id"] == LIT_APP and item["variant"] == "prof-v1"]
+    with tempfile.TemporaryDirectory() as folder:
+        vectors_file = Path(folder) / "vectores.jsonl"
+        write_vectors(vectors_file, units)
+        saved = [json.loads(line) for line in vectors_file.read_text(encoding="utf-8").splitlines()]
     return [
         ("datos: apps elegibles", sorted(apps), sorted([LIT_APP, NOR_APP])),
         ("datos: sin el derived de ninguna app en lo de la empresa", apps[LIT_APP].company_entries, []),
         ("datos: lo de la empresa", apps[NOR_APP].company_entries, [Entry("r-min", SECTOR, STRUCTURED)]),
-        ("datos: candidatas sin seguidas, notificadas ni descartadas", apps[LIT_APP].candidates, {"n-cand", "n-cand2"}),
+        (
+            "datos: candidatas sin seguidas, notificadas ni descartadas",
+            apps[LIT_APP].candidates,
+            {"n-cand", "n-cand2", "n-cand3"},
+        ),
         ("datos: candidatas por un structured", apps[NOR_APP].candidates, {"n-min"}),
         ("datos: relacionadas por la actividad", (apps[LIT_APP].related, apps[NOR_APP].related), ({"n-rel"}, set())),
         (
             "datos: corpus",
             dataset.corpus,
             {
-                "public_norms": 10,
-                "public_norms_with_chunks": 9,
-                "public_articles": 13,
-                "articles_with_current_chunks": 10,
-                "current_chunks": 10,
+                "public_norms": 12,
+                "public_norms_with_chunks": 11,
+                "public_articles": 15,
+                "articles_with_current_chunks": 12,
+                "current_chunks": 12,
                 "articles_with_stale_chunks": 1,
                 "articles_without_chunks": 2,
                 "test_norms": 1,
@@ -2488,7 +2573,7 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             "datos: avisos",
             dataset.warnings,
             [
-                "AVISO Empresa Litoral Ltda / Requisitos: 1 de 2 candidatas no tienen trozos art-v2 vigentes; la "
+                "AVISO Empresa Litoral Ltda / Requisitos: 1 de 3 candidatas no tienen trozos art-v2 vigentes; la "
                 "distribución y la AUC de las candidatas salen de las demás.",
                 "AVISO Empresa Litoral Ltda / Requisitos: 1 artículos vinculados son de otra norma que la de su "
                 "vinculación. La evaluación que deja una norma afuera aparta cada artículo con su propia norma: al "
@@ -2510,16 +2595,17 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             (holdout["Ley 1"]["sha256"] == main_sha, holdout["Ley 2"]["sha256"] == main_sha),
             (True, False),
         ),
-        ("plan: textos distintos, un pedido por texto", len(texts_to_embed(units)), 4),
+        ("plan: textos distintos, un pedido por texto", len(texts), 4),
         (
             "--dry-run: el SHA-256 por consola, sin el texto",
-            (main_sha in shown, any(line in shown for line in lit["prof-v1"]["text"].split("\n"))),
+            (main_sha in shown, any(line in shown for line in text_lines)),
             (True, False),
         ),
         ("apartada de Litoral evaluada", sorted(item["position"] for item in holdout.values()), [1, 1]),
-        ("apartada: orden entre las no seguidas", holdout["Ley 1"]["ranked_norms"], 8),
+        ("apartada: orden entre las no seguidas", holdout["Ley 1"]["ranked_norms"], 10),
         # Por el promedio de los tres mejores artículos, n-trans (0,998 y 0,882) queda detrás de n-cand y n-notif.
         ("apartada: puesto por los tres mejores artículos", holdout["Ley 1"]["position_top3"], 3),
+        ("apartada: coseno de su mejor artículo, no el de los tres mejores", holdout["Ley 1"]["cosine"], 0.9988),
         ("apartada: percentil entre las sin relación", holdout["Ley 1"]["percentile_vs_unrelated"], 100.0),
         ("centroide sin tokens", lit[CENTROID]["tokens"], 0),
         (
@@ -2527,34 +2613,123 @@ def pipeline_checks() -> list[tuple[str, object, object]]:
             by_app[LIT_APP]["groups"],
             {
                 "seguidas": 2,
-                "candidatas": 1,
+                "candidatas": 2,
                 "relacionadas_fuera_del_cruce": 1,
-                "sin_relacion": 3,
-                "sin_relacion_total": 3,
+                "sin_relacion": 4,
+                "sin_relacion_total": 4,
                 "notificadas_o_descartadas": 2,
                 "seguidas_no_publicas": 0,
-                "candidatas_total": 2,
+                "candidatas_total": 3,
                 "candidatas_sin_trozos": 1,
                 "seguidas_publicas_sin_trozos": 0,
             },
         ),
+        # (a) por artículo. n-ajena (0,899) supera a a2 de n-trans (0,882) y a n-cand3 (0,847), una candidata sin
+        # sugerencia, así que las AUC de seguidas (11 de 12 pares) y de candidatas (7 de 8) no son 1.
         (
-            "AUC de las candidatas y de las relacionadas",
+            "(a): AUC de cada grupo contra las sin relación",
+            prof["auc"],
+            {
+                "seguidas_vs_sin_relacion": 0.9167,
+                "candidatas_vs_sin_relacion": 0.875,
+                "relacionadas_vs_sin_relacion": 1.0,
+            },
+        ),
+        (
+            "(a): artículos y mediana por grupo",
+            {name: (stats["n"], stats.get("p50")) for name, stats in prof["cosine"].items()},
+            {
+                "seguidas": (3, 0.9951),
+                "seguidas_vinculados": (2, 0.9969),
+                "candidatas": (2, 0.9089),
+                "candidatas_con_sugerencia": (1, 0.971),
+                "relacionadas_fuera_del_cruce": (1, 0.9156),
+                "sin_relacion": (4, 0.7587),
+            },
+        ),
+        (
+            "(a): normas por grupo",
+            {name: stats["n"] for name, stats in prof["norm_cosine"].items()},
+            {"seguidas": 2, "candidatas": 2, "relacionadas_fuera_del_cruce": 1, "sin_relacion": 4},
+        ),
+        # Las nueve normas que la app no sigue, en orden de similitud. n-emb queda octava, y entre las cuatro sin
+        # relación solo n-min tiene menos similitud: su percentil entre ellas es 37,5.
+        (
+            "ranking: normas que la app no sigue y sus grupos",
+            (prof["ranking"]["norms"], [item["group"] for item in prof["ranking"]["top"]]),
+            (
+                9,
+                ["candidata", "notificada", "descartada", "relacionada_fuera_del_cruce", "sin_relacion", "candidata"]
+                + ["sin_relacion"] * 3,
+            ),
+        ),
+        (
+            "(d): control «emblema», puesto y percentil entre las sin relación",
+            [(item["position"], item["percentile_vs_unrelated"], item["test_norm"]) for item in prof["control"]],
+            [(8, 37.5, True)],
+        ),
+        (
+            "(d): percentiles 90 y 95 de las sin relación",
+            (cross["unrelated_p90"], cross["unrelated_p95"]),
+            (0.8622, 0.8807),
+        ),
+        # Transporte de minerales trae «miner», de Norte, pero también «transport», de Litoral: no cuenta. Sí cuentan
+        # Código de minería, novena, y Reglamento de seguridad minera, quinta y sobre los percentiles 90 y 95.
+        (
+            "(d): entre rubros, las dos normas que nombran la minería",
+            (
+                cross["norms"],
+                cross["in_top_10"],
+                cross["in_top_25"],
+                cross["over_p90_unrelated"],
+                cross["over_p95_unrelated"],
+                [item["position"] for item in cross["top"]],
+            ),
+            (2, 2, 2, 1, 1, [5, 9]),
+        ),
+        ("tramos: artículos contados", sum(sum(item["counts"].values()) for item in prof["bins"]), 10),
+        (
+            "tramos: la muestra por grupo",
+            [(item["range"], [entry["group"] for entry in item["sample"]]) for item in prof["bins"]],
             [
-                lit["prof-v1"]["auc"][name] is not None
-                for name in ("candidatas_vs_sin_relacion", "relacionadas_vs_sin_relacion")
+                ("0,10-0,15", ["sin_relacion"]),
+                ("0,70-0,75", ["sin_relacion"]),
+                ("0,75-0,80", ["sin_relacion"]),
+                ("0,80-0,85", ["candidatas"]),
+                ("0,85-0,90", ["seguidas", "sin_relacion"]),
+                ("0,90-0,95", ["relacionadas_fuera_del_cruce"]),
+                ("0,95-1,00", ["seguidas", "seguidas", "candidatas"]),
             ],
-            [True, True],
         ),
-        ("control «emblema» rotulado", [item["test_norm"] for item in lit["prof-v1"]["control"]], [True]),
-        # Transporte de minerales trae «miner», de Norte, pero también «transport», de Litoral: no cuenta. Código de
-        # minería queda séptima entre las siete normas que la app no sigue, notificadas y descartadas incluidas.
+        # Lo que solo ejecuta main. El caso sintético no entra en el resumen conjunto ni en --vectors-out.
         (
-            "entre rubros: solo Código de minería",
-            (cross["norms"], cross["in_top_10"], cross["in_top_25"], [item["position"] for item in cross["top"]]),
-            (1, 1, 1, [7]),
+            "resumen conjunto: apps con vector y apartadas evaluadas",
+            (report["summary"]["prof-v1"]["apps_with_vector"], report["summary"]["prof-v1"]["holdout"]["evaluated"]),
+            (1, 2),
         ),
-        ("tramos de revisión", sum(sum(item["counts"].values()) for item in lit["prof-v1"]["bins"]), 8),
+        (
+            "consola: el informe llega hasta el resumen conjunto, sin los textos",
+            (printed_lines[-1].startswith("  por-empresa"), any(line in printed.getvalue() for line in text_lines)),
+            (True, False),
+        ),
+        ("--dry-run --out: un texto por unidad, sin el centroide", len(dry["texts"]), 9),
+        (
+            "--dry-run --out: la apartada por su número y el SHA-256",
+            [(item["held_out"], item["sha256"] == main_sha) for item in dry_lit],
+            [(None, True), ("Ley 1", True), ("Ley 2", False)],
+        ),
+        (
+            "--vectors-out: los vectores de las apps reales",
+            sorted(
+                (item["app_id"], item["variant"], item["held_out_legal_body_id"] or "", item["sha256"] is not None)
+                for item in saved
+            ),
+            sorted(
+                [(LIT_APP, "prof-v1", held_out, True) for held_out in ("", "n-trans", "n-carga")]
+                + [(LIT_APP, CENTROID, held_out, False) for held_out in ("", "n-trans", "n-carga")]
+                + [(NOR_APP, "por-empresa", "", True)]
+            ),
+        ),
     ]
 
 
