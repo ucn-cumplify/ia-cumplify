@@ -460,7 +460,8 @@ TEMPLATE_COMPANY = "11111111-0000-0000-0000-000000000001"
 
 @dataclass
 class AppData:
-    """Lo que el script lee de una app elegible. Los ids son locales y nunca salen del informe."""
+    """Lo que el script lee de una app elegible. Los ids son locales. Van al informe, a --vectors-out y, en --dry-run,
+    a la consola, donde sirven para cotejar el SHA-256 con el del backend."""
 
     id: str
     company_id: str
