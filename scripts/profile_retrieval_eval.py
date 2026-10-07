@@ -288,13 +288,16 @@ def proportional_caps(available: dict[str, int], dimensions: tuple[str, ...], to
 
 def dimension_rank(candidate: Candidate) -> tuple:
     """Orden dentro de una dimensión: peso de mayor a menor; después la familia más específica (menos artículos,
-    que es mayor IDF: se compara el entero para no depender del redondeo); al final el value, ordinal UTF-16."""
+    que es mayor IDF: se compara el entero para no depender del redondeo); al final el value, ordinal UTF-16. La
+    procedencia no entra: con el mismo peso, un declared con una familia más grande va después de un derived
+    saturado (caso de paridad P8)."""
     return (-candidate.weight, candidate.family_count, utf16_key(candidate.value))
 
 
 def global_rank(candidate: Candidate) -> tuple:
     """Orden entre dimensiones para el tope de largo: el mismo, con el orden fijo de las dimensiones antes del
-    value. El tope quita siempre el valor de este orden que queda último (regla 8 de requirements.md)."""
+    value. El tope quita siempre el valor de este orden que queda último (regla 8 de requirements.md). Tampoco
+    aquí entra la procedencia (caso de paridad P9)."""
     return (
         -candidate.weight,
         candidate.family_count,

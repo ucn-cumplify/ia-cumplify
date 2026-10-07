@@ -135,17 +135,21 @@ Cada regla cambia el hash:
    - El peso, de mayor a menor.
    - Después, `family_article_count`, de menor a mayor. Es el IDF de la familia de mayor a menor: se compara el entero para no depender del redondeo. Se cuenta en vivo, con el SQL de `RecalculateFamilyArticleCountsAsync`, que es lo que recalcula la ejecución antes del cruce.
    - Al final, el `value` en orden ordinal por unidades UTF-16: `string.CompareOrdinal` en C#; en Python, comparar `value.encode("utf-16-be")`. No es el orden alfabético de una cultura, que depende de la versión de ICU, ni el de los puntos de código de Python, que difiere cuando hay caracteres fuera del plano básico.
+
+   La procedencia no entra en el orden, como en el desempate del plan del backend. Con los pesos por defecto, un derived con cinco artículos vinculados o más pesa 1,0, lo mismo que un declared, y entre ellos decide `family_article_count`: un declared con una familia más grande queda después, y el tope del punto 7 lo puede dejar fuera (P8).
 7. **Topes por dimensión.** 20 de ámbito, 10 de sector, 30 de actividad y 20 de instalación: quedan los primeros del orden del punto 6.
 8. **Tope de largo.** El plan del backend fija 8.000 caracteres en total, y el detalle del recorte es este:
    - 8.000 unidades UTF-16: `string.Length` en C#; en Python, `len(texto.encode("utf-16-le")) // 2`;
    - mientras el texto supere el tope, se quita el último valor de un orden global: el peso, de mayor a menor; `family_article_count`, de menor a mayor; el orden de las dimensiones del punto 4; y el `value`, en orden ordinal UTF-16.
+
+   Como en el punto 6, la procedencia no entra en este orden: con el mismo peso, el recorte quita antes un declared con una familia más grande que un derived saturado (P9).
 9. **Texto.** Una línea por dimensión con valores, en el orden del punto 4: `etiqueta: valor; valor`, con los valores en orden ordinal UTF-16 y separados por `"; "`. Una dimensión sin valores no deja línea. Las líneas se unen con `"\n"`, sin salto al final.
 10. **Señal mínima.** Si ninguna raíz con peso de las dimensiones del punto 4 tiene una entrada declared o derived, gane la procedencia que gane, la app no tiene texto ni vector. Se evalúa antes de los topes, como dice el plan de la recuperación semántica del backend (`docs/AI/plan-recuperacion-semantica.md`): «sin al menos una raíz con entrada declared o derived en esas cuatro dimensiones».
     - Con los pesos por defecto da lo mismo evaluarla antes o después de los topes, o mirar la procedencia ganadora. Declared (1,0) y derived (0,5 o más) siempre quedan antes que structured (0,4) en su dimensión, y el recorte por largo quita primero lo de menor peso.
     - Con otros pesos, por ejemplo con `AI_SCORE_W_SRC_STRUCTURED` mayor o igual que `AI_SCORE_W_SRC_DERIVED_MIN`, esas lecturas se separan. El caso P4 lo fija con pesos propios.
 11. **Hash.** SHA-256 del texto en UTF-8, en hexadecimal en minúsculas, como el `content_hash` de `ai_embeddings`. El identificador de la receta es `text-embedding-3-large@1024#prof-v1`.
 
-**Casos de paridad.** `scripts/profile_text_parity.json` trae siete casos. Cada uno tiene:
+**Casos de paridad.** `scripts/profile_text_parity.json` trae nueve casos. Cada uno tiene:
 
 - las entradas del perfil (`root`, `dimension` y `source`);
 - el `value` y el `family_article_count` de cada raíz;
@@ -153,7 +157,7 @@ Cada regla cambia el hash:
 - `settings`, solo si el caso usa pesos propios: los aplica en lugar de los de la raíz del archivo, que son los valores por defecto de `AI_SCORE_W_SRC_*` y `AI_SCORE_DERIVED_SATURATION`;
 - el texto, el SHA-256 y el largo esperados.
 
-Los ids son inventados y no influyen en el texto.
+Los ids son inventados y no influyen en el texto. Tienen la forma de un UUID, como el `Guid` de `ProfileValue` en el backend, y cada caso usa su propio rango.
 
 | Caso | Qué fija |
 |---|---|
@@ -164,6 +168,8 @@ Los ids son inventados y no influyen en el texto.
 | P5 | Los tres criterios del punto 6 al borde de los topes, con las entradas en un orden que no es el del resultado. En sector, un structured con la familia más chica queda fuera porque pesa menos, y de tres derived empatados en peso y en conteo queda solo el primero en orden ordinal UTF-16, que no es el de entrada ni el alfabético de una cultura. En actividad, de dos empatados queda el que va primero en unidades UTF-16 y no en puntos de código |
 | P6 | Recorte por largo en dos pasos. Primero sale el último del orden global, un valor de ámbito, aunque no está en la última línea. Con eso el texto mide 8.001 unidades UTF-16 y 8.000 caracteres de Python, así que se sigue recortando. Después el orden global decide entre tres derived con el mismo peso y el mismo conteo, por la dimensión y luego por el `value`. Un declared con una familia más grande que la del valor que sale se queda porque pesa más |
 | P7 | Texto de exactamente 8.000 unidades UTF-16: no se recorta |
+| P8 | El tope de ámbito exacto, con 22 raíces de peso 1,0: un derived con nueve artículos pesa lo mismo que uno con cinco, porque el peso se satura, y entre pesos iguales decide `family_article_count` y no la procedencia. Quedan las 20 de familia más chica, y salen un declared y el derived con nueve artículos, que tienen las familias más grandes. Con un tope de 19 o de 21, con la procedencia antes del conteo o con un derived sin saturar, el texto sería otro |
+| P9 | En el recorte por largo, un empate de peso 1,0 entre procedencias de dimensiones distintas: decide `family_article_count`, y no la procedencia ni la dimensión. Sale el declared de ámbito, que tiene la familia más grande, y no el derived saturado de sector. La línea de ámbito queda sin valores y desaparece |
 
 La autoprueba los comprueba. La PR del backend tiene que cargarlos todos en una prueba de la función pura de la receta, con los pesos de cada caso.
 
