@@ -96,6 +96,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 - `classifier_version` es `<PROFILE_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `profile-v1@gpt-5.6-luna`.
 - Todo cambio del prompt del perfil o de su bloque de etiquetas sube `PROFILE_PROMPT_VERSION`.
 - `usage` trae los tokens de la llamada, con `cached_tokens` (la parte de `prompt_tokens` servida desde la caché del proveedor, 0 si no la informa), y `llm_calls` vale 1.
+- Cada campo del `usage` del proveedor se lee por separado: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta (caso PRF-015 de `test.csv`).
 - `dev_metrics`, cuando viaja, repite los tokens de `usage`, sin `cached_tokens`, y agrega el tiempo.
 
 ---
@@ -133,4 +134,4 @@ El texto es información de la empresa. No se registra en el log ni aparece en e
 - `PROFILE_TEXT_MAX_CHARS` tiene que coincidir con `AI_PROFILE_TEXT_MAX_CHARS` del backend: si el backend sube su tope y este no, un texto válido para el backend recibe `422`.
 - `PROFILE_PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue los perfiles nuevos de los anteriores. `tests/test_profile_prompts.py` falla si el prompt o su bloque de etiquetas cambian sin subirla, y también si las reglas de etiqueta o el formato del bloque se separan de los del prompt de artículos.
 - Las reglas de longitud de etiqueta viven en el prompt. El esquema solo exige listas no vacías, así que una etiqueta más larga igual puede volver en la respuesta.
-- El prompt (PRF-001 a PRF-007) se probó a mano con OpenAI y no tiene prueba automática, porque necesita el modelo real. El contrato sí la tiene: PRF-008 a PRF-012 y PRF-014 se ejecutan con pytest en `tests/test_company_profile_http.py`, con el adaptador real sobre un transporte falso de OpenAI, junto con dónde va el bloque de etiquetas existentes y que se quiten las imágenes y los adjuntos; PRF-013, en `tests/test_validation_errors.py`.
+- El prompt (PRF-001 a PRF-007) se probó a mano con OpenAI y no tiene prueba automática, porque necesita el modelo real. El contrato sí la tiene: PRF-008 a PRF-012, PRF-014 y PRF-015 se ejecutan con pytest en `tests/test_company_profile_http.py`, con el adaptador real sobre un transporte falso de OpenAI, junto con dónde va el bloque de etiquetas existentes y que se quiten las imágenes y los adjuntos; PRF-013, en `tests/test_validation_errors.py`.

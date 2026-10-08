@@ -72,7 +72,7 @@ POST /api/v1/company-profiles/classify
 `classifier_version` y `usage` viajan siempre:
 
 - `classifier_version` es `<versión del prompt>@<modelo>`. La versión es `PROFILE_PROMPT_VERSION` (`profile-v1`) y sube con cada cambio del prompt o del bloque de etiquetas existentes; el modelo es `OPENAI_MODEL`. El backend la guarda con el texto analizado.
-- `usage` trae los tokens de la única llamada al modelo; `llm_calls` vale 1. `cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché, o 0 si no la informa: como las instrucciones y las etiquetas van antes que el texto, ese prefijo puede salir de la caché.
+- `usage` trae los tokens de la única llamada al modelo; `llm_calls` vale 1. `cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché, o 0 si no la informa: como las instrucciones y las etiquetas van antes que el texto, ese prefijo puede salir de la caché. Cada campo del `usage` del proveedor se lee por separado, como en la clasificación de cuerpos legales: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta.
 
 `dev_metrics` solo trae datos cuando `INCLUDE_DEV_METRICS` es verdadero, igual que en la clasificación de cuerpos legales: el tiempo y los tokens de `usage`, sin `cached_tokens`. Cada lista de `classification` tiene al menos un elemento.
 
