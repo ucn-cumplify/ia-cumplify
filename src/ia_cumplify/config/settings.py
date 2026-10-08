@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     profile_text_max_chars: int = 4000
     openai_timeout_seconds: float = 180
     openai_max_retries: int = 2
+    # POST /api/v1/applicability-reasons. The backend waits AI_APPLICABILITY_REASONS_TIMEOUT_SECONDS
+    # (30). This client stays under that so a slow model call fails here instead of being cancelled.
+    applicability_reasons_timeout_seconds: float = 25
+    # 0: one attempt. A retry would not fit in the backend's 30 s budget.
+    applicability_reasons_max_retries: int = 0
 
     # POST /api/v1/chat. It is interactive, so it does not share the timeout and retries above.
     # Empty CHAT_MODEL and CHAT_REASONING_EFFORT use OPENAI_MODEL and OPENAI_REASONING_EFFORT.

@@ -13,6 +13,10 @@ class LegalBodyNotFoundError(DomainError):
     """No legal body exists for the given identifier."""
 
 
+class ApplicabilityError(DomainError):
+    """Applicability reasons could not be produced."""
+
+
 class EmbeddingError(DomainError):
     """The provider could not produce the embeddings (worth retrying)."""
 

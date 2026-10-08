@@ -7,6 +7,7 @@ from ia_cumplify.domain.classification import (
     TokenUsage,
 )
 from ia_cumplify.domain.exceptions import (
+    ApplicabilityError,
     ClassificationError,
     DomainError,
     LegalBodyNotFoundError,
@@ -14,6 +15,7 @@ from ia_cumplify.domain.exceptions import (
 from ia_cumplify.domain.legal_body import LegalBody
 
 __all__ = [
+    "ApplicabilityError",
     "Article",
     "ArticleClassification",
     "ClassifiedArticle",

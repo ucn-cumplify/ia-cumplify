@@ -65,7 +65,9 @@ EMBEDDINGS_MAX_TEXTS=256
 
 `PROFILE_TEXT_MAX_CHARS` (defecto 4.000) es el largo máximo del texto de perfil de una empresa y tiene que coincidir con `AI_PROFILE_TEXT_MAX_CHARS` del backend: un texto más largo recibe 422.
 
-`INCLUDE_DEV_METRICS` solo agrega `dev_metrics`, con el tiempo de respuesta; en el chat, `elapsed_ms` y `first_delta_ms` en el evento `done`. En la clasificación y el perfil, la versión del clasificador y el uso de tokens viajan siempre, en `classifier_version` y `usage`. En el chat, la versión va en `chat_version`, y `usage` vale `null` si el proveedor no llegó a informarlo.
+`INCLUDE_DEV_METRICS` solo agrega `dev_metrics`, con el tiempo de respuesta; en el chat, `elapsed_ms` y `first_delta_ms` en el evento `done`. En la clasificación y el perfil, la versión del clasificador y el uso de tokens viajan siempre, en `classifier_version` y `usage`. En el chat, la versión va en `chat_version`, y `usage` vale `null` si el proveedor no llegó a informarlo. En los motivos de aplicabilidad viajan `reason_version` y `usage`.
+
+`APPLICABILITY_REASONS_TIMEOUT_SECONDS` (25) y `APPLICABILITY_REASONS_MAX_RETRIES` (0) son del `POST /api/v1/applicability-reasons`. Quedan por debajo de los 30 s que espera el backend (`AI_APPLICABILITY_REASONS_TIMEOUT_SECONDS`), para que un modelo lento falle aquí y el backend deje la plantilla.
 
 ### Chat
 
@@ -167,6 +169,7 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
 |---|---|---|
 | GET | `/health` | Responde `{"status": "ok"}`. No exige `X-API-Key` |
 | POST | `/api/v1/legal-bodies/classify` | Clasifica los artículos de un cuerpo legal ya hidratado |
+| POST | `/api/v1/applicability-reasons` | Un motivo en español por artículo sugerido; lee la norma y solo esos artículos; nunca el texto del perfil |
 | POST | `/api/v1/company-profiles/classify` | Clasifica el texto con que una empresa se describe, en las mismas seis dimensiones; no usa la base |
 | POST | `/api/v1/embeddings` | Devuelve un vector por cada texto, en el mismo orden |
 | POST | `/api/v1/chat` | Responde una pregunta del chat en streaming (Server-Sent Events), solo con los pasajes del pedido y citando cada afirmación; no usa la base |
@@ -178,7 +181,7 @@ El contrato, las reglas y los casos de prueba están en `docs/`.
 ```text
 ia-cumplify/
 ├── src/ia_cumplify/
-│   ├── domain/                  # Artículo, clasificación, perfil de empresa, embedding, chat
+│   ├── domain/                  # Artículo, clasificación, perfil, motivo de aplicabilidad, embedding, chat
 │   ├── application/             # Casos de uso y puertos
 │   ├── adapters/
 │   │   ├── inbound/http/        # FastAPI: routers, esquemas, dependencias
