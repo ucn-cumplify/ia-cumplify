@@ -58,6 +58,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
     "prompt_tokens": 900,
     "completion_tokens": 80,
     "total_tokens": 980,
+    "cached_tokens": 0,
     "llm_calls": 1
   },
   "dev_metrics": {
@@ -70,7 +71,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
 }
 ```
 
-`reason_version` y `usage` viajan siempre. El backend solo usa `reasons`: un artículo sin entrada, con `reason` vacío o de más de 2000 caracteres, conserva la plantilla.
+`reason_version` y `usage` viajan siempre. El backend solo usa `reasons`: un artículo sin entrada, con `reason` vacío o de más de 2000 caracteres, conserva la plantilla. `usage.cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché, o 0 si no la informa; `dev_metrics` no lo repite.
 
 `dev_metrics` solo trae datos cuando `INCLUDE_DEV_METRICS` es verdadero.
 
@@ -81,7 +82,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
 - Un `article_id` que no está en esa norma se omite de `reasons`. Si no queda ninguno, `reasons` es `[]` y no se llama al modelo. El cuerpo inexistente es `404`.
 - El motivo va en español, en un párrafo de dos o tres oraciones. Nombra los valores coincidentes entre comillas («…»). No dictamina aplicabilidad. No cita ni inventa la descripción de la empresa: ese texto no llega en el pedido.
 - No menciona artículos que no vinieron en el pedido, ni ids internos, ni que el texto lo escribió una IA.
-- Antes de armar el prompt se quitan las imágenes embebidas `data:image/...;base64,...`.
+- Antes de armar el prompt se quitan los data URI embebidos: una imagen se reemplaza por `[imagen omitida]` y cualquier otro tipo, como un PDF, por `[archivo omitido]`.
 - El log registra el id de la norma y cuántos artículos pidieron motivo y cuántos lo obtuvieron. No registra etiquetas, acciones ni el texto del artículo.
 
 **Errores:**
