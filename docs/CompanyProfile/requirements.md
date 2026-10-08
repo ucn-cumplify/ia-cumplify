@@ -129,7 +129,7 @@ El texto es información de la empresa. No se registra en el log ni aparece en e
 
 ## Deuda técnica conocida
 
-- **Las exclusiones del texto no se devuelven.** El modelo evita los valores que el texto niega, pero no los entrega como exclusiones, así que no se aplican al perfil: una norma de un tema negado igual puede sugerirse si coincide con el perfil derivado. Hoy las exclusiones se registran a mano con `/ai/profile/exclusions` del backend. Devolverlas sería un campo adicional, compatible con el contrato actual; está pendiente de decidir.
+- **Las exclusiones del texto no se devuelven.** El modelo evita los valores que el texto niega, pero no los entrega como exclusiones, así que no se aplican al perfil: una norma de un tema negado igual puede sugerirse si coincide con el perfil derivado. Devolverlas sería un campo adicional, compatible con el contrato actual. Se decidió el 2026-10-08 dejarlo fuera de las fases 0 y 1; hoy las exclusiones se registran a mano con `/ai/profile/exclusions` del backend.
 - `PROFILE_TEXT_MAX_CHARS` tiene que coincidir con `AI_PROFILE_TEXT_MAX_CHARS` del backend: si el backend sube su tope y este no, un texto válido para el backend recibe `422`.
 - `PROFILE_PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue los perfiles nuevos de los anteriores. `tests/test_profile_prompts.py` falla si el prompt o su bloque de etiquetas cambian sin subirla, y también si las reglas de etiqueta o el formato del bloque se separan de los del prompt de artículos.
 - Las reglas de longitud de etiqueta viven en el prompt. El esquema solo exige listas no vacías, así que una etiqueta más larga igual puede volver en la respuesta.
