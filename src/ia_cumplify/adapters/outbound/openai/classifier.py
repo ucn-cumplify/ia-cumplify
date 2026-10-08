@@ -3,7 +3,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from openai import OpenAI, OpenAIError
-from openai.types import CompletionUsage
 from pydantic import ValidationError
 
 from ia_cumplify.adapters.outbound.openai.llm_schema import (
@@ -86,7 +85,7 @@ class OpenAIArticleClassifierAdapter:
                 failed_article_ids.extend(article.id for article in chunk)
                 # A 200 the provider billed without a classification (a refusal, an answer cut by length or
                 # by the content filter, an invalid output) counts the tokens its usage block reports.
-                # Without an answer, or without a readable usage block, only the call counts.
+                # Without an answer, or without a usage block, only the call counts.
                 billed = exc.usage if isinstance(exc, ClassificationError) else None
                 usage += billed if billed is not None else TokenUsage(llm_calls=1)
                 continue
@@ -176,13 +175,16 @@ class OpenAIArticleClassifierAdapter:
 def _billed_usage(response: "httpx2.Response") -> TokenUsage:
     """The usage block of a 200 body that is not a classification: the provider billed the call all the same.
 
-    Only the call counts when the body is not JSON or has no readable usage block.
+    It is read with the same rule as the usage of a classification. Only the call counts when the body
+    cannot be read as JSON or has no usage block.
     """
     try:
-        reported = CompletionUsage.model_validate(response.json()["usage"])
-    except (ValueError, KeyError, TypeError):
+        body = response.json()
+    except (ValueError, RecursionError):
+        # ValueError: a body that is not JSON or not UTF-8. RecursionError: JSON nested deeper than the
+        # decoder allows, which parse() could not read either.
         return TokenUsage(llm_calls=1)
-    return call_usage(reported)
+    return call_usage(body.get("usage") if isinstance(body, dict) else None)
 
 
 def _log_invalid_output(legal_body_id: str, exc: ValidationError) -> None:
