@@ -398,7 +398,7 @@ Con `CHAT_FAKE_RESPONDER=true`, el endpoint no llama a OpenAI: devuelve un strea
 - Convertir los ids en enlaces, y el widget (4.9 y 4.10).
 - Acciones sobre la app, ciclo de herramientas, perfil desde la conversación y memoria.
 - Leer la base de datos.
-- Ampliar el `TokenUsage` compartido de clasificación y perfil.
+- Ampliar el `TokenUsage` compartido de clasificación y perfil (después `fix/classification-hardening` le agregó `cached_tokens`, fuera del chat).
 - El Dockerfile y el compose de ia-cumplify (5.5).
 - Corregir el ruido que FastAPI registra al cortar un stream: solo se documenta (ver "Deuda técnica conocida").
 

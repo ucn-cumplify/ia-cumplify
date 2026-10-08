@@ -230,7 +230,7 @@ Con un `finish_reason` distinto de `stop`, el texto está incompleto, pero sus c
 | llm_calls | 1 si se llamó al modelo; 0 sin pasajes o con el respondedor falso. Los intentos fallidos del SDK no se cuentan |
 
 - ia pide el uso con `stream_options.include_usage`, y el proveedor lo manda en un fragmento aparte, después del que trae `finish_reason`. **Si ese fragmento no llega, `usage` vale `null`:** en `error` si el stream se cortó, y en `done` si el proveedor terminó la respuesta sin mandar el uso. En los dos casos el backend estima (punto 9 de "Consumo desde el backend").
-- Es un esquema propio del chat. El `usage` de clasificación, perfil y embeddings no cambia.
+- Es un esquema propio del chat. El `usage` de clasificación, perfil y motivos de aplicabilidad también informa `cached_tokens` desde `fix/classification-hardening`, pero no `reasoning_tokens`; el de embeddings no cambia.
 - Sin pasajes o con el respondedor falso, `usage` no es `null`: vale cero en todos los campos.
 
 ### Errores antes del stream
