@@ -99,7 +99,7 @@ uv run python scripts/retrieval_eval.py --base-url http://127.0.0.1:8000
 
 ## Evaluación del perfil embebido
 
-`scripts/profile_retrieval_eval.py` es la fase 0 de la tarea 2.4 del backend (recuperación semántica en el cruce; tareas 2.3 y 2.4 de `docs/AI/plan-sprint-2-chatbot.md` de `backend-cumplify`). Es una herramienta manual, fuera del servicio y de pytest, sin código de producción. Antes de escribir el código del backend, mide si el vector del perfil de una app, armado con la receta `prof-v1` de la tarea 2.3, se parece más a los artículos que importan a la app que a los demás. La cubre EMB-008 de `test.csv`.
+`scripts/profile_retrieval_eval.py` es la fase 0 de la tarea 2.4 del backend (recuperación semántica en el cruce; tareas 2.3 y 2.4 de `docs/AI/plan-sprint-2-chatbot.md` de `backend-cumplify`). Es una herramienta manual, fuera del servicio y de pytest, sin código de producción. Antes de escribir el código del backend, mide si el vector del perfil de una app, armado con la receta `prof-v1` de la tarea 2.3, se parece más a los artículos que importan a la app que a los demás. La cubren EMB-008 de `test.csv`, la primera medición, y EMB-009, la que congeló la receta.
 
 No reimplementa el puntaje del cruce. La combinación con la taxonomía, el peso de la evidencia semántica y la compuerta se miden después en la simulación del backend, con los vectores que este script guarda (`--vectors-out`).
 
@@ -110,7 +110,7 @@ Es una reimplementación declarada, solo del texto. La PR del backend que implem
 - para las apps de demostración de una misma base: `--dry-run` muestra sus SHA-256 por consola y guarda los textos en `--out`;
 - para los casos de `scripts/profile_text_parity.json`, que no necesitan base.
 
-El plan del backend deja el detalle del recorte por el total a la primera PR que se escriba entre la de este script y la del backend, y prefiere la de este script («Selección» en `docs/AI/plan-recuperacion-semantica.md`). Lo fija la regla 8, y la PR del backend la replica como las demás. Como dice el plan, toda la receta queda provisional hasta repetir la medición con textos declarados («Con textos declarados», más abajo). Si esa medición la cambia, se actualizan juntos estas reglas, el script y los casos de paridad, y la PR del backend vuelve a replicarlos.
+El plan del backend deja el detalle del recorte por el total a la primera PR que se escriba entre la de este script y la del backend, y prefiere la de este script («Selección» en `docs/AI/plan-recuperacion-semantica.md`). Lo fija la regla 8, y la PR del backend la replica como las demás. Como pedía el plan, toda la receta quedó provisional hasta repetir la medición con textos declarados. Esa medición (EMB-009, 2026-10-08) la congeló sin cambios («Con textos declarados», más abajo). Desde entonces `prof-v1` no cambia: otra receta es una receta nueva (`prof-v2`), con estas reglas, el script y los casos de paridad actualizados juntos, y la PR del backend que la implemente los replica.
 
 **El `--dry-run` de referencia.** Para que el SHA-256 de cada app de demostración tenga que coincidir con el que arma el backend, el `--dry-run` se hace:
 
@@ -239,7 +239,7 @@ Para cada app elegible de Norte, Altiplano y Litoral, o para las de `--apps`:
 
 `--dry-run` cuenta los textos distintos y estima los tokens con 3,8 caracteres por token. En la base local se esperan decenas de miles de tokens, menos de un centavo de dólar.
 
-**Con textos declarados.** Ningún seeder del backend crea textos de perfil, así que sin cargarlos la receta queda provisional. Se congela después de repetir la medición con los textos declarados de las tres empresas, que se cargan con `PUT /ai/profile/text` del backend y se analizan antes de la medición. Con datos reales hay que repetirla.
+**Con textos declarados.** Ningún seeder del backend crea textos de perfil. Los de las tres empresas de demostración están en `docs/AI/perfil-demo/textos-declarados.json` de backend-cumplify, desde la PR de la tarea 2.3: se cargan con `PUT /ai/profile/text` del backend, como el administrador de cada empresa, y se analizan antes de la medición. Con ellos, la medición del 2026-10-08 (EMB-009) congeló `prof-v1`: con los textos declarados, `prof-v1` mejoró en la evaluación que deja una norma afuera, y ninguna variante la supera en todas las métricas. Con datos reales hay que repetirla.
 
 **Rol de solo lectura.** Además de abrir transacciones de solo lectura, la ejecución real usa un rol temporal que solo puede leer las tablas de «Lo que lee», y que se borra al terminar. Como superusuario, con una contraseña que solo sirve para esta ejecución:
 
