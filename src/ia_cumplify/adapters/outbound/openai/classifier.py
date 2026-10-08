@@ -1,7 +1,9 @@
 from collections.abc import Sequence
+import json
 import logging
 
 from openai import OpenAI, OpenAIError
+from pydantic import ValidationError
 
 from ia_cumplify.adapters.outbound.openai.llm_schema import (
     LlmArticleClassification,
@@ -78,7 +80,10 @@ class OpenAIArticleClassifierAdapter:
                     legal_body.id,
                 )
                 failed_article_ids.extend(article.id for article in chunk)
-                usage += TokenUsage(llm_calls=1)
+                # A call the provider answered and billed (a refusal, or an answer cut by length or by the
+                # content filter) counts its tokens. Otherwise the tokens are unknown: only the call counts.
+                billed = exc.usage if isinstance(exc, ClassificationError) else None
+                usage += billed if billed is not None else TokenUsage(llm_calls=1)
                 continue
             classified.extend(chunk_results)
             failed_article_ids.extend(chunk_missing)
@@ -87,7 +92,9 @@ class OpenAIArticleClassifierAdapter:
         if not classified and targets:
             detail = str(last_error) if last_error is not None else "all batches failed"
             raise ClassificationError(
-                f"No article could be classified for legal body {legal_body.id}: {detail}"
+                f"No article could be classified for legal body {legal_body.id} "
+                f"({usage.llm_calls} model calls, {usage.total_tokens} tokens counted): {detail}",
+                usage=usage,
             )
 
         return ClassifierOutput(
@@ -122,8 +129,20 @@ class OpenAIArticleClassifierAdapter:
                 reasoning_effort=self._reasoning_effort,
             )
         except OpenAIError as exc:
+            # LengthFinishReasonError and ContentFilterFinishReasonError carry the completion the
+            # provider billed. Other errors carry none, and only the call counts.
+            completion = getattr(exc, "completion", None)
             raise ClassificationError(
-                f"OpenAI error while classifying legal body {legal_body.id}: {exc}"
+                f"OpenAI error while classifying legal body {legal_body.id}: {exc}",
+                usage=call_usage(getattr(completion, "usage", None)),
+            ) from exc
+        except (ValidationError, json.JSONDecodeError) as exc:
+            # parse() reads the body as JSON (JSONDecodeError) and validates the answer against the schema
+            # (ValidationError). Both are ValueError: unwrapped, they would skip the batch tolerance of
+            # classify_many and lose the batches already paid for.
+            raise ClassificationError(
+                f"Model did not return a valid classification for legal body {legal_body.id}: "
+                f"{type(exc).__name__}."
             ) from exc
 
         message = completion.choices[0].message
@@ -131,7 +150,8 @@ class OpenAIArticleClassifierAdapter:
             refusal = getattr(message, "refusal", None)
             extra = f" Refusal: {refusal}" if refusal else ""
             raise ClassificationError(
-                f"Model did not return a valid classification for legal body {legal_body.id}.{extra}"
+                f"Model did not return a valid classification for legal body {legal_body.id}.{extra}",
+                usage=call_usage(getattr(completion, "usage", None)),
             )
 
         mapped, missing = _map_parsed_to_targets(message.parsed, targets)
