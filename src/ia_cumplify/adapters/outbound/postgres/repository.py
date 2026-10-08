@@ -46,12 +46,14 @@ class PostgresLegalBodyRepository:
                 cursor.execute(_LIST_ARTICLES, (_as_uuid(legal_body_id),))
                 rows = cursor.fetchall()
 
+        # number and section may be null in the backend's schema. Read as empty text, the article is still
+        # classified (an empty number is not a structural piece) and the prompt never says "None".
         return [
             Article(
                 id=str(row["id"]),
                 legal_body_id=str(row["legal_body_id"]),
-                number=row["number"],
-                section=row["section"],
+                number=row["number"] or "",
+                section=row["section"] or "",
                 text=row["text"],
                 order=row["order"],
             )

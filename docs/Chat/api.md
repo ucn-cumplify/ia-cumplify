@@ -230,7 +230,7 @@ Con un `finish_reason` distinto de `stop`, el texto está incompleto, pero sus c
 | llm_calls | 1 si se llamó al modelo; 0 sin pasajes o con el respondedor falso. Los intentos fallidos del SDK no se cuentan |
 
 - ia pide el uso con `stream_options.include_usage`, y el proveedor lo manda en un fragmento aparte, después del que trae `finish_reason`. **Si ese fragmento no llega, `usage` vale `null`:** en `error` si el stream se cortó, y en `done` si el proveedor terminó la respuesta sin mandar el uso. En los dos casos el backend estima (punto 9 de "Consumo desde el backend").
-- Es un esquema propio del chat. El `usage` de clasificación, perfil y embeddings no cambia.
+- Es un esquema propio del chat. El `usage` de clasificación, perfil y motivos de aplicabilidad también informa `cached_tokens` desde `fix/classification-hardening`, pero no `reasoning_tokens`; el de embeddings no cambia.
 - Sin pasajes o con el respondedor falso, `usage` no es `null`: vale cero en todos los campos.
 
 ### Errores antes del stream
@@ -270,7 +270,7 @@ Con un `finish_reason` distinto de `stop`, el texto está incompleto, pero sus c
 - Una llamada al modelo por pedido, o ninguna si no hay pasajes o con el respondedor falso.
 - El modelo solo puede usar los pasajes de este pedido. El historial sirve para entender la pregunta (por ejemplo, "¿y para las bodegas?"), no como fuente.
 - Los pasajes van al modelo en el orden recibido, cada uno en un bloque que abre con la línea `--- PASAJE P<n> ---` y cierra con `--- FIN PASAJE P<n> ---`, con su tipo y su referencia en líneas propias dentro del bloque. La regla exacta y el orden de los mensajes están en CHT-007 de `requirements.md`.
-- Antes de armar el prompt se quitan las imágenes embebidas `data:image/...;base64,...` y se reemplazan por `[imagen omitida]`, igual que en la clasificación. Además:
+- Antes de armar el prompt se quitan las imágenes embebidas `data:image/...;base64,...` y se reemplazan por `[imagen omitida]`, y los demás data URI (un adjunto, como un PDF) por `[archivo omitido]`, igual que en la clasificación. Además:
   - En el texto de los pasajes, en la pregunta y en los mensajes del historial se neutralizan las líneas que imitan un delimitador del prompt.
   - En todo el pedido (texto y referencia de los pasajes, pregunta, historial y `context.app_name`), los tramos entre corchetes sobre los que actúa el filtro de citas, los que contienen una clave o solo un número, pasan a paréntesis: `[P2]` a `(P2)`, `[P1, P2]` a `(P1, P2)`, `[3]` a `(3)`. La excepción son los números entre corchetes de los mensajes `assistant`, que se quitan (ver "Citas"). Si no, un `[P2]` escrito dentro de otro pasaje, por ejemplo en una obligación cargada por un usuario, llega al modelo y, si lo copia, pasa el filtro y la validación del backend como una cita a P2.
   - En los mismos campos se quita la marca de `not_covered`.

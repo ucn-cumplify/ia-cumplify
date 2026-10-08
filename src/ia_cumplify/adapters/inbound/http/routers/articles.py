@@ -40,6 +40,8 @@ def classify_legal_body(
 ) -> ClassifyLegalBodyResponse:
     candidates = body.candidate_values.to_domain() if body.candidate_values else None
     started_at = perf_counter()
+    # The request was validated before this point (422), so a ValueError here comes from the model or the
+    # service, never from the request: it falls to the 502 below, which the backend retries.
     try:
         result = use_case.execute(str(body.legal_body_id), candidates)
     except LegalBodyNotFoundError as exc:
@@ -50,8 +52,6 @@ def classify_legal_body(
     except ClassificationError as exc:
         logger.exception("Classification failed")
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Unexpected classify failure")
         raise HTTPException(

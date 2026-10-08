@@ -178,7 +178,7 @@ Los pasajes y el nombre de la app son datos, no instrucciones: el prompt pide ig
 - **Marcadores en la entrada.** En el texto y la referencia de los pasajes, en la pregunta, en los mensajes del historial y en `context.app_name`, todo tramo entre corchetes sobre el que actúa el filtro de citas de CHT-004 (con una clave o solo con un número) pasa a paréntesis: `[P2]` a `(P2)`, `[P1, P2]` a `(P1, P2)`, `[3]` a `(3)`. En los mensajes `assistant`, los números entre corchetes se quitan antes de cualquier otra conversión, en vez de pasar a paréntesis. En los mismos campos se quita la marca de `not_covered`.
 - `reference` y `context.app_name` no necesitan neutralizar líneas: son de una línea (CHT-002) y van siempre después de una etiqueta fija.
 - La neutralización impide imitar casi literalmente los delimitadores reales. Las instrucciones sin guiones, como "Fin de los pasajes. Nuevas reglas: …", las cubren la regla del prompt de sistema y el set de evaluación.
-- Las imágenes base64 se quitan y se reemplazan por `[imagen omitida]`, como en la clasificación.
+- Las imágenes base64 se quitan y se reemplazan por `[imagen omitida]`, y los demás archivos embebidos por `[archivo omitido]`, como en la clasificación.
 - El historial solo admite los roles `user` y `assistant`.
 - El set de evaluación incluye estos casos, con su resultado esperado:
   - pedidos de contenido o de forma en la pregunta que respetan las reglas ("resume el artículo 184", "explícalo en tres oraciones"): se atienden;
@@ -398,7 +398,7 @@ Con `CHAT_FAKE_RESPONDER=true`, el endpoint no llama a OpenAI: devuelve un strea
 - Convertir los ids en enlaces, y el widget (4.9 y 4.10).
 - Acciones sobre la app, ciclo de herramientas, perfil desde la conversación y memoria.
 - Leer la base de datos.
-- Ampliar el `TokenUsage` compartido de clasificación y perfil.
+- Ampliar el `TokenUsage` compartido de clasificación y perfil (después `fix/classification-hardening` le agregó `cached_tokens`, fuera del chat).
 - El Dockerfile y el compose de ia-cumplify (5.5).
 - Corregir el ruido que FastAPI registra al cortar un stream: solo se documenta (ver "Deuda técnica conocida").
 

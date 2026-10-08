@@ -17,7 +17,7 @@ Dado el id de una fila de `legal_bodies`, devolver una etiqueta por dimensión p
 | Campo | Detalle |
 |---|---|
 | **ID** | CLS-001 |
-| **Rol** | Servicio interno. El endpoint no exige autenticación. |
+| **Rol** | Servicio interno. Exige `X-API-Key`. |
 
 **Descripción:**
 
@@ -47,6 +47,7 @@ No se clasifican los artículos cuyo `number`, luego de recortar espacios y pasa
 - La comparación ignora mayúsculas y espacios al borde.
 - `titulo` o `promulgacion` sin acento no entran en la exclusión.
 - Artículo, párrafo, capítulo y sección sí se clasifican.
+- Un `number` o una `section` en null se leen como texto vacío. Un `number` vacío no es una pieza estructural: el artículo se clasifica y la respuesta trae su `number` vacío.
 
 ---
 
@@ -94,7 +95,7 @@ Si el cuerpo no tiene artículos, o solo tiene piezas estructurales, la respuest
 
 **Descripción:**
 
-Los artículos clasificables se envían al modelo en lotes de `CLASSIFY_BATCH_SIZE` (defecto 25). Cada lote recibe el cuerpo legal completo como contexto. Los resultados se concatenan en el orden de los artículos. Si un lote falla, la petición sigue con los lotes restantes: la respuesta 200 trae lo clasificado y lista en `failed_article_ids` los artículos no clasificados. Si ningún artículo se clasifica, la petición falla.
+Los artículos clasificables se envían al modelo en lotes de `CLASSIFY_BATCH_SIZE` (defecto 25). Cada lote recibe el cuerpo legal completo como contexto (ver la deuda técnica). Los resultados se concatenan en el orden de los artículos. Si un lote falla, la petición sigue con los lotes restantes: la respuesta 200 trae lo clasificado y lista en `failed_article_ids` los artículos no clasificados. Falla el lote ante un error del proveedor, un timeout, una negativa, una respuesta cortada, una salida que no cumple el esquema o no es JSON, o cualquier otra respuesta 200 que no es una clasificación (un cuerpo que no es JSON, no es UTF-8 o anida más de lo que admite el decodificador de JSON, sin `choices` o con `message` nulo). Si ningún artículo se clasifica, la petición falla con `502`. Ni el detalle del error ni el log repiten la salida del modelo o el texto de la negativa.
 
 ---
 
@@ -113,9 +114,11 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 - `classifier_version` es `<PROMPT_VERSION>@<OPENAI_MODEL>`.
 - Todo cambio de `SYSTEM_PROMPT` o del bloque de etiquetas existentes sube `PROMPT_VERSION`.
-- `usage` suma `prompt_tokens`, `completion_tokens` y `total_tokens` de los lotes que respondieron, y `llm_calls` cuenta uno por lote, incluidos los fallidos.
+- `usage` suma `prompt_tokens`, `completion_tokens`, `total_tokens` y `cached_tokens` de los lotes que respondieron y de los lotes fallidos cuya respuesta 200 informa su uso (una negativa, una respuesta cortada por largo o por el filtro de contenido, o una salida que no cumple el esquema o no es JSON). `llm_calls` cuenta uno por lote, incluidos los fallidos.
+- `cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché (`usage.prompt_tokens_details.cached_tokens`, como en el chat), o 0 si no la informa.
+- Cada campo del `usage` del proveedor se lee por separado, como en el chat: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar el lote ni la petición (caso CLS-016 de `test.csv`).
 - Sin artículos clasificables, todos los campos de `usage` valen 0.
-- `dev_metrics`, cuando viaja, repite los tokens de `usage`.
+- `dev_metrics`, cuando viaja, repite `prompt_tokens`, `completion_tokens`, `total_tokens` y `llm_calls` de `usage`. No trae `cached_tokens`.
 
 ---
 
@@ -124,7 +127,8 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 - Leer `legal_bodies` (`id`, `title`, `summary`, `type`) y `articles` (`id`, `legal_body_id`, `number`, `section`, `text`, `order`) de la base del backend.
 - Clasificar con el modelo, el esfuerzo de razonamiento y el tamaño de lote configurados.
 - Usar timeout y reintentos explícitos del cliente OpenAI (`OPENAI_TIMEOUT_SECONDS`, `OPENAI_MAX_RETRIES`).
-- Quitar imágenes embebidas en base64 del texto que se envía al modelo.
+- Exigir `X-API-Key` con el valor de `SERVICE_API_KEY`.
+- Quitar del texto que se envía al modelo las imágenes y los demás archivos embebidos como data URI.
 - Informar siempre la versión del clasificador y el uso de tokens.
 - Adjuntar `dev_metrics` (tiempo y tokens) cuando `INCLUDE_DEV_METRICS` es verdadero.
 
@@ -132,14 +136,15 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 - Crear, hidratar o editar cuerpos legales. Eso vive en `backend-cumplify`.
 - Persistir la clasificación.
-- Autenticación, autorización y filtro por empresa. Cualquier id presente en la base se puede clasificar.
+- Autorización por usuario y filtro por empresa: con la clave del servicio, cualquier id presente en la base se puede clasificar.
 - Elegir los candidatos. El backend los arma desde su taxonomía y los envía en el request.
 
 ## Deuda técnica conocida
 
-- `articles.number` o `articles.section` en null hace fallar la petición, porque el clasificador trata esos campos como texto.
 - `INCLUDE_DEV_METRICS` arranca en verdadero. En un entorno compartido conviene apagarlo; el uso de tokens igual viaja en `usage`.
-- `PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue las respuestas nuevas de las anteriores.
-- Un lote fallido no aborta el resto. `failed_article_ids` lista lo que faltó. El lote suma 1 en `llm_calls`, pero sus tokens no se cuentan aunque el proveedor los haya cobrado: el uso informado puede quedar por debajo del real.
+- `PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue las respuestas nuevas de las anteriores. `tests/test_profile_prompts.py` falla si cambian `SYSTEM_PROMPT` o el bloque de etiquetas existentes sin subirla.
+- **Cuerpo completo en cada lote.** Cada lote repite el cuerpo legal completo (CLS-005). En la base local, de las 46 clasificaciones vigentes del 2026-10-02, las 7 normas de varios lotes sumaron el 71 % de los tokens de entrada, con unos 469.000 tokens de cuerpo repetido (estimación). Se decidió el 2026-10-08 no acotarlo por ahora y medir con `usage.cached_tokens` cuánto de esa repetición se cobra a precio de caché; el backend guarda la respuesta cruda con su `usage`. Una norma cuyo cuerpo no cabe en la ventana de contexto del modelo falla en todos sus lotes.
+- Un lote fallido no aborta el resto. `failed_article_ids` lista lo que faltó y el lote suma 1 en `llm_calls`. Si el proveedor respondió 200 y cobró sin entregar una clasificación (una negativa, una respuesta cortada por largo o por el filtro de contenido, o una salida que no cumple el esquema o no es JSON), se suman a `usage` los tokens que informa el bloque `usage` de esa respuesta. Si no hubo respuesta (error de conexión, timeout o error HTTP), o el cuerpo no se pudo leer como JSON o no trae `usage`, sus tokens no se conocen y no se cuentan, aunque el proveedor pueda haberlos cobrado; un campo de `usage` mal formado cuenta 0 (CLS-006). En los dos casos, el uso informado puede quedar por debajo del real. Los artículos que faltaron no se vuelven a pedir: recuperarlos le toca al backend.
 - El cliente OpenAI reintenta 408, 409, 429, 5xx, timeouts y errores de conexión según `OPENAI_MAX_RETRIES`. En el peor caso un lote tarda (1 + `OPENAI_MAX_RETRIES`) × `OPENAI_TIMEOUT_SECONDS`, unos 9 minutos con los valores por defecto. No se vuelve a encolar un lote ya fallido después de esos reintentos.
+- Los lotes van en serie, así que el peor caso de una norma es lotes × (1 + `OPENAI_MAX_RETRIES`) × `OPENAI_TIMEOUT_SECONDS`: con los valores por defecto, unos 9 minutos por lote, 27 con 3 lotes. El backend espera `AI_REQUEST_TIMEOUT_MINUTES` (defecto 15) por el pedido completo: desde 2 lotes, el peor caso lo supera, el backend corta, este servicio sigue llamando al modelo hasta terminar y el reintento del backend vuelve a pagar la norma completa. En condiciones normales queda lejos: el 2026-10-02, la norma de 128 artículos (6 lotes) de la base local tardó 106 s.
 - Las reglas de longitud de etiqueta (4 palabras, 3 palabras, etc.) viven en el prompt. El esquema solo exige listas no vacías, así que una etiqueta más larga igual puede volver en la respuesta.

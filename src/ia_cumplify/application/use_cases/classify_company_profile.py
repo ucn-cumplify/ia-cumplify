@@ -1,6 +1,7 @@
 from ia_cumplify.application.ports.company_profile_classifier import CompanyProfileClassifierPort
 from ia_cumplify.domain.classification import CandidateLabels
 from ia_cumplify.domain.company_profile import ClassifiedCompanyProfile
+from ia_cumplify.domain.exceptions import InvalidProfileTextError
 
 
 class ClassifyCompanyProfileUseCase:
@@ -16,11 +17,12 @@ class ClassifyCompanyProfileUseCase:
     def execute(self, text: str, candidates: CandidateLabels | None = None) -> ClassifiedCompanyProfile:
         content = text.strip()
         if not content:
-            raise ValueError("The company profile text is empty.")
+            raise InvalidProfileTextError("The company profile text is empty.")
         if len(content) > self._max_chars:
-            raise ValueError(
+            raise InvalidProfileTextError(
                 f"The company profile text has {len(content)} characters; the limit is {self._max_chars}."
             )
+        _require_valid_unicode(content)
 
         output = self._classifier.classify(content, candidates)
         return ClassifiedCompanyProfile(
@@ -28,3 +30,18 @@ class ClassifyCompanyProfileUseCase:
             classifier_version=self._classifier.version,
             usage=output.usage,
         )
+
+
+def _require_valid_unicode(content: str) -> None:
+    """A JSON escape such as \\ud800 gives a lone surrogate, which no request to the model can carry.
+
+    Checked here so it is a 422 of the request, like the length, and not a model failure that the
+    backend would retry.
+    """
+    try:
+        content.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        # from None: the encoding error holds the whole text.
+        raise InvalidProfileTextError(
+            f"The company profile text has a lone surrogate at position {exc.start}; it is not valid Unicode."
+        ) from None

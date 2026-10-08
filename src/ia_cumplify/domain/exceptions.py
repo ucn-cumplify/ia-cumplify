@@ -1,4 +1,5 @@
 from ia_cumplify.domain.chat import PROVIDER_ERROR_CODES, ProviderErrorCode
+from ia_cumplify.domain.classification import TokenUsage
 
 
 class DomainError(Exception):
@@ -6,7 +7,22 @@ class DomainError(Exception):
 
 
 class ClassificationError(DomainError):
-    """Classification could not be produced for an article."""
+    """Classification could not be produced for an article.
+
+    usage carries what the provider reported for the calls that failed, when it did: a refusal or an
+    answer cut by length or by the content filter is billed all the same.
+    """
+
+    def __init__(self, message: str, *, usage: TokenUsage | None = None) -> None:
+        super().__init__(message)
+        self.usage = usage
+
+
+class InvalidProfileTextError(DomainError):
+    """The company profile text cannot be classified: empty, too long or not valid Unicode.
+
+    Retrying the same text does not help. The message gives lengths and positions, never the text.
+    """
 
 
 class LegalBodyNotFoundError(DomainError):

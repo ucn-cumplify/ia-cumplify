@@ -8,6 +8,7 @@ from ia_cumplify.adapters.outbound.openai.applicability_prompts import (
     render_applicability_user_content,
 )
 from ia_cumplify.adapters.outbound.openai.llm_applicability_schema import LlmApplicabilityReasons
+from ia_cumplify.adapters.outbound.openai.usage import call_usage
 from ia_cumplify.domain.applicability import (
     ApplicabilityArticleContext,
     ApplicabilityReasonerOutput,
@@ -81,7 +82,7 @@ class OpenAIApplicabilityReasonerAdapter:
         allowed = {item.article.id for item in articles}
         return ApplicabilityReasonerOutput(
             reasons=map_parsed_reasons(message.parsed, allowed, self._max_reason_chars),
-            usage=_to_usage(getattr(completion, "usage", None)),
+            usage=call_usage(getattr(completion, "usage", None)),
         )
 
 
@@ -103,14 +104,3 @@ def map_parsed_reasons(
         seen.add(article_id)
         reasons.append(ArticleApplicabilityReason(article_id=article_id, reason=reason))
     return tuple(reasons)
-
-
-def _to_usage(usage: object | None) -> TokenUsage:
-    if usage is None:
-        return TokenUsage(llm_calls=1)
-    return TokenUsage(
-        prompt_tokens=int(getattr(usage, "prompt_tokens", 0) or 0),
-        completion_tokens=int(getattr(usage, "completion_tokens", 0) or 0),
-        total_tokens=int(getattr(usage, "total_tokens", 0) or 0),
-        llm_calls=1,
-    )
