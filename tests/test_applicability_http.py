@@ -1,9 +1,15 @@
+import json
+from contextlib import contextmanager
+
+import httpx2
 from chat_http import HEADERS, SECRET, configure
 from fastapi.testclient import TestClient
+from openai import OpenAI
 
 from ia_cumplify.adapters.inbound.http.app import create_app
 from ia_cumplify.adapters.inbound.http.dependencies import get_db_pool
 from ia_cumplify.adapters.inbound.http.routers.applicability import get_explain_applicability_use_case
+from ia_cumplify.adapters.outbound.openai import applicability_reasoner as applicability_reasoner_module
 from ia_cumplify.domain.applicability import ApplicabilityReasons, ArticleApplicabilityReason
 from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.exceptions import ApplicabilityError, LegalBodyNotFoundError
@@ -162,3 +168,91 @@ def test_empty_articles_duplicate_id_and_empty_values_are_422(monkeypatch) -> No
     assert no_values.status_code == 422
     assert use_case.calls == []
     assert OTHER_ID not in empty.text
+
+
+class FakePool:
+    """What PostgresLegalBodyRepository reads of a psycopg pool: the legal body and its articles."""
+
+    def __init__(self, articles: list[dict]) -> None:
+        self.articles = articles
+
+    @contextmanager
+    def connection(self):
+        yield self
+
+    @contextmanager
+    def cursor(self, row_factory=None):
+        yield self
+
+    def execute(self, query: str, params: tuple) -> None:
+        pass
+
+    def fetchone(self) -> dict:
+        return {"id": NORM_ID, "title": "Ley 16744", "summary": "", "type": "Ley"}
+
+    def fetchall(self) -> list[dict]:
+        return self.articles
+
+
+def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypatch) -> None:
+    # APR-016: the real adapter over a fake OpenAI transport, so the usage is the one call_usage reads.
+    configure(monkeypatch, openai_api_key="sk-test-fake", openai_model="fake-model")
+    requests: list[dict] = []
+
+    def answer(request: httpx2.Request) -> httpx2.Response:
+        requests.append(json.loads(request.content))
+        reasons = {"reasons": [{"article_id": ARTICLE_ID, "reason": "Motivo de prueba."}]}
+        message = {"role": "assistant", "content": json.dumps(reasons), "refusal": None}
+        return httpx2.Response(
+            200,
+            json={
+                "id": "chatcmpl-fake",
+                "object": "chat.completion",
+                "created": 1,
+                "model": "fake-model",
+                "choices": [{"index": 0, "finish_reason": "stop", "message": message}],
+                "usage": {
+                    "prompt_tokens": 900,
+                    "completion_tokens": 80,
+                    "total_tokens": 980,
+                    "prompt_tokens_details": {"cached_tokens": 640},
+                },
+            },
+        )
+
+    def build(**kwargs: object) -> OpenAI:
+        return OpenAI(**kwargs, http_client=httpx2.Client(transport=httpx2.MockTransport(answer)))  # type: ignore[arg-type]
+
+    monkeypatch.setattr(applicability_reasoner_module, "OpenAI", build)
+    pdf = "data:application/pdf;base64," + "JVBERi0xLjQK" * 8
+    article = {
+        "id": ARTICLE_ID,
+        "legal_body_id": NORM_ID,
+        "number": "Artículo 1",
+        "section": None,
+        "text": f"El empleador debe informar. Anexo: ![anexo.pdf]({pdf}) Fin.",
+        "order": 1,
+    }
+    app = create_app()
+    app.dependency_overrides[get_db_pool] = lambda: FakePool([article])
+    with TestClient(app) as client:
+        response = client.post(PATH, headers=HEADERS, json=payload())
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["reasons"] == [{"article_id": ARTICLE_ID, "reason": "Motivo de prueba."}]
+    assert body["reason_version"] == "applicability-v1@fake-model"
+    assert body["usage"] == {
+        "prompt_tokens": 900,
+        "completion_tokens": 80,
+        "total_tokens": 980,
+        "cached_tokens": 640,
+        "llm_calls": 1,
+    }
+    assert "cached_tokens" not in body["dev_metrics"]
+    [request] = requests
+    prompt = request["messages"][1]["content"]
+    assert "base64" not in prompt
+    assert "El empleador debe informar. Anexo: [archivo omitido] Fin." in prompt
+    # A null section reaches the model empty, not as "None".
+    assert "Number: Artículo 1\nSection: \n" in prompt

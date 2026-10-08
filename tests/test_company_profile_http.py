@@ -8,6 +8,7 @@ appears in the response or in the log.
 
 import json
 import logging
+import traceback
 
 import httpx2
 import pytest
@@ -23,6 +24,10 @@ from ia_cumplify.adapters.inbound.http.dependencies import (
 from ia_cumplify.adapters.outbound.openai import (
     profile_classifier as profile_classifier_module,
 )
+from ia_cumplify.adapters.outbound.openai.profile_classifier import (
+    OpenAICompanyProfileClassifierAdapter,
+)
+from ia_cumplify.domain.exceptions import ClassificationError
 
 PATH = "/api/v1/company-profiles/classify"
 OUTPUT_MARK = "MARCA-de-la-salida-del-modelo"
@@ -375,6 +380,27 @@ def test_an_invalid_model_output_is_502_without_the_text(
         assert mark not in response.text
         assert mark not in caplog.text
     assert len(script.bodies) == 1
+
+
+@pytest.mark.parametrize("step", ["invalid", "not_json", "bad_body"])
+def test_the_invalid_output_error_carries_no_cause(profile_api, step: str) -> None:
+    # PRF-014. The router logs this failure without its traceback; the error does not chain the original
+    # one either, so no traceback of it can print the output.
+    profile_api(step)
+    classifier = OpenAICompanyProfileClassifierAdapter(
+        api_key="sk-test-fake",
+        model="fake-model",
+        reasoning_effort="low",
+        max_retries=0,
+    )
+    with pytest.raises(ClassificationError) as raised:
+        classifier.classify(f"Somos {SECRET}.")
+
+    assert str(raised.value) == INVALID_OUTPUT
+    assert raised.value.__cause__ is None
+    printed = "".join(traceback.format_exception(raised.value))
+    for mark in (SECRET, OUTPUT_MARK):
+        assert mark not in printed
 
 
 def test_dev_metrics_repeat_the_usage(monkeypatch, profile_api) -> None:
