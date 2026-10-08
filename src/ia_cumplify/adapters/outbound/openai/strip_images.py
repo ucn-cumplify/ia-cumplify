@@ -1,26 +1,31 @@
 import re
 
 _IMAGE_PLACEHOLDER = "[imagen omitida]"
-# Any other type, such as a PDF the BCN attached to the article.
+# Any other type, such as a PDF if the BCN attaches one to an article, or a data URI without a type.
 _FILE_PLACEHOLDER = "[archivo omitido]"
 
-# The top-level MIME type ("image", "application", ...). The placeholder depends on it.
+# The top-level MIME type ("image", "application", ...), followed by "/". The placeholder depends on it:
+# without it, the data URI counts as a file.
 _MIME_TYPE = r"(?P<type>[a-z][a-z0-9.+-]*)"
 
-# Markdown images whose target is a data URI of any type: from "![" to the first "]", then
-# "](data:<type>/..." up to the next ")". The backend writes BCN attachments this way.
+# Markdown images whose target is a data URI, with any media type or none: from "![" to the first "]",
+# then "](data:" up to the next ")". The backend writes BCN attachments this way, with the type the BCN
+# sends, and removes the same targets from the passages (ArticleTextPatterns.MarkdownImage).
 _MARKDOWN_IMAGE_START = re.compile(r"!\[")
-_MARKDOWN_DATA_TARGET = re.compile(rf"\]\(\s*data:{_MIME_TYPE}\/[^)]+\)", re.IGNORECASE)
+_MARKDOWN_DATA_TARGET = re.compile(rf"\]\(\s*data:(?:{_MIME_TYPE}\/)?[^)]*\)", re.IGNORECASE)
 
 # HTML <img> whose src is a data URI (quoted or not): from "<img" to the first ">".
 _IMG_TAG_START = re.compile(r"<img\b", re.IGNORECASE)
 _IMG_SRC_DATA_URI = re.compile(rf"\bsrc\s*=\s*(?:[\"']\s*)?data:{_MIME_TYPE}\/[^>\s\"']", re.IGNORECASE)
 
-# Leftover data URIs (src leftovers, CSS, raw blobs, a Markdown target the first pass did not take).
+# Leftover base64 data URIs (src leftovers, CSS, raw blobs, a Markdown target the first pass did not take).
+# As in RFC 2397, the media type is optional and may carry parameters before ";base64,", such as
+# ";name=anexo.pdf"; it may also lack the subtype, as a type the BCN sends could. No part before the base64
+# admits ":", so a match never runs into the next "data:" and the scan stays linear.
 # Base64 wrapped over several lines continues only with long lines (40+ characters, longer than any real
 # word), and a short last line only if it ends with "=" padding, so the text that follows is never consumed.
 _DATA_URI = re.compile(
-    rf"data:{_MIME_TYPE}\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/]+=*"
+    rf"data:(?:{_MIME_TYPE}\/)?[a-z0-9.+_-]*(?:;[^;,:\s]+)*;base64,[A-Za-z0-9+/]+=*"
     r"(?:\s+[A-Za-z0-9+/]{40,}=*)*"
     r"(?:\s+[A-Za-z0-9+/]{1,39}={1,2}(?![A-Za-z0-9+/=]))?",
     re.IGNORECASE,
@@ -30,7 +35,7 @@ _DATA_URI = re.compile(
 def strip_base64_images(text: str) -> str:
     """Drop embedded images and other data URIs (attachments) so they do not consume model tokens.
 
-    An image becomes "[imagen omitida]" and any other type "[archivo omitido]". The Markdown and <img>
+    An image becomes "[imagen omitida]"; any other type, or none, "[archivo omitido]". The Markdown and <img>
     passes scan the text once: a single regex for each was quadratic on text with many "![" or "<img" and
     no closing character, about a second within the chat limits.
     """
@@ -46,8 +51,8 @@ def strip_base64_images(text: str) -> str:
     return cleaned
 
 
-def _placeholder(mime_type: str) -> str:
-    return _IMAGE_PLACEHOLDER if mime_type.lower() == "image" else _FILE_PLACEHOLDER
+def _placeholder(mime_type: str | None) -> str:
+    return _IMAGE_PLACEHOLDER if mime_type is not None and mime_type.lower() == "image" else _FILE_PLACEHOLDER
 
 
 def _strip_markdown_images(text: str) -> str:
