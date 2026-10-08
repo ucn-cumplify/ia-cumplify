@@ -2,6 +2,7 @@ import json
 from contextlib import contextmanager
 
 import httpx2
+import pytest
 from chat_http import HEADERS, SECRET, configure
 from fastapi.testclient import TestClient
 from openai import OpenAI
@@ -194,8 +195,11 @@ class FakePool:
         return self.articles
 
 
-def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypatch) -> None:
-    # APR-016: the real adapter over a fake OpenAI transport, so the usage is the one call_usage reads.
+def post_with_the_real_adapter(monkeypatch, article: dict, usage: dict):
+    """POST with the real adapter over a fake OpenAI transport that answers one reason and this usage block.
+
+    Returns the response and the requests the model got.
+    """
     configure(monkeypatch, openai_api_key="sk-test-fake", openai_model="fake-model")
     requests: list[dict] = []
 
@@ -211,12 +215,7 @@ def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypat
                 "created": 1,
                 "model": "fake-model",
                 "choices": [{"index": 0, "finish_reason": "stop", "message": message}],
-                "usage": {
-                    "prompt_tokens": 900,
-                    "completion_tokens": 80,
-                    "total_tokens": 980,
-                    "prompt_tokens_details": {"cached_tokens": 640},
-                },
+                "usage": usage,
             },
         )
 
@@ -224,6 +223,14 @@ def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypat
         return OpenAI(**kwargs, http_client=httpx2.Client(transport=httpx2.MockTransport(answer)))  # type: ignore[arg-type]
 
     monkeypatch.setattr(applicability_reasoner_module, "OpenAI", build)
+    app = create_app()
+    app.dependency_overrides[get_db_pool] = lambda: FakePool([article])
+    with TestClient(app) as client:
+        return client.post(PATH, headers=HEADERS, json=payload()), requests
+
+
+def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypatch) -> None:
+    # APR-016: the real adapter over a fake OpenAI transport, so the usage is the one call_usage reads.
     pdf = "data:application/pdf;base64," + "JVBERi0xLjQK" * 8
     article = {
         "id": ARTICLE_ID,
@@ -233,10 +240,13 @@ def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypat
         "text": f"El empleador debe informar. Anexo: ![anexo.pdf]({pdf}) Fin.",
         "order": 1,
     }
-    app = create_app()
-    app.dependency_overrides[get_db_pool] = lambda: FakePool([article])
-    with TestClient(app) as client:
-        response = client.post(PATH, headers=HEADERS, json=payload())
+    usage = {
+        "prompt_tokens": 900,
+        "completion_tokens": 80,
+        "total_tokens": 980,
+        "prompt_tokens_details": {"cached_tokens": 640},
+    }
+    response, requests = post_with_the_real_adapter(monkeypatch, article, usage)
 
     assert response.status_code == 200, response.text
     body = response.json()
@@ -256,3 +266,30 @@ def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypat
     assert "El empleador debe informar. Anexo: [archivo omitido] Fin." in prompt
     # A null section reaches the model empty, not as "None".
     assert "Number: Artículo 1\nSection: \n" in prompt
+
+
+# parse() dumps the completion it built, and pydantic warns that the malformed counts are not int.
+@pytest.mark.filterwarnings("ignore:Pydantic serializer warnings:UserWarning")
+def test_an_unreadable_usage_count_is_zero(monkeypatch) -> None:
+    # APR-017. The SDK builds the usage block without validating it: a count that is not a positive integer
+    # counts 0 instead of failing reasons the provider already billed.
+    article = {"id": ARTICLE_ID, "legal_body_id": NORM_ID, "number": "Artículo 1", "section": "", "text": "Texto.", "order": 1}
+    usage = {
+        "prompt_tokens": "mil",
+        "completion_tokens": 80,
+        "total_tokens": [980],
+        "prompt_tokens_details": {"cached_tokens": "x"},
+    }
+    response, requests = post_with_the_real_adapter(monkeypatch, article, usage)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["reasons"] == [{"article_id": ARTICLE_ID, "reason": "Motivo de prueba."}]
+    assert body["usage"] == {
+        "prompt_tokens": 0,
+        "completion_tokens": 80,
+        "total_tokens": 0,
+        "cached_tokens": 0,
+        "llm_calls": 1,
+    }
+    assert len(requests) == 1

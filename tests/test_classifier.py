@@ -39,6 +39,15 @@ CALL_USAGE = {
     "total_tokens": 1100,
     "prompt_tokens_details": {"cached_tokens": 640},
 }
+# A usage block a proxy or a compatible provider could send: only completion_tokens can be read.
+MALFORMED_USAGE = {
+    "prompt_tokens": "mil",
+    "completion_tokens": 100,
+    "total_tokens": [1100],
+    "prompt_tokens_details": {"cached_tokens": "x"},
+}
+# completion() leaves the usage key out.
+NO_USAGE = object()
 
 
 def usage_of(calls: int) -> dict:
@@ -121,30 +130,30 @@ def completion(
     finish: str = "stop",
     refusal: str | None = None,
     choices: list | None = None,
+    usage: object = CALL_USAGE,
 ) -> httpx2.Response:
-    return httpx2.Response(
-        200,
-        json={
-            "id": "chatcmpl-fake",
-            "object": "chat.completion",
-            "created": 1,
-            "model": "fake-model",
-            "choices": [
-                {
-                    "index": 0,
-                    "finish_reason": finish,
-                    "message": {
-                        "role": "assistant",
-                        "content": content,
-                        "refusal": refusal,
-                    },
-                }
-            ]
-            if choices is None
-            else choices,
-            "usage": CALL_USAGE,
-        },
-    )
+    body = {
+        "id": "chatcmpl-fake",
+        "object": "chat.completion",
+        "created": 1,
+        "model": "fake-model",
+        "choices": [
+            {
+                "index": 0,
+                "finish_reason": finish,
+                "message": {
+                    "role": "assistant",
+                    "content": content,
+                    "refusal": refusal,
+                },
+            }
+        ]
+        if choices is None
+        else choices,
+    }
+    if usage is not NO_USAGE:
+        body["usage"] = usage
+    return httpx2.Response(200, json=body)
 
 
 def target_ids(prompt: str) -> list[str]:
@@ -162,8 +171,12 @@ class ScriptedOpenAI:
     ok: every requested article. omit: all but the first. refusal: a refusal. length and content_filter: an
     answer cut for that reason. invalid: JSON that does not fit the schema. not_json: content that is not
     JSON. bad_body: an HTTP body that is not JSON. 500: a provider error. timeout: no answer in time.
-    Malformed 200s: html (a body that is not JSON, as a proxy would send), empty_choices, null_message and
-    bad_utf8 (a body that is not UTF-8). The refusal, invalid and not_json carry OUTPUT_MARK.
+    Malformed 200s: html (a body that is not JSON, as a proxy would send), empty_choices, null_message,
+    bad_utf8 (a body that is not UTF-8), list_body (a JSON list) and nested_body (JSON nested deeper than
+    the decoder allows). Usage blocks: malformed_usage, refusal_malformed_usage and invalid_malformed_usage
+    answer like ok, refusal and invalid with MALFORMED_USAGE; no_usage and null_usage answer like invalid,
+    without the usage key or with a null usage. The refusals, the invalid outputs and not_json carry
+    OUTPUT_MARK.
     """
 
     def __init__(self, *steps: str) -> None:
@@ -181,27 +194,36 @@ class ScriptedOpenAI:
         self.timeouts.append(request.extensions["timeout"])
         step = self.steps.pop(0)
         ids = target_ids(body["messages"][1]["content"])
-        if step in ("ok", "omit"):
-            kept = ids if step == "ok" else ids[1:]
+        usage = {
+            "malformed_usage": MALFORMED_USAGE,
+            "refusal_malformed_usage": MALFORMED_USAGE,
+            "invalid_malformed_usage": MALFORMED_USAGE,
+            "no_usage": NO_USAGE,
+            "null_usage": None,
+        }.get(step, CALL_USAGE)
+        if step in ("ok", "omit", "malformed_usage"):
+            kept = ids[1:] if step == "omit" else ids
             results = [
                 {"article_id": item, "classification": classification()}
                 for item in kept
             ]
-            return completion(json.dumps({"results": results}))
-        if step == "refusal":
-            return completion(None, refusal=f"No puedo clasificar «{OUTPUT_MARK}».")
+            return completion(json.dumps({"results": results}), usage=usage)
+        if step in ("refusal", "refusal_malformed_usage"):
+            return completion(
+                None, refusal=f"No puedo clasificar «{OUTPUT_MARK}».", usage=usage
+            )
         if step == "length":
             return completion('{"results": [', finish="length")
         if step == "content_filter":
             return completion(None, finish="content_filter")
-        if step == "invalid":
+        if step in ("invalid", "invalid_malformed_usage", "no_usage", "null_usage"):
             results = [
                 {
                     "article_id": ids[0],
                     "classification": {**classification(), "scope": OUTPUT_MARK},
                 }
             ]
-            return completion(json.dumps({"results": results}))
+            return completion(json.dumps({"results": results}), usage=usage)
         if step == "not_json":
             return completion(f"Estas son las etiquetas de {OUTPUT_MARK}.")
         if step == "bad_body":
@@ -226,6 +248,15 @@ class ScriptedOpenAI:
             return httpx2.Response(
                 200,
                 content=b'{"id": "chatcmpl-\xff\xfe"}',
+                headers={"content-type": "application/json"},
+            )
+        if step == "list_body":
+            # A usage block inside a list is not the usage of a completion.
+            return httpx2.Response(200, json=[{"usage": CALL_USAGE}])
+        if step == "nested_body":
+            return httpx2.Response(
+                200,
+                content=b"[" * 200_000,
                 headers={"content-type": "application/json"},
             )
         if step == "500":
@@ -348,6 +379,10 @@ def test_an_omitted_article_goes_to_failed_article_ids(adapter) -> None:
         ("empty_choices", True),
         ("null_message", True),
         ("bad_utf8", False),
+        ("no_usage", False),
+        ("null_usage", False),
+        ("list_body", False),
+        ("nested_body", False),
     ],
 )
 def test_an_answer_that_is_not_a_classification_fails_only_its_batch(
@@ -355,16 +390,43 @@ def test_an_answer_that_is_not_a_classification_fails_only_its_batch(
 ) -> None:
     # parse() raises a ValidationError (invalid, not_json) or a JSONDecodeError (bad_body): before, they
     # left classify_many, lost the batches already paid for and ended in a permanent 422. The malformed
-    # 200s escaped too (an AttributeError, an IndexError or a UnicodeDecodeError) and failed the whole
-    # legal body.
+    # 200s escaped too (an AttributeError, an IndexError, a UnicodeDecodeError or a RecursionError) and
+    # failed the whole legal body.
     classifier, _ = adapter("ok", step, "ok")
     response = post(FakePool(legal_body(5)), classifier)
 
     assert response.status_code == 200, response.text
     assert classified_ids(response) == ["a001", "a002", "a005"]
     assert response.json()["failed_article_ids"] == ["a003", "a004"]
-    # A body with a usage block counts its tokens: the provider billed the call.
+    # A body with a usage block counts its tokens: the provider billed the call. Without one, only the
+    # call counts.
     assert response.json()["usage"] == {**usage_of(3 if billed else 2), "llm_calls": 3}
+
+
+# parse() dumps the completion it built, and pydantic warns that the malformed counts are not int.
+@pytest.mark.filterwarnings("ignore:Pydantic serializer warnings:UserWarning")
+@pytest.mark.parametrize(
+    ("step", "failed"),
+    [
+        ("malformed_usage", []),
+        ("refusal_malformed_usage", ["a003", "a004"]),
+        ("invalid_malformed_usage", ["a003", "a004"]),
+    ],
+)
+def test_an_unreadable_usage_count_is_zero(
+    adapter, step: str, failed: list[str]
+) -> None:
+    # The SDK builds the usage block without validating it. Each count is read on its own, as in the chat:
+    # one that is not a positive integer counts 0, and it fails neither its batch nor the legal body.
+    classifier, _ = adapter("ok", step, "ok")
+    response = post(FakePool(legal_body(5)), classifier)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["failed_article_ids"] == failed
+    assert len(body["results"]) == 5 - len(failed)
+    # The middle batch adds only completion_tokens, the one count of MALFORMED_USAGE that can be read.
+    assert body["usage"] == {**usage_of(2), "completion_tokens": 300, "llm_calls": 3}
 
 
 @pytest.mark.parametrize("step", ["refusal", "length", "content_filter"])

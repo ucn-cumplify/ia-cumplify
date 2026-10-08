@@ -1,4 +1,4 @@
-"""POST /api/v1/company-profiles/classify with the real adapter, without OpenAI (PRF-008 to PRF-012, PRF-014).
+"""POST /api/v1/company-profiles/classify with the real adapter, without OpenAI (PRF-008 to PRF-012, PRF-014, PRF-015).
 
 The adapter's OpenAI client gets an httpx2.MockTransport that answers each model call with a scripted
 completion and keeps the request, so the tests read the prompt the model would get. Nothing leaves the
@@ -45,7 +45,24 @@ IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAD
 PDF = "data:application/pdf;base64,JVBERi0xLjQKJcfsj6IKNSAwIG9iago8PC9MZW5ndGggNiAwIFIvRmlsdGVyIC9GbGF0ZURlY29kZT4+"
 
 
-def completion(content: str | None, *, refusal: str | None = None) -> httpx2.Response:
+CALL_USAGE = {
+    "prompt_tokens": 1000,
+    "completion_tokens": 100,
+    "total_tokens": 1100,
+    "prompt_tokens_details": {"cached_tokens": 640},
+}
+# A usage block a proxy or a compatible provider could send: only completion_tokens can be read.
+MALFORMED_USAGE = {
+    "prompt_tokens": "mil",
+    "completion_tokens": 100,
+    "total_tokens": [1100],
+    "prompt_tokens_details": {"cached_tokens": "x"},
+}
+
+
+def completion(
+    content: str | None, *, refusal: str | None = None, usage: dict = CALL_USAGE
+) -> httpx2.Response:
     return httpx2.Response(
         200,
         json={
@@ -64,20 +81,16 @@ def completion(content: str | None, *, refusal: str | None = None) -> httpx2.Res
                     },
                 }
             ],
-            "usage": {
-                "prompt_tokens": 1000,
-                "completion_tokens": 100,
-                "total_tokens": 1100,
-                "prompt_tokens_details": {"cached_tokens": 640},
-            },
+            "usage": usage,
         },
     )
 
 
 class ProfileScript:
-    """Answers each model call with the next step: ok, refusal, invalid (JSON that does not fit the schema),
-    not_json (content that is not JSON), bad_body (an HTTP body that is not JSON) or 500. Every failure
-    carries OUTPUT_MARK, as a model or a provider repeating what it got would."""
+    """Answers each model call with the next step: ok, malformed_usage (ok with MALFORMED_USAGE), refusal,
+    invalid (JSON that does not fit the schema), not_json (content that is not JSON), bad_body (an HTTP
+    body that is not JSON) or 500. Every failure carries OUTPUT_MARK, as a model or a provider repeating
+    what it got would."""
 
     def __init__(self, *steps: str) -> None:
         self.steps = list(steps)
@@ -92,6 +105,8 @@ class ProfileScript:
         step = self.steps.pop(0)
         if step == "ok":
             return completion(json.dumps(PROFILE))
+        if step == "malformed_usage":
+            return completion(json.dumps(PROFILE), usage=MALFORMED_USAGE)
         if step == "refusal":
             return completion(None, refusal=f"No clasifico «{OUTPUT_MARK}».")
         if step == "invalid":
@@ -173,6 +188,27 @@ def test_200_returns_the_six_dimensions_the_version_and_the_usage(profile_api) -
         name: field["minItems"]
         for name, field in schema["schema"]["properties"].items()
     } == dict.fromkeys(PROFILE, 1)
+
+
+# parse() dumps the completion it built, and pydantic warns that the malformed counts are not int.
+@pytest.mark.filterwarnings("ignore:Pydantic serializer warnings:UserWarning")
+def test_an_unreadable_usage_count_is_zero(profile_api) -> None:
+    # PRF-015. The SDK builds the usage block without validating it: a count that is not a positive integer
+    # counts 0 instead of failing a valid answer with 502, which the backend would retry and pay again.
+    script, post = profile_api("malformed_usage")
+    response = post(json={"text": "Empresa de transporte de carga."})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["classification"] == PROFILE
+    assert body["usage"] == {
+        "prompt_tokens": 0,
+        "completion_tokens": 100,
+        "total_tokens": 0,
+        "cached_tokens": 0,
+        "llm_calls": 1,
+    }
+    assert len(script.bodies) == 1
 
 
 def test_text_limits(profile_api) -> None:
