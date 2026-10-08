@@ -1,8 +1,9 @@
 from collections.abc import Sequence
-import json
 import logging
+from typing import TYPE_CHECKING
 
 from openai import OpenAI, OpenAIError
+from openai.types import CompletionUsage
 from pydantic import ValidationError
 
 from ia_cumplify.adapters.outbound.openai.llm_schema import (
@@ -26,6 +27,9 @@ from ia_cumplify.domain.classification import (
 )
 from ia_cumplify.domain.exceptions import ClassificationError
 from ia_cumplify.domain.legal_body import LegalBody
+
+if TYPE_CHECKING:
+    import httpx2
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +84,9 @@ class OpenAIArticleClassifierAdapter:
                     legal_body.id,
                 )
                 failed_article_ids.extend(article.id for article in chunk)
-                # A call the provider answered and billed (a refusal, or an answer cut by length or by the
-                # content filter) counts its tokens. Otherwise the tokens are unknown: only the call counts.
+                # A 200 the provider billed without a classification (a refusal, an answer cut by length or
+                # by the content filter, an invalid output) counts the tokens its usage block reports.
+                # Without an answer, or without a readable usage block, only the call counts.
                 billed = exc.usage if isinstance(exc, ClassificationError) else None
                 usage += billed if billed is not None else TokenUsage(llm_calls=1)
                 continue
@@ -93,8 +98,7 @@ class OpenAIArticleClassifierAdapter:
             detail = str(last_error) if last_error is not None else "all batches failed"
             raise ClassificationError(
                 f"No article could be classified for legal body {legal_body.id} "
-                f"({usage.llm_calls} model calls, {usage.total_tokens} tokens counted): {detail}",
-                usage=usage,
+                f"({usage.llm_calls} model calls, {usage.total_tokens} tokens counted): {detail}"
             )
 
         return ClassifierOutput(
@@ -119,7 +123,8 @@ class OpenAIArticleClassifierAdapter:
         user_content = "\n\n".join(blocks)
 
         try:
-            completion = self._client.chat.completions.parse(
+            # The raw response keeps the body: a 200 that is not a classification still reports its usage.
+            raw = self._client.chat.completions.with_raw_response.parse(
                 model=self._model,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
@@ -129,28 +134,34 @@ class OpenAIArticleClassifierAdapter:
                 reasoning_effort=self._reasoning_effort,
             )
         except OpenAIError as exc:
-            # LengthFinishReasonError and ContentFilterFinishReasonError carry the completion the
-            # provider billed. Other errors carry none, and only the call counts.
-            completion = getattr(exc, "completion", None)
+            # No answer (a connection error, a timeout or an HTTP error): only the call counts.
             raise ClassificationError(
                 f"OpenAI error while classifying legal body {legal_body.id}: {exc}",
-                usage=call_usage(getattr(completion, "usage", None)),
-            ) from exc
-        except (ValidationError, json.JSONDecodeError) as exc:
-            # parse() reads the body as JSON (JSONDecodeError) and validates the answer against the schema
-            # (ValidationError). Both are ValueError: unwrapped, they would skip the batch tolerance of
-            # classify_many and lose the batches already paid for.
-            raise ClassificationError(
-                f"Model did not return a valid classification for legal body {legal_body.id}: "
-                f"{type(exc).__name__}."
+                usage=TokenUsage(llm_calls=1),
             ) from exc
 
-        message = completion.choices[0].message
-        if message.parsed is None:
-            refusal = getattr(message, "refusal", None)
-            extra = f" Refusal: {refusal}" if refusal else ""
+        try:
+            completion = raw.parse()
+            message = completion.choices[0].message
+        except Exception as exc:
+            # A 200 that is not a classification fails only this batch: an answer cut by length or by the
+            # content filter, an output that does not fit the schema or is not JSON, or a body that is not
+            # a chat completion (not JSON, no choices, no message). Only the type goes on, unchained: a
+            # ValidationError quotes the model output. The prompt and the mapping stay outside this try,
+            # so a bug there still fails the request.
+            if isinstance(exc, ValidationError):
+                _log_invalid_output(legal_body.id, exc)
             raise ClassificationError(
-                f"Model did not return a valid classification for legal body {legal_body.id}.{extra}",
+                f"Model did not return a valid classification for legal body {legal_body.id}: "
+                f"{type(exc).__name__}.",
+                usage=_billed_usage(raw.http_response),
+            ) from None
+
+        if message.parsed is None:
+            # The refusal is model output: only the fact that the model refused goes on.
+            refused = " The model refused." if getattr(message, "refusal", None) else ""
+            raise ClassificationError(
+                f"Model did not return a valid classification for legal body {legal_body.id}.{refused}",
                 usage=call_usage(getattr(completion, "usage", None)),
             )
 
@@ -160,6 +171,32 @@ class OpenAIArticleClassifierAdapter:
             call_usage(getattr(completion, "usage", None)),
             missing,
         )
+
+
+def _billed_usage(response: "httpx2.Response") -> TokenUsage:
+    """The usage block of a 200 body that is not a classification: the provider billed the call all the same.
+
+    Only the call counts when the body is not JSON or has no readable usage block.
+    """
+    try:
+        reported = CompletionUsage.model_validate(response.json()["usage"])
+    except (ValueError, KeyError, TypeError):
+        return TokenUsage(llm_calls=1)
+    return call_usage(reported)
+
+
+def _log_invalid_output(legal_body_id: str, exc: ValidationError) -> None:
+    """Where the output broke the schema, for diagnosis: error types and locations, never the input."""
+    errors = exc.errors(include_input=False, include_url=False, include_context=False)
+    logger.warning(
+        "Invalid model output for legal body %s: %s (%d in total)",
+        legal_body_id,
+        "; ".join(
+            f"{error['type']} at {'.'.join(str(part) for part in error['loc']) or 'root'}"
+            for error in errors[:5]
+        ),
+        len(errors),
+    )
 
 
 def _chunks(items: list[Article], size: int) -> list[list[Article]]:

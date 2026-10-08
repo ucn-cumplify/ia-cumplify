@@ -2,10 +2,12 @@
 
 The adapter's OpenAI client gets an httpx2.MockTransport: every model call is answered by the next step
 of a script, and the test reads the prompt each call received. The repository reads a fake pool with the
-rows the test writes. Nothing leaves the process and no token is spent.
+rows the test writes. Nothing leaves the process and no token is spent. OUTPUT_MARK marks the model
+output: when a batch fails, it appears neither in the response nor in the log.
 """
 
 import json
+import logging
 from contextlib import contextmanager
 
 import httpx2
@@ -29,6 +31,7 @@ from ia_cumplify.adapters.outbound.openai.classifier import (
 PATH = "/api/v1/legal-bodies/classify"
 BODY_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 TARGETS_MARKER = "--- ARTICLES TO CLASSIFY ---"
+OUTPUT_MARK = "MARCA-de-la-salida-del-modelo"
 # What every scripted completion reports, as OpenAI does in completion.usage.
 CALL_USAGE = {
     "prompt_tokens": 1000,
@@ -113,7 +116,11 @@ def classification() -> dict:
 
 
 def completion(
-    content: str | None, *, finish: str = "stop", refusal: str | None = None
+    content: str | None,
+    *,
+    finish: str = "stop",
+    refusal: str | None = None,
+    choices: list | None = None,
 ) -> httpx2.Response:
     return httpx2.Response(
         200,
@@ -132,7 +139,9 @@ def completion(
                         "refusal": refusal,
                     },
                 }
-            ],
+            ]
+            if choices is None
+            else choices,
             "usage": CALL_USAGE,
         },
     )
@@ -153,6 +162,8 @@ class ScriptedOpenAI:
     ok: every requested article. omit: all but the first. refusal: a refusal. length and content_filter: an
     answer cut for that reason. invalid: JSON that does not fit the schema. not_json: content that is not
     JSON. bad_body: an HTTP body that is not JSON. 500: a provider error. timeout: no answer in time.
+    Malformed 200s: html (a body that is not JSON, as a proxy would send), empty_choices, null_message and
+    bad_utf8 (a body that is not UTF-8). The refusal, invalid and not_json carry OUTPUT_MARK.
     """
 
     def __init__(self, *steps: str) -> None:
@@ -178,7 +189,7 @@ class ScriptedOpenAI:
             ]
             return completion(json.dumps({"results": results}))
         if step == "refusal":
-            return completion(None, refusal="No puedo clasificar este texto.")
+            return completion(None, refusal=f"No puedo clasificar «{OUTPUT_MARK}».")
         if step == "length":
             return completion('{"results": [', finish="length")
         if step == "content_filter":
@@ -187,16 +198,34 @@ class ScriptedOpenAI:
             results = [
                 {
                     "article_id": ids[0],
-                    "classification": {**classification(), "scope": []},
+                    "classification": {**classification(), "scope": OUTPUT_MARK},
                 }
             ]
             return completion(json.dumps({"results": results}))
         if step == "not_json":
-            return completion("Estas son las etiquetas del artículo.")
+            return completion(f"Estas son las etiquetas de {OUTPUT_MARK}.")
         if step == "bad_body":
             return httpx2.Response(
                 200,
                 content=b'{"id": "chatcmpl-fake", "choices": [',
+                headers={"content-type": "application/json"},
+            )
+        if step == "html":
+            return httpx2.Response(
+                200,
+                content=b"<html>Proxy error</html>",
+                headers={"content-type": "text/html"},
+            )
+        if step == "empty_choices":
+            return completion(None, choices=[])
+        if step == "null_message":
+            return completion(
+                None, choices=[{"index": 0, "finish_reason": "stop", "message": None}]
+            )
+        if step == "bad_utf8":
+            return httpx2.Response(
+                200,
+                content=b'{"id": "chatcmpl-\xff\xfe"}',
                 headers={"content-type": "application/json"},
             )
         if step == "500":
@@ -309,17 +338,33 @@ def test_an_omitted_article_goes_to_failed_article_ids(adapter) -> None:
     assert response.json()["usage"] == {**usage_of(3), "llm_calls": 3}
 
 
-@pytest.mark.parametrize("step", ["invalid", "not_json", "bad_body"])
-def test_an_invalid_model_output_fails_only_its_batch(adapter, step: str) -> None:
-    # parse() raises a ValidationError or a JSONDecodeError, both ValueError: before, they left
-    # classify_many, lost the batches already paid for and ended in a permanent 422.
+@pytest.mark.parametrize(
+    ("step", "billed"),
+    [
+        ("invalid", True),
+        ("not_json", True),
+        ("bad_body", False),
+        ("html", False),
+        ("empty_choices", True),
+        ("null_message", True),
+        ("bad_utf8", False),
+    ],
+)
+def test_an_answer_that_is_not_a_classification_fails_only_its_batch(
+    adapter, step: str, billed: bool
+) -> None:
+    # parse() raises a ValidationError (invalid, not_json) or a JSONDecodeError (bad_body): before, they
+    # left classify_many, lost the batches already paid for and ended in a permanent 422. The malformed
+    # 200s escaped too (an AttributeError, an IndexError or a UnicodeDecodeError) and failed the whole
+    # legal body.
     classifier, _ = adapter("ok", step, "ok")
     response = post(FakePool(legal_body(5)), classifier)
 
     assert response.status_code == 200, response.text
     assert classified_ids(response) == ["a001", "a002", "a005"]
     assert response.json()["failed_article_ids"] == ["a003", "a004"]
-    assert response.json()["usage"] == {**usage_of(2), "llm_calls": 3}
+    # A body with a usage block counts its tokens: the provider billed the call.
+    assert response.json()["usage"] == {**usage_of(3 if billed else 2), "llm_calls": 3}
 
 
 @pytest.mark.parametrize("step", ["refusal", "length", "content_filter"])
@@ -334,7 +379,8 @@ def test_a_billed_failed_batch_counts_its_tokens(adapter, step: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("step", "tokens"), [("500", 0), ("refusal", 3300), ("invalid", 0)]
+    ("step", "tokens"),
+    [("500", 0), ("refusal", 3300), ("invalid", 3300), ("bad_body", 0)],
 )
 def test_every_batch_failing_is_502(adapter, step: str, tokens: int) -> None:
     classifier, _ = adapter(step, step, step)
@@ -346,6 +392,34 @@ def test_every_batch_failing_is_502(adapter, step: str, tokens: int) -> None:
         f"No article could be classified for legal body {BODY_ID} (3 model calls, {tokens} tokens counted): "
     )
     assert only_reads(pool)
+
+
+@pytest.mark.parametrize(
+    ("step", "reason"),
+    [
+        ("invalid", ": ValidationError."),
+        ("not_json", ": ValidationError."),
+        ("refusal", ". The model refused."),
+    ],
+)
+def test_the_model_output_never_reaches_the_response_or_the_log(
+    adapter, caplog, step: str, reason: str
+) -> None:
+    # The 502 repeats the error of the last batch, and every failed batch is logged with its traceback:
+    # neither carries the output, nor the error that quotes it.
+    caplog.set_level(logging.DEBUG)
+    classifier, _ = adapter(step, step, step)
+    response = post(FakePool(legal_body(5)), classifier)
+
+    assert response.status_code == 502
+    assert response.json()["detail"].endswith(
+        f"Model did not return a valid classification for legal body {BODY_ID}{reason}"
+    )
+    assert OUTPUT_MARK not in response.text
+    assert OUTPUT_MARK not in caplog.text
+    if step == "invalid":
+        # The log keeps where the output broke the schema, without the value.
+        assert "list_type at results.0.classification.scope" in caplog.text
 
 
 def test_more_articles_than_the_batch_size(monkeypatch, openai_script) -> None:
@@ -419,7 +493,7 @@ def test_no_classifiable_article_does_not_call_the_model(adapter) -> None:
 
 
 def test_images_and_attachments_never_reach_the_model(adapter) -> None:
-    # CLS-014, and data URIs of other types: the BCN attaches PDFs to some articles.
+    # CLS-014, and data URIs of other types, such as a PDF if the BCN attaches one to an article.
     image = "data:image/png;base64," + "A" * 298 + "=="
     # Wrapped in lines of 76 characters, as MIME does: the last one is short and ends with the padding.
     wrapped = "\n".join(image[start : start + 76] for start in range(0, len(image), 76))
