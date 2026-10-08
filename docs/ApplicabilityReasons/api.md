@@ -71,7 +71,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
 }
 ```
 
-`reason_version` y `usage` viajan siempre. El backend solo usa `reasons`: un artículo sin entrada, con `reason` vacío o de más de 2000 caracteres, conserva la plantilla. `usage.cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché, o 0 si no la informa; `dev_metrics` no lo repite.
+`reason_version` y `usage` viajan siempre. El backend solo usa `reasons`: un artículo sin entrada, con `reason` vacío o de más de 2000 caracteres, conserva la plantilla. `usage.cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché, o 0 si no la informa; `dev_metrics` no lo repite. Cada campo del `usage` del proveedor se lee por separado, como en la clasificación de cuerpos legales: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta.
 
 `dev_metrics` solo trae datos cuando `INCLUDE_DEV_METRICS` es verdadero.
 

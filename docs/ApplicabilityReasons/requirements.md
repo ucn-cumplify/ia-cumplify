@@ -103,6 +103,7 @@ Cada respuesta informa qué versión del prompt la produjo y cuántos tokens cos
 - `reason_version` es `<APPLICABILITY_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `applicability-v1@gpt-5.6-luna`.
 - Todo cambio del prompt o del armado del mensaje de usuario sube `APPLICABILITY_PROMPT_VERSION`. La limpieza de los datos que llegan al mensaje no cuenta como cambio del armado: por ejemplo, reemplazar un adjunto por `[archivo omitido]` o leer una `section` nula como texto vacío, que cambiaron el 2026-10-08 sin subirla.
 - `usage.llm_calls` vale 1 cuando se llamó al modelo, y 0 cuando `reasons` queda vacío sin llamarlo.
+- Cada campo del `usage` del proveedor se lee por separado: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta (caso APR-017 de `test.csv`).
 - `dev_metrics`, cuando viaja, repite los tokens de `usage`, sin `cached_tokens`, y agrega el tiempo.
 
 ---
