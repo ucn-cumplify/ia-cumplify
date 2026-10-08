@@ -4,7 +4,8 @@ from ia_cumplify.domain.classification import TokenUsage
 
 
 class DevMetricsPayload(BaseModel):
-    """DEV-ONLY: elapsed time plus the same usage the response always reports."""
+    """DEV-ONLY: elapsed time plus the token counts of the usage the response always reports, without
+    cached_tokens."""
 
     elapsed_ms: float
     prompt_tokens: int

@@ -45,12 +45,17 @@ class ClassifiedArticle:
 
 @dataclass(frozen=True, slots=True)
 class TokenUsage:
-    """Tokens billed by the model, summed over every call made for one legal body."""
+    """Tokens billed by the model, summed over every call made for one legal body.
+
+    cached_tokens is the part of prompt_tokens the provider served from its prompt cache, 0 when it does
+    not report it.
+    """
 
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
     llm_calls: int = 0
+    cached_tokens: int = 0
 
     def __add__(self, other: "TokenUsage") -> "TokenUsage":
         return TokenUsage(
@@ -58,6 +63,7 @@ class TokenUsage:
             completion_tokens=self.completion_tokens + other.completion_tokens,
             total_tokens=self.total_tokens + other.total_tokens,
             llm_calls=self.llm_calls + other.llm_calls,
+            cached_tokens=self.cached_tokens + other.cached_tokens,
         )
 
 

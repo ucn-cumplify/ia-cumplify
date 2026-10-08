@@ -13,6 +13,7 @@ from ia_cumplify.adapters.outbound.openai.prompts import (
     render_candidate_labels,
 )
 from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
+from ia_cumplify.adapters.outbound.openai.usage import call_usage
 from ia_cumplify.domain.article import Article
 from ia_cumplify.domain.classification import (
     ArticleClassification,
@@ -136,21 +137,9 @@ class OpenAIArticleClassifierAdapter:
         mapped, missing = _map_parsed_to_targets(message.parsed, targets)
         return (
             mapped,
-            _to_usage(getattr(completion, "usage", None)),
+            call_usage(getattr(completion, "usage", None)),
             missing,
         )
-
-
-def _to_usage(usage: object | None) -> TokenUsage:
-    # The call counts even when the provider omits the usage block.
-    if usage is None:
-        return TokenUsage(llm_calls=1)
-    return TokenUsage(
-        prompt_tokens=int(getattr(usage, "prompt_tokens", 0) or 0),
-        completion_tokens=int(getattr(usage, "completion_tokens", 0) or 0),
-        total_tokens=int(getattr(usage, "total_tokens", 0) or 0),
-        llm_calls=1,
-    )
 
 
 def _chunks(items: list[Article], size: int) -> list[list[Article]]:

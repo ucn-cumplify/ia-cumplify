@@ -98,6 +98,9 @@ class TokenUsageResponse(BaseModel):
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
+    cached_tokens: int = Field(
+        ..., description="Part of prompt_tokens the provider served from its prompt cache; 0 if it does not say"
+    )
     llm_calls: int
 
     @classmethod
@@ -106,6 +109,7 @@ class TokenUsageResponse(BaseModel):
             prompt_tokens=usage.prompt_tokens,
             completion_tokens=usage.completion_tokens,
             total_tokens=usage.total_tokens,
+            cached_tokens=usage.cached_tokens,
             llm_calls=usage.llm_calls,
         )
 
