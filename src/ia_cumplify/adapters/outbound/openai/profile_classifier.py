@@ -1,4 +1,7 @@
+import json
+
 from openai import OpenAI, OpenAIError
+from pydantic import ValidationError
 
 from ia_cumplify.adapters.outbound.openai.llm_profile_schema import LlmCompanyProfileClassification
 from ia_cumplify.adapters.outbound.openai.profile_prompts import (
@@ -11,6 +14,8 @@ from ia_cumplify.adapters.outbound.openai.usage import call_usage
 from ia_cumplify.domain.classification import ArticleClassification, CandidateLabels
 from ia_cumplify.domain.company_profile import ProfileClassifierOutput
 from ia_cumplify.domain.exceptions import ClassificationError
+
+_INVALID_OUTPUT = "Model did not return a valid company profile classification."
 
 
 class OpenAICompanyProfileClassifierAdapter:
@@ -65,11 +70,17 @@ class OpenAICompanyProfileClassifierAdapter:
                 f"OpenAI error while classifying a company profile: {type(exc).__name__}"
                 + (f" (HTTP {status})" if status else "")
             ) from exc
+        except (ValidationError, json.JSONDecodeError):
+            # parse() reads the body as JSON (JSONDecodeError) and validates the answer against the schema
+            # (ValidationError). Both are ValueError, but they are failures of the model or the provider,
+            # worth retrying (502), not of the request. Their message and the chained error quote the
+            # model output, which can repeat the description: neither goes on.
+            raise ClassificationError(_INVALID_OUTPUT) from None
 
         message = completion.choices[0].message
         if message.parsed is None:
             refused = " The model refused." if getattr(message, "refusal", None) else ""
-            raise ClassificationError(f"Model did not return a valid company profile classification.{refused}")
+            raise ClassificationError(f"{_INVALID_OUTPUT}{refused}")
 
         return ProfileClassifierOutput(
             classification=_to_domain(message.parsed),

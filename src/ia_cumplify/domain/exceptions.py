@@ -18,6 +18,13 @@ class ClassificationError(DomainError):
         self.usage = usage
 
 
+class InvalidProfileTextError(DomainError):
+    """The company profile text cannot be classified: empty, too long or not valid Unicode.
+
+    Retrying the same text does not help. The message gives lengths and positions, never the text.
+    """
+
+
 class LegalBodyNotFoundError(DomainError):
     """No legal body exists for the given identifier."""
 

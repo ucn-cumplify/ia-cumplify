@@ -12,7 +12,7 @@ from ia_cumplify.adapters.inbound.http.schemas.company_profile import (
 from ia_cumplify.adapters.outbound.openai.profile_classifier import OpenAICompanyProfileClassifierAdapter
 from ia_cumplify.application.use_cases.classify_company_profile import ClassifyCompanyProfileUseCase
 from ia_cumplify.config.settings import get_settings
-from ia_cumplify.domain.exceptions import ClassificationError
+from ia_cumplify.domain.exceptions import ClassificationError, InvalidProfileTextError
 
 router = APIRouter(prefix="/company-profiles", tags=["company-profiles"])
 logger = logging.getLogger(__name__)
@@ -34,10 +34,12 @@ def classify_company_profile(
 ) -> ClassifyCompanyProfileResponse:
     candidates = body.candidate_values.to_domain() if body.candidate_values else None
     started_at = perf_counter()
-    # The text never reaches the log or an error body: only the kind of failure and its length.
+    # The text never reaches the log or an error body: only the kind of failure and its length. 422 is
+    # only for a text the use case rejects; any other failure, a ValueError too, is a 502 the backend
+    # retries.
     try:
         result = use_case.execute(body.text, candidates)
-    except ValueError as exc:
+    except InvalidProfileTextError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ClassificationError as exc:
         logger.error("Company profile classification failed (%d characters): %s", len(body.text), exc)
