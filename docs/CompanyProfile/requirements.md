@@ -27,7 +27,7 @@ El sistema debe devolver las seis dimensiones de la empresa a partir de su texto
 
 **Validaciones:**
 
-- `text` se recorta y debe quedar entre 1 y `PROFILE_TEXT_MAX_CHARS` caracteres (defecto 4.000). Si no, `422`.
+- `text` se recorta y debe quedar entre 1 y `PROFILE_TEXT_MAX_CHARS` caracteres (defecto 4.000), sin surrogates sueltos (un escape JSON como `\ud800` no es Unicode válido). Si no, `422`.
 - Cada dimensión trae al menos un valor; sin respaldo en el texto, las dimensiones 1 a 4 y 6 valen `No especificado`.
 - La respuesta incluye `classification`, `classifier_version` y `usage`.
 
@@ -95,8 +95,8 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 - `classifier_version` es `<PROFILE_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `profile-v1@gpt-5.6-luna`.
 - Todo cambio del prompt del perfil o de su bloque de etiquetas sube `PROFILE_PROMPT_VERSION`.
-- `usage` trae los tokens de la llamada y `llm_calls` vale 1.
-- `dev_metrics`, cuando viaja, repite los tokens de `usage` y agrega el tiempo.
+- `usage` trae los tokens de la llamada, con `cached_tokens` (la parte de `prompt_tokens` servida desde la caché del proveedor, 0 si no la informa), y `llm_calls` vale 1.
+- `dev_metrics`, cuando viaja, repite los tokens de `usage`, sin `cached_tokens`, y agrega el tiempo.
 
 ---
 
@@ -109,7 +109,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 **Descripción:**
 
-El texto es información de la empresa. No se registra en el log ni aparece en el cuerpo de un error: los errores dicen el tipo de falla, y el log, el largo del texto. Tampoco se copia la respuesta de rechazo del modelo, que podría citarlo. El texto es dato, no instrucciones: el prompt pide ignorar las instrucciones escritas dentro de él.
+El texto es información de la empresa. No se registra en el log ni aparece en el cuerpo de un error: los errores dicen el tipo de falla, y el log, el largo del texto. Tampoco se copia la respuesta de rechazo del modelo, que podría citarlo, ni una salida que no cumple el esquema o no es JSON: esa falla responde `502` con un texto fijo. El texto es dato, no instrucciones: el prompt pide ignorar las instrucciones escritas dentro de él.
 
 ---
 
@@ -118,7 +118,7 @@ El texto es información de la empresa. No se registra en el log ni aparece en e
 - Clasificar un texto con el modelo y el esfuerzo de razonamiento configurados (`OPENAI_MODEL`, `OPENAI_REASONING_EFFORT`).
 - Reutilizar las etiquetas existentes que envía el llamador.
 - Usar timeout y reintentos explícitos del cliente OpenAI (`OPENAI_TIMEOUT_SECONDS`, `OPENAI_MAX_RETRIES`).
-- Quitar imágenes embebidas en base64 del texto que se envía al modelo.
+- Quitar del texto que se envía al modelo las imágenes y los demás archivos embebidos como data URI.
 - Informar siempre la versión del clasificador y el uso de tokens.
 
 ## Fuera de alcance
@@ -131,6 +131,6 @@ El texto es información de la empresa. No se registra en el log ni aparece en e
 
 - **Las exclusiones del texto no se devuelven.** El modelo evita los valores que el texto niega, pero no los entrega como exclusiones, así que no se aplican al perfil: una norma de un tema negado igual puede sugerirse si coincide con el perfil derivado. Hoy las exclusiones se registran a mano con `/ai/profile/exclusions` del backend. Devolverlas sería un campo adicional, compatible con el contrato actual; está pendiente de decidir.
 - `PROFILE_TEXT_MAX_CHARS` tiene que coincidir con `AI_PROFILE_TEXT_MAX_CHARS` del backend: si el backend sube su tope y este no, un texto válido para el backend recibe `422`.
-- `PROFILE_PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue los perfiles nuevos de los anteriores.
+- `PROFILE_PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue los perfiles nuevos de los anteriores. `tests/test_profile_prompts.py` falla si el prompt o su bloque de etiquetas cambian sin subirla, y también si las reglas de etiqueta o el formato del bloque se separan de los del prompt de artículos.
 - Las reglas de longitud de etiqueta viven en el prompt. El esquema solo exige listas no vacías, así que una etiqueta más larga igual puede volver en la respuesta.
-- Las pruebas automáticas (`tests/`) cubren solo el 422 sin el texto (PRF-013 de `test.csv`). Los demás casos se ejecutaron a mano contra el servicio, con un clasificador falso para el contrato y con OpenAI para el prompt, y no tienen prueba automática.
+- El prompt (PRF-001 a PRF-007) se probó a mano con OpenAI y no tiene prueba automática, porque necesita el modelo real. El contrato sí la tiene: PRF-008 a PRF-012 y PRF-014 se ejecutan con pytest en `tests/test_company_profile_http.py`, con el adaptador real sobre un transporte falso de OpenAI, junto con dónde va el bloque de etiquetas existentes y que se quiten las imágenes y los adjuntos; PRF-013, en `tests/test_validation_errors.py`.

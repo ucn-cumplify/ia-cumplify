@@ -39,7 +39,7 @@ POST /api/v1/company-profiles/classify
 
 `candidate_values` sigue las mismas reglas que en la clasificación de cuerpos legales: cada etiqueta se recorta y debe tener entre 1 y 100 caracteres, sin `|` ni saltos de línea; los campos extra se rechazan y los duplicados se eliminan conservando el orden.
 
-**Response `200 OK`** (respuesta real a ese texto, con las candidatas del backend):
+**Response `200 OK`** (respuesta real a ese texto, con las candidatas del backend; `cached_tokens` se agregó después y aquí se muestra en 0):
 
 ```json
 {
@@ -56,6 +56,7 @@ POST /api/v1/company-profiles/classify
     "prompt_tokens": 2102,
     "completion_tokens": 126,
     "total_tokens": 2228,
+    "cached_tokens": 0,
     "llm_calls": 1
   },
   "dev_metrics": {
@@ -71,9 +72,9 @@ POST /api/v1/company-profiles/classify
 `classifier_version` y `usage` viajan siempre:
 
 - `classifier_version` es `<versión del prompt>@<modelo>`. La versión es `PROFILE_PROMPT_VERSION` (`profile-v1`) y sube con cada cambio del prompt o del bloque de etiquetas existentes; el modelo es `OPENAI_MODEL`. El backend la guarda con el texto analizado.
-- `usage` trae los tokens de la única llamada al modelo; `llm_calls` vale 1.
+- `usage` trae los tokens de la única llamada al modelo; `llm_calls` vale 1. `cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché, o 0 si no la informa: como las instrucciones y las etiquetas van antes que el texto, ese prefijo puede salir de la caché.
 
-`dev_metrics` solo trae datos cuando `INCLUDE_DEV_METRICS` es verdadero, igual que en la clasificación de cuerpos legales. Cada lista de `classification` tiene al menos un elemento.
+`dev_metrics` solo trae datos cuando `INCLUDE_DEV_METRICS` es verdadero, igual que en la clasificación de cuerpos legales: el tiempo y los tokens de `usage`, sin `cached_tokens`. Cada lista de `classification` tiene al menos un elemento.
 
 **Reglas:**
 
@@ -87,17 +88,17 @@ POST /api/v1/company-profiles/classify
 - **Lo que el texto niega no se clasifica.** "No realizamos faenas mineras" no produce `Minería`, y "no operamos calderas" no produce `Caldera`, en ninguna dimensión.
 - El texto es dato, no instrucciones: el prompt pide ignorar cualquier instrucción escrita dentro de él.
 - Las etiquetas existentes van antes que el texto. El prompt y las etiquetas son iguales para todas las empresas en un momento dado, así que ese prefijo puede aprovechar el caché del proveedor.
-- Antes de armar el prompt se quitan las imágenes embebidas `data:image/...;base64,...`, igual que en la clasificación de artículos.
+- Antes de armar el prompt se quitan los data URI embebidos, igual que en la clasificación de artículos: una imagen se reemplaza por `[imagen omitida]` y cualquier otro tipo, como un PDF, por `[archivo omitido]`.
 - La llamada a OpenAI usa `OPENAI_TIMEOUT_SECONDS` (defecto 180) y `OPENAI_MAX_RETRIES` (defecto 2). El SDK reintenta 408, 409, 429, 5xx, timeouts y errores de conexión.
-- **Privacidad:** el texto no se registra en el log ni aparece en ningún error. Los errores dicen el tipo de falla y, en el log, el largo del texto.
+- **Privacidad:** el texto no se registra en el log ni aparece en ningún error. Los errores dicen el tipo de falla y, en el log, el largo del texto. Tampoco se repite la salida del modelo, que puede citar el texto: una respuesta que no cumple el esquema o no es JSON se informa con un texto fijo, sin el error que la describe.
 
 **Errores:**
 
 | Código | Cuándo |
 |---|---|
 | 401 | Falta `X-API-Key` o no coincide con `SERVICE_API_KEY` |
-| 422 | `text` falta, no es texto, queda vacío al recortarlo o supera `PROFILE_TEXT_MAX_CHARS`; o `candidate_values` no cumple las reglas de etiqueta |
-| 502 | El proveedor falló, el modelo no devolvió una clasificación válida o la rechazó |
+| 422 | `text` falta, no es texto, queda vacío al recortarlo, supera `PROFILE_TEXT_MAX_CHARS` o tiene un surrogate suelto (un escape como `\ud800`, que no es Unicode válido); o `candidate_values` no cumple las reglas de etiqueta. Es el único error permanente: reintentar el mismo pedido no cambia nada |
+| 502 | El proveedor falló; el modelo rechazó la clasificación o devolvió una que no cumple el esquema o no es JSON (`Model did not return a valid company profile classification.`); o hubo una falla inesperada, con solo su tipo en el detalle (por ejemplo, `ValueError`). El backend lo trata como transitorio y reintenta |
 | 503 | Falta `SERVICE_API_KEY` u `OPENAI_API_KEY` |
 
 **Limitaciones:**
