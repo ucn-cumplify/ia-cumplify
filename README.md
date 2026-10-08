@@ -147,6 +147,22 @@ uv run python scripts/retrieval_eval.py --base-url http://127.0.0.1:8000
 - Por consola muestra solo métricas y los tokens que informa el endpoint. El detalle por pregunta va a `--out` (por defecto, un archivo del directorio temporal), siempre fuera del repositorio.
 - Qué mide, el formato del conjunto y las opciones están en "Evaluación de recuperación" de `docs/Embeddings/requirements.md`. `--self-test` comprueba el cálculo de las métricas con datos inventados, sin servicio ni base.
 
+### Evaluación del perfil embebido
+
+`scripts/profile_retrieval_eval.py` es la fase 0 de la tarea 2.4 del backend y cubre EMB-008 de `docs/Embeddings/test.csv`. Arma el texto del perfil de cada app de las empresas de demostración con la receta `prof-v1` de la tarea 2.3, lo embebe con un ia-cumplify ya en marcha y mide, sin reimplementar el puntaje del cruce, cuánto se parece a los trozos `art-v2` de las normas que la app sigue, de sus candidatas y de las normas sin relación. Mide también la evaluación que deja una norma afuera, las variantes de la receta y el control entre rubros. No es parte de pytest y gasta tokens reales, del orden de decenas de miles en la base local.
+
+```bash
+export SERVICE_API_KEY=...        # la misma del servicio
+export DATABASE_URL='postgresql://perfil_eval:<contraseña temporal>@localhost:5432/cumplify_db'
+uv run python scripts/profile_retrieval_eval.py --dry-run
+uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
+```
+
+- Lee la base local con una conexión propia de solo lectura y, en la ejecución real, con un rol temporal que solo puede leer sus tablas y que se borra al terminar. No lee `.env`: las variables van exportadas o como argumentos (`--api-key`, `--database-url`).
+- `--dry-run` arma los textos y muestra, de los de `prof-v1`, el SHA-256, el largo y los valores por dimensión, con el costo estimado, sin llamar al endpoint ni pedir `SERVICE_API_KEY`. Los textos van solo a `--out`.
+- Por consola muestra solo métricas y, en `--dry-run`, hashes y conteos. Los textos de perfil, que son datos de empresas, van a `--out` (por defecto, un archivo del directorio temporal; en `--dry-run`, solo si se indica), siempre fuera del repositorio.
+- La receta, los casos de paridad (`scripts/profile_text_parity.json`), qué mide, el rol de solo lectura, las condiciones del `--dry-run` de referencia para el backend y las opciones están en "Evaluación del perfil embebido" de `docs/Embeddings/requirements.md`. `--self-test` comprueba la receta, esos casos y las métricas con datos inventados, sin servicio ni base.
+
 ## Endpoints
 
 | Método | Ruta | Uso |
@@ -173,7 +189,7 @@ ia-cumplify/
 │   ├── config/
 │   └── cli.py
 ├── tests/                       # pytest, con un OpenAI simulado en 127.0.0.1
-├── scripts/                     # Evaluaciones manuales con tokens reales: el chat y la recuperación de embeddings
+├── scripts/                     # Evaluaciones manuales con tokens reales: el chat, la recuperación de embeddings y el perfil embebido
 ├── docs/
 ├── pyproject.toml
 ├── .env.example

@@ -1,0 +1,1796 @@
+{
+  "version": 1,
+  "recipe": "prof-v1",
+  "embedding_model": "text-embedding-3-large@1024#prof-v1",
+  "description": "Casos de paridad de la receta prof-v1 (tarea 2.3 de backend-cumplify). Los usa la autoprueba de scripts/profile_retrieval_eval.py, y la PR del backend que implemente prof-v1 tiene que dar, con las mismas entradas, el mismo texto y el mismo SHA-256. El detalle del recorte por el total lo fija el script, como pide el plan del backend, y esa PR lo replica. Si la medición con textos declarados cambia la receta, se actualizan juntos el script, requirements.md y estos casos. Cada caso trae las entradas del perfil ya resueltas a su raíz (root, dimension, source: el ProfileValue del backend), el value y el family_article_count de cada raíz, y las ocurrencias de derived por raíz (artículos vinculados distintos de la familia). Un caso puede traer sus propios pesos en settings; si no los trae, valen los de la raíz del archivo, que son los valores por defecto de AI_SCORE_W_SRC_* y AI_SCORE_DERIVED_SATURATION. Los ids son inventados y no influyen en el texto. Las reglas están en «Evaluación del perfil embebido» de docs/Embeddings/requirements.md.",
+  "settings": {
+    "declared": 1.0,
+    "derived_min": 0.5,
+    "derived_saturation": 5.0,
+    "structured": 0.4
+  },
+  "caps": {
+    "scope": 20,
+    "productive_sector": 10,
+    "activity_action": 30,
+    "facility_installation_equipment": 20
+  },
+  "max_length_utf16": 8000,
+  "cases": [
+    {
+      "id": "P1",
+      "description": "Perfil completo, sin recorte por largo: exclusión por familia (Medio ambiente, structured y excluded; Extracción de áridos, derived y excluded); una raíz con dos procedencias aparece una vez (Laboral); tope de sector con empate de peso resuelto por family_article_count (quedan fuera Turismo y Minería, el structured; Turismo empata en conteo con Educación y Salud y queda último en cualquier orden de texto, así que el desempate por el value lo fija P5); orden ordinal UTF-16 dentro de la línea (Área portuaria al final; el valor fuera del plano básico antes que el de U+FF27); territorio y others fuera; tope de instalaciones (la 21 queda fuera). El texto mide 6.551 unidades UTF-16, una más que en caracteres de Python, lejos del tope de 8.000.",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000001",
+          "dimension": "scope",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000002",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000003",
+          "dimension": "scope",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000003",
+          "dimension": "scope",
+          "source": "excluded"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000004",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000004",
+          "dimension": "scope",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000010",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000011",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000012",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000013",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000014",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000015",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000016",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000017",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000018",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000019",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000020",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000021",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000030",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000031",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000032",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000033",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000034",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000034",
+          "dimension": "activity_action",
+          "source": "excluded"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000040",
+          "dimension": "territorial_coverage",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000041",
+          "dimension": "others",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000101",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000102",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000103",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000104",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000105",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000106",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000107",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000108",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000109",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000110",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000111",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000112",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000113",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000114",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000115",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000116",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000117",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000118",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000119",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000120",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000121",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000001": {
+          "value": "Seguridad vial",
+          "dimension": "scope",
+          "family_article_count": 12
+        },
+        "00000000-0000-4000-8000-000000000002": {
+          "value": "Transporte y tránsito",
+          "dimension": "scope",
+          "family_article_count": 40
+        },
+        "00000000-0000-4000-8000-000000000003": {
+          "value": "Medio ambiente",
+          "dimension": "scope",
+          "family_article_count": 100
+        },
+        "00000000-0000-4000-8000-000000000004": {
+          "value": "Laboral",
+          "dimension": "scope",
+          "family_article_count": 80
+        },
+        "00000000-0000-4000-8000-000000000010": {
+          "value": "Minería",
+          "dimension": "productive_sector",
+          "family_article_count": 30
+        },
+        "00000000-0000-4000-8000-000000000011": {
+          "value": "Logística",
+          "dimension": "productive_sector",
+          "family_article_count": 5
+        },
+        "00000000-0000-4000-8000-000000000012": {
+          "value": "Área portuaria",
+          "dimension": "productive_sector",
+          "family_article_count": 5
+        },
+        "00000000-0000-4000-8000-000000000013": {
+          "value": "Energía",
+          "dimension": "productive_sector",
+          "family_article_count": 7
+        },
+        "00000000-0000-4000-8000-000000000014": {
+          "value": "Agricultura",
+          "dimension": "productive_sector",
+          "family_article_count": 9
+        },
+        "00000000-0000-4000-8000-000000000015": {
+          "value": "Construcción",
+          "dimension": "productive_sector",
+          "family_article_count": 9
+        },
+        "00000000-0000-4000-8000-000000000016": {
+          "value": "Pesca",
+          "dimension": "productive_sector",
+          "family_article_count": 11
+        },
+        "00000000-0000-4000-8000-000000000017": {
+          "value": "Comercio",
+          "dimension": "productive_sector",
+          "family_article_count": 13
+        },
+        "00000000-0000-4000-8000-000000000018": {
+          "value": "Telecomunicaciones",
+          "dimension": "productive_sector",
+          "family_article_count": 15
+        },
+        "00000000-0000-4000-8000-000000000019": {
+          "value": "Educación",
+          "dimension": "productive_sector",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000020": {
+          "value": "Salud",
+          "dimension": "productive_sector",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000021": {
+          "value": "Turismo",
+          "dimension": "productive_sector",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000030": {
+          "value": "Transporte de carga por carretera",
+          "dimension": "activity_action",
+          "family_article_count": 8
+        },
+        "00000000-0000-4000-8000-000000000031": {
+          "value": "Mantención de vehículos de carga",
+          "dimension": "activity_action",
+          "family_article_count": 3
+        },
+        "00000000-0000-4000-8000-000000000032": {
+          "value": "Ｇrúas horquilla",
+          "dimension": "activity_action",
+          "family_article_count": 2
+        },
+        "00000000-0000-4000-8000-000000000033": {
+          "value": "𝐆rúas portacontenedores",
+          "dimension": "activity_action",
+          "family_article_count": 2
+        },
+        "00000000-0000-4000-8000-000000000034": {
+          "value": "Extracción de áridos",
+          "dimension": "activity_action",
+          "family_article_count": 6
+        },
+        "00000000-0000-4000-8000-000000000040": {
+          "value": "Región de Antofagasta",
+          "dimension": "territorial_coverage",
+          "family_article_count": 50
+        },
+        "00000000-0000-4000-8000-000000000041": {
+          "value": "Empresa Ejemplo SpA",
+          "dimension": "others",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000101": {
+          "value": "Instalación 01 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 51
+        },
+        "00000000-0000-4000-8000-000000000102": {
+          "value": "Instalación 02 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 52
+        },
+        "00000000-0000-4000-8000-000000000103": {
+          "value": "Instalación 03 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 53
+        },
+        "00000000-0000-4000-8000-000000000104": {
+          "value": "Instalación 04 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 54
+        },
+        "00000000-0000-4000-8000-000000000105": {
+          "value": "Instalación 05 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 55
+        },
+        "00000000-0000-4000-8000-000000000106": {
+          "value": "Instalación 06 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 56
+        },
+        "00000000-0000-4000-8000-000000000107": {
+          "value": "Instalación 07 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 57
+        },
+        "00000000-0000-4000-8000-000000000108": {
+          "value": "Instalación 08 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 58
+        },
+        "00000000-0000-4000-8000-000000000109": {
+          "value": "Instalación 09 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 59
+        },
+        "00000000-0000-4000-8000-000000000110": {
+          "value": "Instalación 10 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 60
+        },
+        "00000000-0000-4000-8000-000000000111": {
+          "value": "Instalación 11 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 61
+        },
+        "00000000-0000-4000-8000-000000000112": {
+          "value": "Instalación 12 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 62
+        },
+        "00000000-0000-4000-8000-000000000113": {
+          "value": "Instalación 13 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 63
+        },
+        "00000000-0000-4000-8000-000000000114": {
+          "value": "Instalación 14 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 64
+        },
+        "00000000-0000-4000-8000-000000000115": {
+          "value": "Instalación 15 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 65
+        },
+        "00000000-0000-4000-8000-000000000116": {
+          "value": "Instalación 16 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 66
+        },
+        "00000000-0000-4000-8000-000000000117": {
+          "value": "Instalación 17 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 67
+        },
+        "00000000-0000-4000-8000-000000000118": {
+          "value": "Instalación 18 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 68
+        },
+        "00000000-0000-4000-8000-000000000119": {
+          "value": "Instalación 19 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 69
+        },
+        "00000000-0000-4000-8000-000000000120": {
+          "value": "Instalación 20 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 70
+        },
+        "00000000-0000-4000-8000-000000000121": {
+          "value": "Instalación 21 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 71
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000002": 3,
+        "00000000-0000-4000-8000-000000000004": 1,
+        "00000000-0000-4000-8000-000000000011": 1,
+        "00000000-0000-4000-8000-000000000012": 1,
+        "00000000-0000-4000-8000-000000000013": 1,
+        "00000000-0000-4000-8000-000000000014": 1,
+        "00000000-0000-4000-8000-000000000015": 1,
+        "00000000-0000-4000-8000-000000000016": 1,
+        "00000000-0000-4000-8000-000000000017": 1,
+        "00000000-0000-4000-8000-000000000018": 1,
+        "00000000-0000-4000-8000-000000000019": 1,
+        "00000000-0000-4000-8000-000000000020": 1,
+        "00000000-0000-4000-8000-000000000021": 1,
+        "00000000-0000-4000-8000-000000000030": 6,
+        "00000000-0000-4000-8000-000000000031": 2,
+        "00000000-0000-4000-8000-000000000032": 1,
+        "00000000-0000-4000-8000-000000000033": 1,
+        "00000000-0000-4000-8000-000000000034": 1,
+        "00000000-0000-4000-8000-000000000101": 1,
+        "00000000-0000-4000-8000-000000000102": 1,
+        "00000000-0000-4000-8000-000000000103": 1,
+        "00000000-0000-4000-8000-000000000104": 1,
+        "00000000-0000-4000-8000-000000000105": 1,
+        "00000000-0000-4000-8000-000000000106": 1,
+        "00000000-0000-4000-8000-000000000107": 1,
+        "00000000-0000-4000-8000-000000000108": 1,
+        "00000000-0000-4000-8000-000000000109": 1,
+        "00000000-0000-4000-8000-000000000110": 1,
+        "00000000-0000-4000-8000-000000000111": 1,
+        "00000000-0000-4000-8000-000000000112": 1,
+        "00000000-0000-4000-8000-000000000113": 1,
+        "00000000-0000-4000-8000-000000000114": 1,
+        "00000000-0000-4000-8000-000000000115": 1,
+        "00000000-0000-4000-8000-000000000116": 1,
+        "00000000-0000-4000-8000-000000000117": 1,
+        "00000000-0000-4000-8000-000000000118": 1,
+        "00000000-0000-4000-8000-000000000119": 1,
+        "00000000-0000-4000-8000-000000000120": 1,
+        "00000000-0000-4000-8000-000000000121": 1
+      },
+      "expected": {
+        "text": "Ámbito regulatorio: Laboral; Seguridad vial; Transporte y tránsito\nSector productivo: Agricultura; Comercio; Construcción; Educación; Energía; Logística; Pesca; Salud; Telecomunicaciones; Área portuaria\nActividad: Mantención de vehículos de carga; Transporte de carga por carretera; 𝐆rúas portacontenedores; Ｇrúas horquilla\nObra, instalación o equipo: Instalación 01 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 02 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 03 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 04 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 05 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 06 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 07 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 08 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 09 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 10 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 11 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 12 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 13 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 14 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 15 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 16 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 17 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 18 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 19 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica; Instalación 20 con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica con estanques, bombas, cañerías y sala eléctrica",
+        "sha256": "efd81495d0f5ea8ceb33afcf869d8b05e97a0dae7b6027c90659c0fcf0a5a49b",
+        "length_utf16": 6551,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 0,
+          "productive_sector": 2,
+          "activity_action": 0,
+          "facility_installation_equipment": 1
+        },
+        "cut_by_length": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        }
+      }
+    },
+    {
+      "id": "P2",
+      "description": "Sin señal mínima: solo un structured en las cuatro dimensiones; el declared es de territorio y de others, y el derived está excluido. No hay texto ni vector.",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000050",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000051",
+          "dimension": "territorial_coverage",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000052",
+          "dimension": "others",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000053",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000053",
+          "dimension": "scope",
+          "source": "excluded"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000050": {
+          "value": "Minería",
+          "dimension": "productive_sector",
+          "family_article_count": 30
+        },
+        "00000000-0000-4000-8000-000000000051": {
+          "value": "Región de Atacama",
+          "dimension": "territorial_coverage",
+          "family_article_count": 40
+        },
+        "00000000-0000-4000-8000-000000000052": {
+          "value": "Empresa Ejemplo SpA",
+          "dimension": "others",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000053": {
+          "value": "Medio ambiente",
+          "dimension": "scope",
+          "family_article_count": 100
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000053": 2
+      },
+      "expected": {
+        "text": null,
+        "sha256": null,
+        "length_utf16": 0,
+        "reason": "sin señal mínima: ningún valor declared ni derived"
+      }
+    },
+    {
+      "id": "P3",
+      "description": "Un solo valor declared: la forma mínima del texto.",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000060",
+          "dimension": "scope",
+          "source": "declared"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000060": {
+          "value": "Seguridad vial",
+          "dimension": "scope",
+          "family_article_count": 12
+        }
+      },
+      "occurrences": {},
+      "expected": {
+        "text": "Ámbito regulatorio: Seguridad vial",
+        "sha256": "dbf4d22984dd11c0a1a747267cbe1dd377f9ff9000e9c94632b6e6722599c1d8",
+        "length_utf16": 34,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        },
+        "cut_by_length": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        }
+      }
+    },
+    {
+      "id": "P4",
+      "description": "Señal mínima con pesos propios (structured 0,8, mayor que cualquier derived): Turismo, la única raíz con una entrada derived, gana como structured y queda fuera por el tope de sector, detrás de diez structured con familias más chicas. La señal se evalúa sobre las raíces de las cuatro dimensiones antes de los topes, y basta una entrada declared o derived, gane la procedencia que gane: hay texto, solo con valores structured. Mirando la procedencia ganadora, o solo los valores del texto ya recortado, no habría texto. Con los pesos por defecto esas lecturas coinciden, por eso el caso trae los suyos.",
+      "settings": {
+        "declared": 1.0,
+        "derived_min": 0.5,
+        "derived_saturation": 5.0,
+        "structured": 0.8
+      },
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000201",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000202",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000203",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000204",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000205",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000206",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000207",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000208",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000209",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000210",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000211",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000211",
+          "dimension": "productive_sector",
+          "source": "structured"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000201": {
+          "value": "Sector 01",
+          "dimension": "productive_sector",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000202": {
+          "value": "Sector 02",
+          "dimension": "productive_sector",
+          "family_article_count": 2
+        },
+        "00000000-0000-4000-8000-000000000203": {
+          "value": "Sector 03",
+          "dimension": "productive_sector",
+          "family_article_count": 3
+        },
+        "00000000-0000-4000-8000-000000000204": {
+          "value": "Sector 04",
+          "dimension": "productive_sector",
+          "family_article_count": 4
+        },
+        "00000000-0000-4000-8000-000000000205": {
+          "value": "Sector 05",
+          "dimension": "productive_sector",
+          "family_article_count": 5
+        },
+        "00000000-0000-4000-8000-000000000206": {
+          "value": "Sector 06",
+          "dimension": "productive_sector",
+          "family_article_count": 6
+        },
+        "00000000-0000-4000-8000-000000000207": {
+          "value": "Sector 07",
+          "dimension": "productive_sector",
+          "family_article_count": 7
+        },
+        "00000000-0000-4000-8000-000000000208": {
+          "value": "Sector 08",
+          "dimension": "productive_sector",
+          "family_article_count": 8
+        },
+        "00000000-0000-4000-8000-000000000209": {
+          "value": "Sector 09",
+          "dimension": "productive_sector",
+          "family_article_count": 9
+        },
+        "00000000-0000-4000-8000-000000000210": {
+          "value": "Sector 10",
+          "dimension": "productive_sector",
+          "family_article_count": 10
+        },
+        "00000000-0000-4000-8000-000000000211": {
+          "value": "Turismo",
+          "dimension": "productive_sector",
+          "family_article_count": 50
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000211": 1
+      },
+      "expected": {
+        "text": "Sector productivo: Sector 01; Sector 02; Sector 03; Sector 04; Sector 05; Sector 06; Sector 07; Sector 08; Sector 09; Sector 10",
+        "sha256": "98ce94adefed97188f1f2b4f9a3cb09bee9ec76fa29bcdc01a469c928ca85b92",
+        "length_utf16": 127,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 0,
+          "productive_sector": 1,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        },
+        "cut_by_length": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        }
+      }
+    },
+    {
+      "id": "P5",
+      "description": "Desempates al borde de los topes, con las entradas en un orden que no es el del resultado. Sector: Acuicultura, structured, tiene la familia más chica pero pesa menos que los derived y queda fuera; entre Turismo, Área marítima y Salud, derived con el mismo peso y el mismo family_article_count, el tope deja solo Salud, la primera en orden ordinal UTF-16 (el orden de entrada dejaría Turismo, y uno alfabético de cultura, Área marítima). Actividad: entre «Ｇrúas horquilla» (U+FF27) y «𝐆rúas portacontenedores» (fuera del plano básico), empatados en peso y en conteo, el tope deja la segunda, primera en orden ordinal UTF-16 (el orden de los puntos de código o el de entrada dejaría la primera).",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000301",
+          "dimension": "productive_sector",
+          "source": "structured"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000302",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000303",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000304",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000305",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000306",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000307",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000308",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000309",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000310",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000311",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000312",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000313",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000314",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000315",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000316",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000317",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000318",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000319",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000320",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000321",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000322",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000323",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000324",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000325",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000326",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000327",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000328",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000329",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000330",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000331",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000332",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000333",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000334",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000335",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000336",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000337",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000338",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000339",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000340",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000341",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000342",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000343",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000344",
+          "dimension": "activity_action",
+          "source": "derived"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000301": {
+          "value": "Acuicultura",
+          "dimension": "productive_sector",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000302": {
+          "value": "Sector 01",
+          "dimension": "productive_sector",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000303": {
+          "value": "Sector 02",
+          "dimension": "productive_sector",
+          "family_article_count": 2
+        },
+        "00000000-0000-4000-8000-000000000304": {
+          "value": "Sector 03",
+          "dimension": "productive_sector",
+          "family_article_count": 3
+        },
+        "00000000-0000-4000-8000-000000000305": {
+          "value": "Sector 04",
+          "dimension": "productive_sector",
+          "family_article_count": 4
+        },
+        "00000000-0000-4000-8000-000000000306": {
+          "value": "Sector 05",
+          "dimension": "productive_sector",
+          "family_article_count": 5
+        },
+        "00000000-0000-4000-8000-000000000307": {
+          "value": "Sector 06",
+          "dimension": "productive_sector",
+          "family_article_count": 6
+        },
+        "00000000-0000-4000-8000-000000000308": {
+          "value": "Sector 07",
+          "dimension": "productive_sector",
+          "family_article_count": 7
+        },
+        "00000000-0000-4000-8000-000000000309": {
+          "value": "Sector 08",
+          "dimension": "productive_sector",
+          "family_article_count": 8
+        },
+        "00000000-0000-4000-8000-000000000310": {
+          "value": "Sector 09",
+          "dimension": "productive_sector",
+          "family_article_count": 9
+        },
+        "00000000-0000-4000-8000-000000000311": {
+          "value": "Turismo",
+          "dimension": "productive_sector",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000312": {
+          "value": "Área marítima",
+          "dimension": "productive_sector",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000313": {
+          "value": "Salud",
+          "dimension": "productive_sector",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000314": {
+          "value": "Actividad 01",
+          "dimension": "activity_action",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000315": {
+          "value": "Actividad 02",
+          "dimension": "activity_action",
+          "family_article_count": 2
+        },
+        "00000000-0000-4000-8000-000000000316": {
+          "value": "Actividad 03",
+          "dimension": "activity_action",
+          "family_article_count": 3
+        },
+        "00000000-0000-4000-8000-000000000317": {
+          "value": "Actividad 04",
+          "dimension": "activity_action",
+          "family_article_count": 4
+        },
+        "00000000-0000-4000-8000-000000000318": {
+          "value": "Actividad 05",
+          "dimension": "activity_action",
+          "family_article_count": 5
+        },
+        "00000000-0000-4000-8000-000000000319": {
+          "value": "Actividad 06",
+          "dimension": "activity_action",
+          "family_article_count": 6
+        },
+        "00000000-0000-4000-8000-000000000320": {
+          "value": "Actividad 07",
+          "dimension": "activity_action",
+          "family_article_count": 7
+        },
+        "00000000-0000-4000-8000-000000000321": {
+          "value": "Actividad 08",
+          "dimension": "activity_action",
+          "family_article_count": 8
+        },
+        "00000000-0000-4000-8000-000000000322": {
+          "value": "Actividad 09",
+          "dimension": "activity_action",
+          "family_article_count": 9
+        },
+        "00000000-0000-4000-8000-000000000323": {
+          "value": "Actividad 10",
+          "dimension": "activity_action",
+          "family_article_count": 10
+        },
+        "00000000-0000-4000-8000-000000000324": {
+          "value": "Actividad 11",
+          "dimension": "activity_action",
+          "family_article_count": 11
+        },
+        "00000000-0000-4000-8000-000000000325": {
+          "value": "Actividad 12",
+          "dimension": "activity_action",
+          "family_article_count": 12
+        },
+        "00000000-0000-4000-8000-000000000326": {
+          "value": "Actividad 13",
+          "dimension": "activity_action",
+          "family_article_count": 13
+        },
+        "00000000-0000-4000-8000-000000000327": {
+          "value": "Actividad 14",
+          "dimension": "activity_action",
+          "family_article_count": 14
+        },
+        "00000000-0000-4000-8000-000000000328": {
+          "value": "Actividad 15",
+          "dimension": "activity_action",
+          "family_article_count": 15
+        },
+        "00000000-0000-4000-8000-000000000329": {
+          "value": "Actividad 16",
+          "dimension": "activity_action",
+          "family_article_count": 16
+        },
+        "00000000-0000-4000-8000-000000000330": {
+          "value": "Actividad 17",
+          "dimension": "activity_action",
+          "family_article_count": 17
+        },
+        "00000000-0000-4000-8000-000000000331": {
+          "value": "Actividad 18",
+          "dimension": "activity_action",
+          "family_article_count": 18
+        },
+        "00000000-0000-4000-8000-000000000332": {
+          "value": "Actividad 19",
+          "dimension": "activity_action",
+          "family_article_count": 19
+        },
+        "00000000-0000-4000-8000-000000000333": {
+          "value": "Actividad 20",
+          "dimension": "activity_action",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000334": {
+          "value": "Actividad 21",
+          "dimension": "activity_action",
+          "family_article_count": 21
+        },
+        "00000000-0000-4000-8000-000000000335": {
+          "value": "Actividad 22",
+          "dimension": "activity_action",
+          "family_article_count": 22
+        },
+        "00000000-0000-4000-8000-000000000336": {
+          "value": "Actividad 23",
+          "dimension": "activity_action",
+          "family_article_count": 23
+        },
+        "00000000-0000-4000-8000-000000000337": {
+          "value": "Actividad 24",
+          "dimension": "activity_action",
+          "family_article_count": 24
+        },
+        "00000000-0000-4000-8000-000000000338": {
+          "value": "Actividad 25",
+          "dimension": "activity_action",
+          "family_article_count": 25
+        },
+        "00000000-0000-4000-8000-000000000339": {
+          "value": "Actividad 26",
+          "dimension": "activity_action",
+          "family_article_count": 26
+        },
+        "00000000-0000-4000-8000-000000000340": {
+          "value": "Actividad 27",
+          "dimension": "activity_action",
+          "family_article_count": 27
+        },
+        "00000000-0000-4000-8000-000000000341": {
+          "value": "Actividad 28",
+          "dimension": "activity_action",
+          "family_article_count": 28
+        },
+        "00000000-0000-4000-8000-000000000342": {
+          "value": "Actividad 29",
+          "dimension": "activity_action",
+          "family_article_count": 29
+        },
+        "00000000-0000-4000-8000-000000000343": {
+          "value": "Ｇrúas horquilla",
+          "dimension": "activity_action",
+          "family_article_count": 40
+        },
+        "00000000-0000-4000-8000-000000000344": {
+          "value": "𝐆rúas portacontenedores",
+          "dimension": "activity_action",
+          "family_article_count": 40
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000302": 1,
+        "00000000-0000-4000-8000-000000000303": 1,
+        "00000000-0000-4000-8000-000000000304": 1,
+        "00000000-0000-4000-8000-000000000305": 1,
+        "00000000-0000-4000-8000-000000000306": 1,
+        "00000000-0000-4000-8000-000000000307": 1,
+        "00000000-0000-4000-8000-000000000308": 1,
+        "00000000-0000-4000-8000-000000000309": 1,
+        "00000000-0000-4000-8000-000000000310": 1,
+        "00000000-0000-4000-8000-000000000311": 1,
+        "00000000-0000-4000-8000-000000000312": 1,
+        "00000000-0000-4000-8000-000000000313": 1,
+        "00000000-0000-4000-8000-000000000314": 1,
+        "00000000-0000-4000-8000-000000000315": 1,
+        "00000000-0000-4000-8000-000000000316": 1,
+        "00000000-0000-4000-8000-000000000317": 1,
+        "00000000-0000-4000-8000-000000000318": 1,
+        "00000000-0000-4000-8000-000000000319": 1,
+        "00000000-0000-4000-8000-000000000320": 1,
+        "00000000-0000-4000-8000-000000000321": 1,
+        "00000000-0000-4000-8000-000000000322": 1,
+        "00000000-0000-4000-8000-000000000323": 1,
+        "00000000-0000-4000-8000-000000000324": 1,
+        "00000000-0000-4000-8000-000000000325": 1,
+        "00000000-0000-4000-8000-000000000326": 1,
+        "00000000-0000-4000-8000-000000000327": 1,
+        "00000000-0000-4000-8000-000000000328": 1,
+        "00000000-0000-4000-8000-000000000329": 1,
+        "00000000-0000-4000-8000-000000000330": 1,
+        "00000000-0000-4000-8000-000000000331": 1,
+        "00000000-0000-4000-8000-000000000332": 1,
+        "00000000-0000-4000-8000-000000000333": 1,
+        "00000000-0000-4000-8000-000000000334": 1,
+        "00000000-0000-4000-8000-000000000335": 1,
+        "00000000-0000-4000-8000-000000000336": 1,
+        "00000000-0000-4000-8000-000000000337": 1,
+        "00000000-0000-4000-8000-000000000338": 1,
+        "00000000-0000-4000-8000-000000000339": 1,
+        "00000000-0000-4000-8000-000000000340": 1,
+        "00000000-0000-4000-8000-000000000341": 1,
+        "00000000-0000-4000-8000-000000000342": 1,
+        "00000000-0000-4000-8000-000000000343": 1,
+        "00000000-0000-4000-8000-000000000344": 1
+      },
+      "expected": {
+        "text": "Sector productivo: Salud; Sector 01; Sector 02; Sector 03; Sector 04; Sector 05; Sector 06; Sector 07; Sector 08; Sector 09\nActividad: Actividad 01; Actividad 02; Actividad 03; Actividad 04; Actividad 05; Actividad 06; Actividad 07; Actividad 08; Actividad 09; Actividad 10; Actividad 11; Actividad 12; Actividad 13; Actividad 14; Actividad 15; Actividad 16; Actividad 17; Actividad 18; Actividad 19; Actividad 20; Actividad 21; Actividad 22; Actividad 23; Actividad 24; Actividad 25; Actividad 26; Actividad 27; Actividad 28; Actividad 29; 𝐆rúas portacontenedores",
+        "sha256": "0c5286ff20bf3a4571fa767dc3244f0b5471e6a0ff500c834405348b101c1f84",
+        "length_utf16": 565,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 0,
+          "productive_sector": 3,
+          "activity_action": 1,
+          "facility_installation_equipment": 0
+        },
+        "cut_by_length": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        }
+      }
+    },
+    {
+      "id": "P6",
+      "description": "Antes del recorte, el texto mide 8.011 unidades UTF-16. Primero sale Ámbito W, el último del orden global (derived, con la familia más grande), aunque no está en la última línea. El texto queda en 8.001 unidades UTF-16 y 8.000 caracteres de Python (por el carácter fuera del plano básico), así que se sigue recortando por unidades UTF-16. Después, entre Ámbito Z, Instalación Y e Instalación Z (derived, con el mismo peso y el mismo family_article_count), va última la dimensión que viene después y, dentro de ella, el value mayor en orden ordinal UTF-16, así que sale Instalación Z. Seguridad vial, declared, queda aunque su familia es más grande que la de Instalación Z, porque pesa más; Relleno, de la misma dimensión, queda por su familia más chica.",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000401",
+          "dimension": "scope",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000402",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000403",
+          "dimension": "activity_action",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000404",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000405",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000406",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000407",
+          "dimension": "scope",
+          "source": "derived"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000401": {
+          "value": "Seguridad vial",
+          "dimension": "scope",
+          "family_article_count": 100
+        },
+        "00000000-0000-4000-8000-000000000402": {
+          "value": "Ámbito Z",
+          "dimension": "scope",
+          "family_article_count": 99
+        },
+        "00000000-0000-4000-8000-000000000403": {
+          "value": "𝐆rúas portacontenedores",
+          "dimension": "activity_action",
+          "family_article_count": 2
+        },
+        "00000000-0000-4000-8000-000000000404": {
+          "value": "Relleno xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 50
+        },
+        "00000000-0000-4000-8000-000000000405": {
+          "value": "Instalación Y",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 99
+        },
+        "00000000-0000-4000-8000-000000000406": {
+          "value": "Instalación Z",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 99
+        },
+        "00000000-0000-4000-8000-000000000407": {
+          "value": "Ámbito W",
+          "dimension": "scope",
+          "family_article_count": 200
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000402": 1,
+        "00000000-0000-4000-8000-000000000403": 1,
+        "00000000-0000-4000-8000-000000000404": 1,
+        "00000000-0000-4000-8000-000000000405": 1,
+        "00000000-0000-4000-8000-000000000406": 1,
+        "00000000-0000-4000-8000-000000000407": 1
+      },
+      "expected": {
+        "text": "Ámbito regulatorio: Seguridad vial; Ámbito Z\nActividad: 𝐆rúas portacontenedores\nObra, instalación o equipo: Instalación Y; Relleno xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sha256": "b7343eb3e7c2424c07d5d3b7cc5edb20b37cf69cbd63dd783cbf4fca476aa753",
+        "length_utf16": 7986,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        },
+        "cut_by_length": {
+          "scope": 1,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 1
+        }
+      }
+    },
+    {
+      "id": "P7",
+      "description": "El texto mide exactamente 8.000 unidades UTF-16 y no se recorta: se quita un valor solo mientras el texto supere el tope.",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000501",
+          "dimension": "scope",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000502",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000503",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000501": {
+          "value": "Seguridad vial",
+          "dimension": "scope",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000502": {
+          "value": "Instalación yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 5
+        },
+        "00000000-0000-4000-8000-000000000503": {
+          "value": "Instalación Z",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 6
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000502": 1,
+        "00000000-0000-4000-8000-000000000503": 1
+      },
+      "expected": {
+        "text": "Ámbito regulatorio: Seguridad vial\nObra, instalación o equipo: Instalación Z; Instalación yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+        "sha256": "44aa0cac4ca49067b8a050eb5faf166ee609215295d7de9b23be9a543e888b6a",
+        "length_utf16": 8000,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        },
+        "cut_by_length": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        }
+      }
+    },
+    {
+      "id": "P8",
+      "description": "Tope de ámbito exacto (20) con 22 raíces de peso 1,0 y las entradas en orden inverso: diecinueve derived saturados (cinco artículos vinculados) con family_article_count de 1 a 19; Ámbito derived saturado, también con cinco artículos y conteo 20; Ámbito declarado, declared con conteo 21; y Ámbito derived nueve, derived con nueve artículos y conteo 22. Con nueve artículos el derived pesa 1,0, igual que con cinco, porque el peso se satura. Con el mismo peso decide family_article_count y no la procedencia: quedan los diecinueve y Ámbito derived saturado, y salen Ámbito declarado y Ámbito derived nueve. Con un tope de ámbito de 19 o de 21, con la procedencia antes del conteo o con un derived que no se satura, el texto sería otro.",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000622",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000621",
+          "dimension": "scope",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000620",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000619",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000618",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000617",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000616",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000615",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000614",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000613",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000612",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000611",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000610",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000609",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000608",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000607",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000606",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000605",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000604",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000603",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000602",
+          "dimension": "scope",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000601",
+          "dimension": "scope",
+          "source": "derived"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000601": {
+          "value": "Ámbito 01",
+          "dimension": "scope",
+          "family_article_count": 1
+        },
+        "00000000-0000-4000-8000-000000000602": {
+          "value": "Ámbito 02",
+          "dimension": "scope",
+          "family_article_count": 2
+        },
+        "00000000-0000-4000-8000-000000000603": {
+          "value": "Ámbito 03",
+          "dimension": "scope",
+          "family_article_count": 3
+        },
+        "00000000-0000-4000-8000-000000000604": {
+          "value": "Ámbito 04",
+          "dimension": "scope",
+          "family_article_count": 4
+        },
+        "00000000-0000-4000-8000-000000000605": {
+          "value": "Ámbito 05",
+          "dimension": "scope",
+          "family_article_count": 5
+        },
+        "00000000-0000-4000-8000-000000000606": {
+          "value": "Ámbito 06",
+          "dimension": "scope",
+          "family_article_count": 6
+        },
+        "00000000-0000-4000-8000-000000000607": {
+          "value": "Ámbito 07",
+          "dimension": "scope",
+          "family_article_count": 7
+        },
+        "00000000-0000-4000-8000-000000000608": {
+          "value": "Ámbito 08",
+          "dimension": "scope",
+          "family_article_count": 8
+        },
+        "00000000-0000-4000-8000-000000000609": {
+          "value": "Ámbito 09",
+          "dimension": "scope",
+          "family_article_count": 9
+        },
+        "00000000-0000-4000-8000-000000000610": {
+          "value": "Ámbito 10",
+          "dimension": "scope",
+          "family_article_count": 10
+        },
+        "00000000-0000-4000-8000-000000000611": {
+          "value": "Ámbito 11",
+          "dimension": "scope",
+          "family_article_count": 11
+        },
+        "00000000-0000-4000-8000-000000000612": {
+          "value": "Ámbito 12",
+          "dimension": "scope",
+          "family_article_count": 12
+        },
+        "00000000-0000-4000-8000-000000000613": {
+          "value": "Ámbito 13",
+          "dimension": "scope",
+          "family_article_count": 13
+        },
+        "00000000-0000-4000-8000-000000000614": {
+          "value": "Ámbito 14",
+          "dimension": "scope",
+          "family_article_count": 14
+        },
+        "00000000-0000-4000-8000-000000000615": {
+          "value": "Ámbito 15",
+          "dimension": "scope",
+          "family_article_count": 15
+        },
+        "00000000-0000-4000-8000-000000000616": {
+          "value": "Ámbito 16",
+          "dimension": "scope",
+          "family_article_count": 16
+        },
+        "00000000-0000-4000-8000-000000000617": {
+          "value": "Ámbito 17",
+          "dimension": "scope",
+          "family_article_count": 17
+        },
+        "00000000-0000-4000-8000-000000000618": {
+          "value": "Ámbito 18",
+          "dimension": "scope",
+          "family_article_count": 18
+        },
+        "00000000-0000-4000-8000-000000000619": {
+          "value": "Ámbito 19",
+          "dimension": "scope",
+          "family_article_count": 19
+        },
+        "00000000-0000-4000-8000-000000000620": {
+          "value": "Ámbito derived saturado",
+          "dimension": "scope",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000621": {
+          "value": "Ámbito declarado",
+          "dimension": "scope",
+          "family_article_count": 21
+        },
+        "00000000-0000-4000-8000-000000000622": {
+          "value": "Ámbito derived nueve",
+          "dimension": "scope",
+          "family_article_count": 22
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000601": 5,
+        "00000000-0000-4000-8000-000000000602": 5,
+        "00000000-0000-4000-8000-000000000603": 5,
+        "00000000-0000-4000-8000-000000000604": 5,
+        "00000000-0000-4000-8000-000000000605": 5,
+        "00000000-0000-4000-8000-000000000606": 5,
+        "00000000-0000-4000-8000-000000000607": 5,
+        "00000000-0000-4000-8000-000000000608": 5,
+        "00000000-0000-4000-8000-000000000609": 5,
+        "00000000-0000-4000-8000-000000000610": 5,
+        "00000000-0000-4000-8000-000000000611": 5,
+        "00000000-0000-4000-8000-000000000612": 5,
+        "00000000-0000-4000-8000-000000000613": 5,
+        "00000000-0000-4000-8000-000000000614": 5,
+        "00000000-0000-4000-8000-000000000615": 5,
+        "00000000-0000-4000-8000-000000000616": 5,
+        "00000000-0000-4000-8000-000000000617": 5,
+        "00000000-0000-4000-8000-000000000618": 5,
+        "00000000-0000-4000-8000-000000000619": 5,
+        "00000000-0000-4000-8000-000000000620": 5,
+        "00000000-0000-4000-8000-000000000622": 9
+      },
+      "expected": {
+        "text": "Ámbito regulatorio: Ámbito 01; Ámbito 02; Ámbito 03; Ámbito 04; Ámbito 05; Ámbito 06; Ámbito 07; Ámbito 08; Ámbito 09; Ámbito 10; Ámbito 11; Ámbito 12; Ámbito 13; Ámbito 14; Ámbito 15; Ámbito 16; Ámbito 17; Ámbito 18; Ámbito 19; Ámbito derived saturado",
+        "sha256": "c712dab8e70bfc875f28c25ce82ffa634c796444677efc6586a18e0c5e1fc17b",
+        "length_utf16": 252,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 2,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        },
+        "cut_by_length": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        }
+      }
+    },
+    {
+      "id": "P9",
+      "description": "Recorte por largo con un empate de peso entre procedencias, en dimensiones distintas. Antes del recorte, el texto mide 8.010 unidades UTF-16. Pesan 1,0 el relleno (derived saturado de instalación, family_article_count 1), Sector saturado (derived saturado de sector, 20) y Ámbito declarado (declared de ámbito, 30). En el orden global decide family_article_count, y no la procedencia ni la dimensión, así que sale Ámbito declarado: la línea de ámbito queda sin valores y desaparece, y el texto mide 7.973 unidades UTF-16. Con la procedencia antes del conteo saldría Sector saturado, y con la dimensión antes del conteo, el relleno.",
+      "entries": [
+        {
+          "root": "00000000-0000-4000-8000-000000000703",
+          "dimension": "scope",
+          "source": "declared"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000702",
+          "dimension": "productive_sector",
+          "source": "derived"
+        },
+        {
+          "root": "00000000-0000-4000-8000-000000000701",
+          "dimension": "facility_installation_equipment",
+          "source": "derived"
+        }
+      ],
+      "roots": {
+        "00000000-0000-4000-8000-000000000703": {
+          "value": "Ámbito declarado",
+          "dimension": "scope",
+          "family_article_count": 30
+        },
+        "00000000-0000-4000-8000-000000000702": {
+          "value": "Sector saturado",
+          "dimension": "productive_sector",
+          "family_article_count": 20
+        },
+        "00000000-0000-4000-8000-000000000701": {
+          "value": "Relleno xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "dimension": "facility_installation_equipment",
+          "family_article_count": 1
+        }
+      },
+      "occurrences": {
+        "00000000-0000-4000-8000-000000000702": 5,
+        "00000000-0000-4000-8000-000000000701": 5
+      },
+      "expected": {
+        "text": "Sector productivo: Sector saturado\nObra, instalación o equipo: Relleno xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sha256": "980753f5c4928b91c05a53d356244d6158f5c0dec958dc19a789abf8cb532687",
+        "length_utf16": 7973,
+        "reason": null,
+        "cut_by_cap": {
+          "scope": 0,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        },
+        "cut_by_length": {
+          "scope": 1,
+          "productive_sector": 0,
+          "activity_action": 0,
+          "facility_installation_equipment": 0
+        }
+      }
+    }
+  ]
+}
