@@ -19,7 +19,7 @@ El tamaño por defecto es 1024, que es el de la columna `vector(1024)` del backe
 | Campo | Detalle |
 |---|---|
 | **ID** | EMB-001 |
-| **Rol** | Servicio interno. El endpoint no exige autenticación. |
+| **Rol** | Servicio interno. Exige `X-API-Key`. |
 
 **Descripción:**
 
