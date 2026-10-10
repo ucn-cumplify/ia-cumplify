@@ -149,7 +149,7 @@ uv run python scripts/retrieval_eval.py --base-url http://127.0.0.1:8000
 
 ### Evaluación del perfil embebido
 
-`scripts/profile_retrieval_eval.py` es la fase 0 de la tarea 2.4 del backend y cubre EMB-008 de `docs/Embeddings/test.csv`. Arma el texto del perfil de cada app de las empresas de demostración con la receta `prof-v1` de la tarea 2.3, lo embebe con un ia-cumplify ya en marcha y mide, sin reimplementar el puntaje del cruce, cuánto se parece a los trozos `art-v2` de las normas que la app sigue, de sus candidatas y de las normas sin relación. Mide también la evaluación que deja una norma afuera, las variantes de la receta y el control entre rubros. No es parte de pytest y gasta tokens reales, del orden de decenas de miles en la base local.
+`scripts/profile_retrieval_eval.py` es la fase 0 de la tarea 2.4 del backend y cubre EMB-008 y EMB-009 de `docs/Embeddings/test.csv`: la primera medición y la que congeló la receta `prof-v1` con los textos declarados. Arma el texto del perfil de cada app de las empresas de demostración con la receta `prof-v1` de la tarea 2.3, lo embebe con un ia-cumplify ya en marcha y mide, sin reimplementar el puntaje del cruce, cuánto se parece a los trozos `art-v2` de las normas que la app sigue, de sus candidatas y de las normas sin relación. Mide también la evaluación que deja una norma afuera, las variantes de la receta y el control entre rubros. No es parte de pytest y gasta tokens reales, del orden de decenas de miles en la base local.
 
 ```bash
 export SERVICE_API_KEY=...        # la misma del servicio
