@@ -20,7 +20,7 @@ _OLD_IMG_TAG = re.compile(
     rf"<img\b[^>]*?\bsrc\s*=\s*(?:[\"']\s*)?data:{_TYPE}\/[^>\s\"']+[^>]*>", re.IGNORECASE | re.DOTALL
 )
 _OLD_DATA_URI = re.compile(
-    rf"data:(?:{_TYPE}\/)?[a-z0-9.+_-]*(?:;[^;,:\s]+)*;base64,[A-Za-z0-9+/]+=*"
+    rf"data:(?:{_TYPE}\/)?[a-z0-9.+_-]*(?:;[^;,:\s]+)*;base64,(?:[A-Za-z0-9+/]+=*|\s+[A-Za-z0-9+/]{{40,}}=*)"
     r"(?:\s+[A-Za-z0-9+/]{40,}=*)*"
     r"(?:\s+[A-Za-z0-9+/]{1,39}={1,2}(?![A-Za-z0-9+/=]))?",
     re.IGNORECASE,
@@ -55,6 +55,10 @@ PDF = "data:application/pdf;base64,JVBERi0xLjQKJcfsj6IKNSAwIG9iago8PC9MZW5ndGggN
         (f'<img src="https://x.cl/a.png"> y <img src="{IMAGE}">', '<img src="https://x.cl/a.png"> y [imagen omitida]'),
         (f'<img alt="<img src={IMAGE}">', "[imagen omitida]"),
         ("data:image/png;base64,QUFB\nQUFB fin", "[imagen omitida]\nQUFB fin"),
+        # The base64 starts on the next line, wrapped at 76 characters (CLS-014 with the real provider).
+        (f"Ver data:image/gif;base64,\n{'QUFB' * 19}\n{'QUFB' * 19}\nLa empresa debe registrar.", "Ver [imagen omitida]\nLa empresa debe registrar."),
+        # A short next line is text, not base64: it stays.
+        ("data:image/png;base64,\nQUFB fin", "data:image/png;base64,\nQUFB fin"),
         ("Sin imágenes, solo base64 en el texto.", "Sin imágenes, solo base64 en el texto."),
     ],
 )

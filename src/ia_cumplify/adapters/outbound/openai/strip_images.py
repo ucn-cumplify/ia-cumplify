@@ -24,8 +24,10 @@ _IMG_SRC_DATA_URI = re.compile(rf"\bsrc\s*=\s*(?:[\"']\s*)?data:{_MIME_TYPE}\/[^
 # admits ":", so a match never runs into the next "data:" and the scan stays linear.
 # Base64 wrapped over several lines continues only with long lines (40+ characters, longer than any real
 # word), and a short last line only if it ends with "=" padding, so the text that follows is never consumed.
+# The base64 may also start on the next line, after ";base64," and a line break, as a writer that wraps at 76
+# characters leaves it; then its first line has to be a long one too.
 _DATA_URI = re.compile(
-    rf"data:(?:{_MIME_TYPE}\/)?[a-z0-9.+_-]*(?:;[^;,:\s]+)*;base64,[A-Za-z0-9+/]+=*"
+    rf"data:(?:{_MIME_TYPE}\/)?[a-z0-9.+_-]*(?:;[^;,:\s]+)*;base64,(?:[A-Za-z0-9+/]+=*|\s+[A-Za-z0-9+/]{{40,}}=*)"
     r"(?:\s+[A-Za-z0-9+/]{40,}=*)*"
     r"(?:\s+[A-Za-z0-9+/]{1,39}={1,2}(?![A-Za-z0-9+/=]))?",
     re.IGNORECASE,
