@@ -1,0 +1,18 @@
+# Secrets never enter the image: the container gets its settings from the environment.
+.env
+.env.*
+
+.git
+.venv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# Not needed to run the service.
+tests/
+scripts/
+docs/

@@ -105,6 +105,19 @@ El comando levanta Uvicorn con recarga en `http://0.0.0.0:8000`. El log del serv
 - Salud: `GET http://localhost:8000/health`
 - OpenAPI: `http://localhost:8000/docs`
 
+### Con Docker, junto al backend
+
+El `Dockerfile` arma la imagen que levanta el `docker-compose.yml` de `backend-cumplify` con el perfil `ia`, en la misma red que la API y Postgres y sin puerto publicado: desde el host no se alcanza. Desde `backend-cumplify`, con este repositorio clonado al lado (`../ia-cumplify`):
+
+```bash
+AI_SERVICE_URL=http://ia-cumplify:8000 docker compose --profile ia up -d
+```
+
+- La clave de OpenAI y el resto de la configuración salen del `.env` de este repositorio, que Compose lee al crear el contenedor. El `.env` nunca entra en la imagen (`.dockerignore`).
+- `DATABASE_URL` y `SERVICE_API_KEY` los pone el Compose del backend. La base es la misma que usa la API, con las variables `PG*` de libpq, así que la contraseña no viaja en una URL. La clave es la `AI_SERVICE_API_KEY` del backend, así que las dos siempre coinciden.
+- El contenedor arranca con `ia-cumplify-serve`: el mismo log que `uv run ia-cumplify`, sin recarga.
+- `GET /health` es su healthcheck.
+
 ## Pruebas
 
 Las pruebas usan pytest y httpx2, del grupo de desarrollo `dev`. `uv sync` ya instala ese grupo, salvo con `--no-dev`; para pedirlo de forma explícita:
