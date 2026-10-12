@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 ia-cumplify = "ia_cumplify.cli:main"
+ia-cumplify-serve = "ia_cumplify.cli:serve"
 
 [build-system]
 requires = ["uv_build>=0.12.15,<0.13.0"]
