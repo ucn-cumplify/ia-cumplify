@@ -1,139 +1,237 @@
-# ia-cumplify
+# Cumplify · ia-cumplify
 
-Servicio HTTP de inteligencia artificial de Cumplify. Clasifica los artículos de un cuerpo legal y el texto con que una empresa se describe, genera embeddings de texto y responde las preguntas del chat normativo en streaming, citando los pasajes que le envía el backend. No reemplaza al backend: lee la misma base PostgreSQL que escribe `backend-cumplify` y expone endpoints para que ese backend los consuma.
+Servicio HTTP de inteligencia artificial de **Cumplify**. Hace cinco cosas:
 
-## Tecnologías
+- clasifica los artículos de un cuerpo legal;
+- clasifica el texto con que una empresa se describe;
+- genera embeddings de texto;
+- redacta el motivo por el que un artículo sugerido le aplica a una empresa;
+- responde en streaming las preguntas del chat normativo, citando los pasajes que le envía el backend.
 
-- Python 3.12
-- FastAPI (0.140.13 o posterior, por los Server-Sent Events de `fastapi.sse`) y Uvicorn
-- OpenAI (clasificación con el modelo configurado en `OPENAI_MODEL`, chat con `CHAT_MODEL` o, si está vacía, `OPENAI_MODEL`, y embeddings con `OPENAI_EMBEDDING_MODEL`)
-- PostgreSQL vía psycopg (misma base que el backend)
-- uv
-- pytest, en el grupo de desarrollo `dev`
+No reemplaza al backend: lee la misma base PostgreSQL que escribe `backend-cumplify` y expone endpoints que solo ese
+backend consume.
 
-## Relación con los otros repositorios
+## Contenido
 
-| Proceso | Puerto | Rol |
+- [El sistema completo](#el-sistema-completo)
+- [Requisitos](#requisitos)
+- [Puesta en marcha](#puesta-en-marcha)
+- [Configuración](#configuración)
+- [Ejecución junto al backend](#ejecución-junto-al-backend)
+- [Pruebas](#pruebas)
+- [Herramientas de evaluación](#herramientas-de-evaluación)
+- [Endpoints](#endpoints)
+- [Estructura](#estructura)
+- [Solución de problemas](#solución-de-problemas)
+
+## El sistema completo
+
+| Repositorio | Rol | Puerto local |
 |---|---|---|
-| PostgreSQL | 5432 | Lo levanta `backend-cumplify` |
-| backend-cumplify | 8080 | Crea e hidrata cuerpos legales. Envía textos a embeber |
-| frontend-cumplify | 3000 | Habla solo con el backend |
-| ia-cumplify | 8000 | Clasifica cuerpos legales y perfiles de empresa, embebe textos y responde el chat |
+| [backend-cumplify](https://github.com/ucn-cumplify/backend-cumplify) | API REST y PostgreSQL. Crea e hidrata los cuerpos legales y envía los textos a clasificar o embeber | 8080 (API) y 5432 (base) |
+| [frontend-cumplify](https://github.com/ucn-cumplify/frontend-cumplify) | Interfaz web; habla solo con el backend | 3000 |
+| **ia-cumplify** (este) | Clasificación, embeddings, motivos de aplicabilidad y chat | 8000 |
 
-El backend crea el cuerpo legal y, si viene de la BCN, lo hidrata antes de clasificar. Este servicio no crea ni hidrata normas, y no guarda la clasificación ni los vectores. La persistencia queda en el backend.
+Reparto de responsabilidades:
+- **Normas:** el backend crea cada cuerpo legal y, si viene de la BCN, lo hidrata antes de pedir su clasificación. Este
+  servicio no crea ni hidrata normas, y tampoco guarda la clasificación ni los vectores: la persistencia es del backend.
+- **Base de datos:** este servicio la lee solo para clasificar normas y redactar motivos de aplicabilidad.
+- **Chat:** el chat no lee la base ni guarda estado. Cada pedido trae la pregunta, los mensajes recientes y los pasajes
+  que el backend recuperó para ese turno. Recuperar los pasajes, guardar la conversación y reenviar el stream al navegador
+  es trabajo del backend.
 
-El chat tampoco lee la base ni guarda estado: cada pedido trae la pregunta, los mensajes recientes y los pasajes que el backend recuperó para ese turno. Recuperar los pasajes, guardar la conversación y reenviar el stream al navegador le corresponde al backend (tareas 4.5, 4.4 y 4.7 del plan del equipo).
+## Requisitos
 
-`DATABASE_URL` debe apuntar a la misma base, usando `localhost` cuando este proceso se ejecuta en el host y Postgres está publicado por Docker:
+| Herramienta | Versión | Nota |
+|---|---|---|
+| Python | 3.12 | `uv` lo instala si falta |
+| [uv](https://docs.astral.sh/uv/getting-started/installation/) | reciente | Gestiona el entorno y las dependencias |
+| Clave de API de OpenAI | — | Para clasificar, embeber, redactar motivos y responder el chat |
+| PostgreSQL de `backend-cumplify` | — | Lo levanta el backend; hace falta para clasificar normas y redactar motivos |
 
-```text
-postgresql://postgres:postgres@localhost:5432/cumplify_db
+## Puesta en marcha
+
+1. **Clonar el repositorio.**
+
+   ```bash
+   git clone https://github.com/ucn-cumplify/ia-cumplify.git
+   cd ia-cumplify
+   ```
+
+2. **Crear el `.env`** a partir del ejemplo (en PowerShell: `Copy-Item .env.example .env`).
+
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Completar las tres variables obligatorias.** Con el `docker-compose.yml` del backend y sus valores por defecto:
+
+   ```env
+   SERVICE_API_KEY=<la misma AI_SERVICE_API_KEY del backend>
+   OPENAI_API_KEY=<tu clave de OpenAI>
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cumplify_db
+   ```
+
+   Para generar la clave compartida: `openssl rand -base64 32`, o
+   `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+
+4. **Instalar y levantar.**
+
+   ```bash
+   uv sync
+   uv run ia-cumplify
+   ```
+
+5. **Verificar.**
+
+   ```bash
+   curl http://localhost:8000/health
+   ```
+
+   La respuesta es `{"status": "ok"}`. La documentación OpenAPI queda en http://localhost:8000/docs.
+
+`uv run ia-cumplify` levanta Uvicorn con recarga automática en `0.0.0.0:8000`, todas las interfaces de red. Desde fuera
+del equipo es alcanzable, pero todo `/api/v1` exige la clave de `SERVICE_API_KEY`. El log sale por stderr en nivel INFO.
+
+Para escuchar en una sola interfaz, se lanza Uvicorn directamente; por ejemplo, el puente de Docker en Linux:
+
+```bash
+uv run uvicorn ia_cumplify.adapters.inbound.http.app:app --host 172.17.0.1 --port 8000
 ```
+
+Ese lanzamiento no pasa por `cli.py`, así que no muestra los registros INFO del servicio sin un `--log-config`
+equivalente.
 
 ## Configuración
 
-1. Copia el ejemplo:
+Todas las variables están en `.env.example`. Las principales:
 
-```bash
-cp .env.example .env
-```
+| Variable | Por defecto | Uso |
+|---|---|---|
+| `SERVICE_API_KEY` | — | Secreto del header `X-API-Key`; igual a `AI_SERVICE_API_KEY` del backend |
+| `OPENAI_API_KEY` | — | Clave de OpenAI |
+| `OPENAI_MODEL` | `gpt-5.6-luna` | Modelo de la clasificación, del perfil y de los motivos; también del chat si `CHAT_MODEL` está vacía |
+| `OPENAI_REASONING_EFFORT` | `low` | Esfuerzo de razonamiento |
+| `DATABASE_URL` | — | La misma base que usa el backend |
+| `CLASSIFY_BATCH_SIZE` | 25 | Artículos que se clasifican por llamada al modelo; cada llamada lleva la norma completa |
+| `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-large` | Modelo de embeddings |
+| `OPENAI_EMBEDDING_DIMENSIONS` | 1024 | Tiene que coincidir con la columna `vector(1024)` del backend |
+| `EMBEDDINGS_MAX_TEXTS` | 256 | Textos máximos por pedido de embeddings; el backend envía lotes de 50 |
+| `PROFILE_TEXT_MAX_CHARS` | 4.000 | Largo máximo del texto de perfil; igual a `AI_PROFILE_TEXT_MAX_CHARS` del backend |
+| `OPENAI_TIMEOUT_SECONDS` | 180 | Plazo de cada llamada a OpenAI. Clasificar una norma completa puede tardar minutos. No lo usan el chat ni los motivos |
+| `OPENAI_MAX_RETRIES` | 2 | Reintentos del SDK ante 408, 409, 429, 5xx, plazos vencidos y errores de conexión. No los usan el chat ni los motivos |
+| `APPLICABILITY_REASONS_TIMEOUT_SECONDS` | 25 | Plazo de `POST /api/v1/applicability-reasons` |
+| `APPLICABILITY_REASONS_MAX_RETRIES` | 0 | Reintentos de los motivos |
+| `INCLUDE_DEV_METRICS` | `true` | Agrega `dev_metrics` con el tiempo de respuesta |
 
-En PowerShell: `copy .env.example .env`.
-
-2. Completa al menos la clave compartida con el backend, la clave de OpenAI y la base:
-
-```env
-SERVICE_API_KEY=un-secreto-largo-y-aleatorio
-
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-5.6-luna
-OPENAI_REASONING_EFFORT=low
-
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cumplify_db
-
-INCLUDE_DEV_METRICS=true
-CLASSIFY_BATCH_SIZE=25
-
-OPENAI_EMBEDDING_MODEL=text-embedding-3-large
-OPENAI_EMBEDDING_DIMENSIONS=1024
-EMBEDDINGS_MAX_TEXTS=256
-```
-
-`SERVICE_API_KEY` es el secreto que el backend envía en el header `X-API-Key` y tiene que ser igual a su `AI_SERVICE_API_KEY`. Todo `/api/v1` lo exige: sin header o con otro valor responde 401, y si `SERVICE_API_KEY` está vacía responde 503. `/health` queda abierto. Para generar uno: `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
-
-`OPENAI_EMBEDDING_DIMENSIONS` tiene que coincidir con la columna `vector(1024)` del backend. Si el request de embeddings no manda `model` ni `dimensions`, se usan estos valores.
-
-`PROFILE_TEXT_MAX_CHARS` (defecto 4.000) es el largo máximo del texto de perfil de una empresa y tiene que coincidir con `AI_PROFILE_TEXT_MAX_CHARS` del backend: un texto más largo recibe 422.
-
-`INCLUDE_DEV_METRICS` solo agrega `dev_metrics`, con el tiempo de respuesta; en el chat, `elapsed_ms` y `first_delta_ms` en el evento `done`. En la clasificación y el perfil, la versión del clasificador y el uso de tokens viajan siempre, en `classifier_version` y `usage`. En el chat, la versión va en `chat_version`, y `usage` vale `null` si el proveedor no llegó a informarlo. En los motivos de aplicabilidad viajan `reason_version` y `usage`.
-
-`APPLICABILITY_REASONS_TIMEOUT_SECONDS` (25) y `APPLICABILITY_REASONS_MAX_RETRIES` (0) son del `POST /api/v1/applicability-reasons`. Quedan por debajo de los 30 s que espera el backend (`AI_APPLICABILITY_REASONS_TIMEOUT_SECONDS`), para que un modelo lento falle aquí y el backend deje la plantilla.
+- **`SERVICE_API_KEY`:** todo `/api/v1` la exige. Sin header o con otro valor, el servicio responde 401; si la variable
+  está vacía, responde 503. `/health` queda abierto.
+- **Topes compartidos con el backend:** si `PROFILE_TEXT_MAX_CHARS` es menor que el tope del backend, un texto que el
+  backend acepta recibe 422.
+- **Plazos de los motivos:** quedan por debajo de los 30 s que espera el backend
+  (`AI_APPLICABILITY_REASONS_TIMEOUT_SECONDS`). Así, un modelo lento falla aquí y el backend usa su plantilla.
+- **Qué informa cada respuesta:**
+  - `INCLUDE_DEV_METRICS` agrega `dev_metrics` y, en el chat, `elapsed_ms` y `first_delta_ms` en el evento `done`;
+  - la clasificación y el perfil siempre informan `classifier_version` y `usage`;
+  - el chat informa `chat_version`, con `usage` en `null` si el proveedor no llegó a informarlo;
+  - los motivos informan `reason_version` y `usage`.
 
 ### Chat
 
-El chat (`POST /api/v1/chat`) tiene su propia configuración: no usa `OPENAI_TIMEOUT_SECONDS` (180) ni `OPENAI_MAX_RETRIES` (2), que en el peor caso suman minutos sin respuesta. Todas las variables son opcionales; los valores por defecto son los del contrato (`docs/Chat/api.md`).
+El chat (`POST /api/v1/chat`) tiene su propia configuración: no usa `OPENAI_TIMEOUT_SECONDS` ni `OPENAI_MAX_RETRIES`,
+que en el peor caso suman minutos sin respuesta. Todas sus variables son opcionales; los valores por defecto son los del
+contrato (`docs/Chat/api.md`).
 
-| Variable | Defecto | Uso | Espejo en el backend |
+| Variable | Defecto | Uso | Constante equivalente en el backend |
 |---|---|---|---|
 | `CHAT_MODEL` | vacía (usa `OPENAI_MODEL`) | Modelo del chat | |
 | `CHAT_REASONING_EFFORT` | vacía (usa `OPENAI_REASONING_EFFORT`) | Esfuerzo de razonamiento del chat | |
 | `CHAT_MAX_COMPLETION_TOKENS` | 4.000 | Tope de salida por respuesta, razonamiento incluido | |
 | `CHAT_TIMEOUT_SECONDS` | 60 | Lectura, por intento: lo máximo que se esperan las cabeceras de OpenAI o su siguiente fragmento. La conexión tiene 5 s | |
 | `CHAT_MAX_RETRIES` | 0 | Reintentos del SDK, solo antes de que OpenAI responda 2xx. Con 0, el backend decide si reintenta | |
-| `CHAT_QUESTION_MAX_CHARS` | 2.000 | Largo máximo de la pregunta, recortada | `AI_CHAT_QUESTION_MAX_CHARS` |
-| `CHAT_HISTORY_MAX_MESSAGES` | 6 | Mensajes máximos del historial, sin contar los vacíos | `AI_CHAT_HISTORY_MAX_MESSAGES` |
-| `CHAT_HISTORY_MAX_CHARS` | 8.000 | Caracteres máximos del historial, sumados | `AI_CHAT_HISTORY_MAX_CHARS` |
-| `CHAT_MAX_PASSAGES` | 12 | Pasajes máximos por pedido | `AI_CHAT_MAX_PASSAGES` |
-| `CHAT_PASSAGE_MAX_CHARS` | 6.000 | Largo máximo del texto de un pasaje, recortado | `AI_CHAT_PASSAGE_MAX_CHARS` |
-| `CHAT_PASSAGES_MAX_TOTAL_CHARS` | 48.000 | Suma máxima de los textos de los pasajes | `AI_CHAT_PASSAGES_MAX_TOTAL_CHARS` |
+| `CHAT_QUESTION_MAX_CHARS` | 2.000 | Largo máximo de la pregunta, recortada | `ChatTurn.QuestionMaxChars` |
+| `CHAT_HISTORY_MAX_MESSAGES` | 6 | Mensajes máximos del historial, sin contar los vacíos | `ChatHistory.MaxMessages` |
+| `CHAT_HISTORY_MAX_CHARS` | 8.000 | Caracteres máximos del historial, sumados | `ChatHistory.MaxChars` |
+| `CHAT_MAX_PASSAGES` | 12 | Pasajes máximos por pedido | `ChatPassageLimits.MaxPassages` |
+| `CHAT_PASSAGE_MAX_CHARS` | 6.000 | Largo máximo del texto de un pasaje, recortado | `ChatPassageLimits.MaxPassageChars` |
+| `CHAT_PASSAGES_MAX_TOTAL_CHARS` | 48.000 | Suma máxima de los textos de los pasajes | `ChatPassageLimits.MaxTotalChars` |
 | `CHAT_FAKE_RESPONDER` | `false` | Respondedor falso: un texto fijo que cita el primer pasaje, sin llamar a OpenAI ni exigir `OPENAI_API_KEY`, con `chat_version` `fake-v1@fake`. Solo para integrar sin gastar tokens; si arranca activo, el log lo avisa | |
 
-- Los topes se espejan en el backend, como `PROFILE_TEXT_MAX_CHARS` con `AI_PROFILE_TEXT_MAX_CHARS`: si el backend sube un tope y este servicio no, un pedido válido para el backend recibe 422. Los nombres `AI_CHAT_*` son una propuesta: el backend todavía no los define.
-- Con el respondedor real y sin `OPENAI_API_KEY`, el chat responde 503 antes de validar el esquema y los largos, aunque el pedido venga sin pasajes.
+- **Topes del chat:** en el backend son constantes, no variables de entorno. Subir uno exige cambiar el backend y este
+  servicio a la vez; si no, un pedido válido para el backend recibe 422.
+- **Sin clave de OpenAI:** con el respondedor real y sin `OPENAI_API_KEY`, el chat responde 503 antes de validar el
+  esquema y los largos, aunque el pedido venga sin pasajes.
 
-## Ejecución local
+## Ejecución junto al backend
 
-Con el Postgres del backend ya disponible:
+El backend llega a este servicio con `AI_SERVICE_URL` y le envía `AI_SERVICE_API_KEY` en el header `X-API-Key`. Hay dos
+formas de conectarlos.
 
-```bash
-uv sync
-uv run ia-cumplify
-```
+### Con Docker, dentro del Compose del backend (recomendada)
 
-El comando levanta Uvicorn con recarga en `http://0.0.0.0:8000`. El log del servicio sale por stderr en nivel INFO, con el formato de Uvicorn; un lanzamiento directo con `uvicorn ia_cumplify.adapters.inbound.http.app:app` no pasa por `cli.py` y necesita un `--log-config` equivalente.
-
-- Salud: `GET http://localhost:8000/health`
-- OpenAPI: `http://localhost:8000/docs`
-
-### Con Docker, junto al backend
-
-El `Dockerfile` arma la imagen que levanta el `docker-compose.yml` de `backend-cumplify` con el perfil `ia`, en la misma red que la API y Postgres y sin puerto publicado: desde el host no se alcanza. Desde `backend-cumplify`, con este repositorio clonado al lado (`../ia-cumplify`):
+El `Dockerfile` arma la imagen que levanta el `docker-compose.yml` de `backend-cumplify` con el perfil `ia`. Queda en la
+misma red que la API y PostgreSQL, sin puerto publicado, así que desde el host no se alcanza. Con este repositorio
+clonado junto al backend (`../ia-cumplify`), desde `backend-cumplify`:
 
 ```bash
 AI_SERVICE_URL=http://ia-cumplify:8000 docker compose --profile ia up -d
 ```
 
-- La clave de OpenAI y el resto de la configuración salen del `.env` de este repositorio, que Compose lee al crear el contenedor. El `.env` nunca entra en la imagen (`.dockerignore`).
-- `DATABASE_URL` y `SERVICE_API_KEY` los pone el Compose del backend. La base es la misma que usa la API, con las variables `PG*` de libpq, así que la contraseña no viaja en una URL. La clave es la `AI_SERVICE_API_KEY` del backend, así que las dos siempre coinciden.
-- El contenedor arranca con `ia-cumplify-serve`: el mismo log que `uv run ia-cumplify`, sin recarga.
-- `GET /health` es su healthcheck.
+- **Configuración:** la clave de OpenAI y el resto salen del `.env` de este repositorio, que Compose lee al crear el
+  contenedor. El `.env` nunca entra en la imagen (`.dockerignore`).
+- **Base y clave:** las pone el Compose del backend:
+  - la base es la misma que usa la API, con las variables `PG*` de libpq, así que la contraseña no viaja en una URL;
+  - `SERVICE_API_KEY` toma el valor de `AI_SERVICE_API_KEY` del backend, así que las dos siempre coinciden.
+- **Arranque:** el contenedor arranca con `ia-cumplify-serve`, que da el mismo log que `uv run ia-cumplify` pero sin
+  recarga. Su healthcheck es `GET /health`.
+
+El README del backend explica cómo dejar el perfil encendido con `COMPOSE_PROFILES=ia`.
+
+### Con el servicio en el host
+
+Sirve para desarrollar este servicio y ver los cambios al instante. Se levanta con `uv run ia-cumplify` y, en el `.env`
+del backend:
+
+```env
+AI_SERVICE_URL=http://host.docker.internal:8000
+AI_SERVICE_API_KEY=<la misma SERVICE_API_KEY de este servicio>
+```
+
+- **Interfaz:** la API corre en un contenedor, así que este servicio tiene que escuchar en una interfaz que el contenedor
+  alcance. Sirven la de `uv run ia-cumplify` (`0.0.0.0`) o el puente de Docker (`--host 172.17.0.1` en Linux).
+- **Base de datos:** `DATABASE_URL` tiene que apuntar a la misma base que usa la API.
 
 ## Pruebas
 
-Las pruebas usan pytest y httpx2, del grupo de desarrollo `dev`. `uv sync` ya instala ese grupo, salvo con `--no-dev`; para pedirlo de forma explícita:
+Las pruebas usan pytest y httpx2, del grupo de desarrollo `dev`. `uv sync` ya instala ese grupo, salvo con `--no-dev`;
+para pedirlo de forma explícita:
 
 ```bash
 uv sync --group dev
 uv run pytest
 ```
 
-- Ninguna prueba lee `.env` ni llama a OpenAI. Usan un respondedor falso o un OpenAI simulado en 127.0.0.1, y `tests/conftest.py` borra las variables de `Settings` antes de cada prueba. Tampoco hace falta Postgres.
-- Las pruebas de desconexión del chat (marcador `disconnect`) levantan uvicorn y el OpenAI simulado como procesos propios en 127.0.0.1. Para omitirlas: `uv run pytest -m "not disconnect"`.
-- Los casos de prueba de cada módulo están en `docs/<Módulo>/test.csv`; los que cubre una prueba automática la nombran en `Resultado Obtenido`.
+- Ninguna prueba lee `.env` ni llama a OpenAI. Usan un respondedor falso o un OpenAI simulado en 127.0.0.1, y
+  `tests/conftest.py` borra las variables de `Settings` antes de cada prueba. Tampoco hace falta PostgreSQL.
+- Las pruebas de desconexión del chat (marcador `disconnect`) levantan uvicorn y el OpenAI simulado como procesos propios
+  en 127.0.0.1. Para omitirlas: `uv run pytest -m "not disconnect"`.
+- Los casos de prueba de cada módulo están en `docs/<Módulo>/test.csv`; los que cubre una prueba automática la nombran en
+  `Resultado Obtenido`.
+
+## Herramientas de evaluación
+
+Son scripts manuales, fuera de pytest, que se ejecutan contra un ia-cumplify ya en marcha. Ninguno lee `.env`: las
+variables van exportadas o como argumentos (`--api-key`, `--database-url`), y los resultados detallados, que pueden traer
+datos de empresas, van a `--out`, siempre fuera del repositorio.
 
 ### Set de evaluación del chat
 
-`scripts/chat_eval.py` ejecuta a mano el set fijo de evaluación del prompt del chat (`scripts/chat_eval_set.json`, 26 preguntas) y cubre CHT-041 a CHT-046 de `docs/Chat/test.csv`. No es parte de pytest, que solo recoge `tests/`, y **gasta tokens reales**: le pide cada respuesta a un ia-cumplify ya en marcha, que llama a OpenAI. Una ejecución completa costó de 50.000 a 53.000 tokens con `chat-v2` y `chat-v3` ("Costo por pregunta" en `docs/Chat/requirements.md`), y el script informa el gasto real.
+`scripts/chat_eval.py` ejecuta el set fijo de evaluación del prompt del chat (`scripts/chat_eval_set.json`, 26
+preguntas) y cubre CHT-041 a CHT-046 de `docs/Chat/test.csv`.
+
+> **Gasta tokens reales.** Le pide cada respuesta al servicio, que llama a OpenAI. Una ejecución completa costó de 50.000
+> a 53.000 tokens con `chat-v2` y `chat-v3` («Costo por pregunta» en `docs/Chat/requirements.md`), y el script informa el
+> gasto real.
 
 ```bash
 export SERVICE_API_KEY=...        # la misma del servicio
@@ -141,14 +239,26 @@ export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cumplify_db
 uv run python scripts/chat_eval.py --base-url http://127.0.0.1:8000
 ```
 
-- Saca los pasajes de la base local con una conexión propia de solo lectura. No lee `.env`: las variables van exportadas o como argumentos (`--api-key`, `--database-url`).
-- Por consola muestra solo métricas: tokens (incluidos `cached_tokens` y `reasoning_tokens`), latencia del primer `delta` y total, cobertura y citas descartadas por caso, y los casos cuya cobertura no es la esperada. Las respuestas completas y los pasajes, que traen datos de la empresa, van a `--out` (por defecto, un archivo del directorio temporal), siempre fuera del repositorio.
-- `--case E01` ejecuta solo ese caso (se puede repetir). `--repeat-case E01` repite ese pedido idéntico al final y compara su `cached_tokens` con el límite de "Privacidad" de `docs/Chat/api.md`; solo sirve si se acuerda un modo explícito de caché.
-- Para probar el script sin gastar tokens, el servicio va con `CHAT_FAKE_RESPONDER=true` y sin `OPENAI_API_KEY`; sin base, `--without-db` usa pasajes simulados. El informe marca la ejecución como simulada (`chat_version` `fake-v1@fake`, `usage` en cero).
+- **Pasajes:** los saca de la base local con una conexión propia de solo lectura.
+- **Consola:** muestra solo métricas:
+  - tokens, incluidos `cached_tokens` y `reasoning_tokens`;
+  - latencia del primer `delta` y total;
+  - cobertura y citas descartadas por caso;
+  - los casos cuya cobertura no es la esperada.
+- **Opciones:** `--case E01` ejecuta solo ese caso y se puede repetir. `--repeat-case E01` repite ese pedido idéntico al
+  final y compara su `cached_tokens` con el límite de «Privacidad» de `docs/Chat/api.md`; solo sirve si se acuerda un modo
+  explícito de caché.
+- **Sin gastar tokens:** se levanta el servicio con `CHAT_FAKE_RESPONDER=true` y sin `OPENAI_API_KEY`; sin base,
+  `--without-db` usa pasajes simulados. El informe marca la ejecución como simulada (`chat_version` `fake-v1@fake`,
+  `usage` en cero).
 
 ### Evaluación de recuperación de los embeddings
 
-`scripts/retrieval_eval.py` compara a mano las recetas de embeddings de artículos que `backend-cumplify` guarda en `ai_embeddings` (por defecto `text-embedding-3-large@1024#art-v1` y `#art-v2`) con un conjunto fijo de preguntas (`scripts/retrieval_eval_set.json`), y mide recall@k y MRR por receta y por tipo de pregunta. Es el script del caso AI-044 del backend y cubre EMB-007 de `docs/Embeddings/test.csv`. No es parte de pytest y gasta pocos tokens: solo los de las preguntas, que embebe un ia-cumplify ya en marcha; los vectores de los artículos ya están guardados.
+`scripts/retrieval_eval.py` compara las recetas de embeddings de artículos que `backend-cumplify` guarda en
+`ai_embeddings` (por defecto, `text-embedding-3-large@1024#art-v1` y `#art-v2`) con un conjunto fijo de preguntas
+(`scripts/retrieval_eval_set.json`). Mide recall@k y MRR por receta y por tipo de pregunta. Es el script del caso AI-044
+del backend y cubre EMB-007 de `docs/Embeddings/test.csv`. Gasta pocos tokens: solo los de las preguntas, porque los
+vectores de los artículos ya están guardados.
 
 ```bash
 export SERVICE_API_KEY=...        # la misma del servicio
@@ -156,13 +266,26 @@ export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cumplify_db
 uv run python scripts/retrieval_eval.py --base-url http://127.0.0.1:8000
 ```
 
-- Lee la base local con una conexión propia de solo lectura. No lee `.env`: las variables van exportadas o como argumentos (`--api-key`, `--database-url`).
-- Por consola muestra solo métricas y los tokens que informa el endpoint. El detalle por pregunta va a `--out` (por defecto, un archivo del directorio temporal), siempre fuera del repositorio.
-- Qué mide, el formato del conjunto y las opciones están en "Evaluación de recuperación" de `docs/Embeddings/requirements.md`. `--self-test` comprueba el cálculo de las métricas con datos inventados, sin servicio ni base.
+Qué mide, el formato del conjunto y las opciones están en «Evaluación de recuperación» de
+`docs/Embeddings/requirements.md`. `--self-test` comprueba el cálculo de las métricas con datos inventados, sin servicio
+ni base.
 
 ### Evaluación del perfil embebido
 
-`scripts/profile_retrieval_eval.py` es la fase 0 de la tarea 2.4 del backend y cubre EMB-008 y EMB-009 de `docs/Embeddings/test.csv`: la primera medición y la que congeló la receta `prof-v1` con los textos declarados. Arma el texto del perfil de cada app de las empresas de demostración con la receta `prof-v1` de la tarea 2.3, lo embebe con un ia-cumplify ya en marcha y mide, sin reimplementar el puntaje del cruce, cuánto se parece a los trozos `art-v2` de las normas que la app sigue, de sus candidatas y de las normas sin relación. Mide también la evaluación que deja una norma afuera, las variantes de la receta y el control entre rubros. No es parte de pytest y gasta tokens reales, del orden de decenas de miles en la base local.
+`scripts/profile_retrieval_eval.py` es la fase 0 de la tarea 2.4 del backend y cubre EMB-008 y EMB-009 de
+`docs/Embeddings/test.csv`. Corresponde a la primera medición y a la que congeló la receta `prof-v1` con los textos
+declarados.
+
+- **Qué hace:** arma el texto del perfil de cada app de las empresas de demostración con la receta `prof-v1` de la tarea
+  2.3 y lo embebe con el servicio.
+- **Qué mide**, sin reimplementar el puntaje del cruce:
+  - cuánto se parece ese perfil a los trozos `art-v2` de las normas que la app sigue, de sus candidatas y de normas sin
+    relación;
+  - la evaluación que deja una norma afuera;
+  - las variantes de la receta;
+  - el control entre rubros.
+
+> **Gasta tokens reales**, del orden de decenas de miles en la base local.
 
 ```bash
 export SERVICE_API_KEY=...        # la misma del servicio
@@ -171,10 +294,13 @@ uv run python scripts/profile_retrieval_eval.py --dry-run
 uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
 ```
 
-- Lee la base local con una conexión propia de solo lectura y, en la ejecución real, con un rol temporal que solo puede leer sus tablas y que se borra al terminar. No lee `.env`: las variables van exportadas o como argumentos (`--api-key`, `--database-url`).
-- `--dry-run` arma los textos y muestra, de los de `prof-v1`, el SHA-256, el largo y los valores por dimensión, con el costo estimado, sin llamar al endpoint ni pedir `SERVICE_API_KEY`. Los textos van solo a `--out`.
-- Por consola muestra solo métricas y, en `--dry-run`, hashes y conteos. Los textos de perfil, que son datos de empresas, van a `--out` (por defecto, un archivo del directorio temporal; en `--dry-run`, solo si se indica), siempre fuera del repositorio.
-- La receta, los casos de paridad (`scripts/profile_text_parity.json`), qué mide, el rol de solo lectura, las condiciones del `--dry-run` de referencia para el backend y las opciones están en "Evaluación del perfil embebido" de `docs/Embeddings/requirements.md`. `--self-test` comprueba la receta, esos casos y las métricas con datos inventados, sin servicio ni base.
+- **Acceso a la base:** en la ejecución real usa un rol temporal que solo puede leer sus tablas y que se borra al
+  terminar.
+- **`--dry-run`:** arma los textos y muestra el SHA-256, el largo y los valores por dimensión de los de `prof-v1`, con el
+  costo estimado. No llama al endpoint ni pide `SERVICE_API_KEY`, y los textos van solo a `--out`.
+- **Más detalle:** la receta, los casos de paridad (`scripts/profile_text_parity.json`), el rol de solo lectura y las
+  opciones están en «Evaluación del perfil embebido» de `docs/Embeddings/requirements.md`. `--self-test` comprueba la
+  receta, esos casos y las métricas con datos inventados, sin servicio ni base.
 
 ## Endpoints
 
@@ -182,12 +308,12 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
 |---|---|---|
 | GET | `/health` | Responde `{"status": "ok"}`. No exige `X-API-Key` |
 | POST | `/api/v1/legal-bodies/classify` | Clasifica los artículos de un cuerpo legal ya hidratado |
-| POST | `/api/v1/applicability-reasons` | Un motivo en español por artículo sugerido; lee la norma y solo esos artículos; nunca el texto del perfil |
-| POST | `/api/v1/company-profiles/classify` | Clasifica el texto con que una empresa se describe, en las mismas seis dimensiones; no usa la base |
+| POST | `/api/v1/applicability-reasons` | Un motivo en español por artículo sugerido. Lee la norma y solo esos artículos, nunca el texto del perfil |
+| POST | `/api/v1/company-profiles/classify` | Clasifica en las mismas seis dimensiones el texto con que una empresa se describe; no usa la base |
 | POST | `/api/v1/embeddings` | Devuelve un vector por cada texto, en el mismo orden |
 | POST | `/api/v1/chat` | Responde una pregunta del chat en streaming (Server-Sent Events), solo con los pasajes del pedido y citando cada afirmación; no usa la base |
 
-El contrato, las reglas y los casos de prueba están en `docs/`.
+El contrato, las reglas y los casos de prueba de cada endpoint están en `docs/`.
 
 ## Estructura
 
@@ -200,11 +326,22 @@ ia-cumplify/
 │   │   ├── inbound/http/        # FastAPI: routers, esquemas, dependencias
 │   │   └── outbound/            # OpenAI, PostgreSQL y el respondedor falso del chat
 │   ├── config/
-│   └── cli.py
+│   └── cli.py                   # ia-cumplify (desarrollo) e ia-cumplify-serve (contenedor)
 ├── tests/                       # pytest, con un OpenAI simulado en 127.0.0.1
-├── scripts/                     # Evaluaciones manuales con tokens reales: el chat, la recuperación de embeddings y el perfil embebido
-├── docs/
+├── scripts/                     # Evaluaciones manuales del chat, de la recuperación y del perfil embebido
+├── docs/                        # Contratos, requisitos y casos de prueba por módulo
+├── Dockerfile                   # Imagen del perfil ia del Compose del backend
 ├── pyproject.toml
 ├── .env.example
 └── README.md
 ```
+
+## Solución de problemas
+
+| Síntoma | Causa y solución |
+|---|---|
+| `/api/v1` responde 401 | El header `X-API-Key` no coincide: `SERVICE_API_KEY` tiene que ser igual a `AI_SERVICE_API_KEY` del backend |
+| `/api/v1` responde 503 | `SERVICE_API_KEY` está vacía o, con el respondedor real del chat, falta `OPENAI_API_KEY` |
+| Un pedido válido para el backend responde 422 | Un tope de este servicio es menor que el del backend: el texto de perfil, la pregunta, el historial o los pasajes |
+| El backend en Docker no llega al servicio | El servicio escucha solo en `127.0.0.1`. Ver [Con el servicio en el host](#con-el-servicio-en-el-host) |
+| Clasificar una norma responde 404 | `DATABASE_URL` apunta a una base distinta de la que usa la API |
