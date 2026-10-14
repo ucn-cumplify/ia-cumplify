@@ -10,8 +10,10 @@ from ia_cumplify.adapters.outbound.openai.chat_responder import OpenAIChatRespon
 from ia_cumplify.adapters.outbound.openai.applicability_reasoner import OpenAIApplicabilityReasonerAdapter
 from ia_cumplify.adapters.outbound.openai.classifier import OpenAIArticleClassifierAdapter
 from ia_cumplify.adapters.outbound.openai.embedder import OpenAITextEmbedderAdapter
+from ia_cumplify.adapters.outbound.openai.evidence_reviewer import OpenAIEvidenceReviewerAdapter
 from ia_cumplify.adapters.outbound.openai.profile_classifier import OpenAICompanyProfileClassifierAdapter
 from ia_cumplify.application.ports.chat_responder import ChatResponderPort
+from ia_cumplify.application.ports.evidence_reviewer import EvidenceReviewerPort
 from ia_cumplify.config.settings import get_settings
 
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
@@ -124,10 +126,28 @@ def get_chat_responder() -> ChatResponderPort:
     )
 
 
+@lru_cache
+def get_evidence_reviewer() -> EvidenceReviewerPort:
+    settings = get_settings()
+    if not settings.openai_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="OPENAI_API_KEY is not configured.",
+        )
+    return OpenAIEvidenceReviewerAdapter(
+        api_key=settings.openai_api_key,
+        model=settings.openai_model,
+        reasoning_effort=settings.openai_reasoning_effort,
+        timeout_seconds=settings.openai_timeout_seconds,
+        max_retries=settings.openai_max_retries,
+    )
+
+
 def reset_wiring_cache() -> None:
     get_classifier.cache_clear()
     get_profile_classifier.cache_clear()
     get_applicability_reasoner.cache_clear()
     get_text_embedder.cache_clear()
     get_chat_responder.cache_clear()
+    get_evidence_reviewer.cache_clear()
     get_settings.cache_clear()

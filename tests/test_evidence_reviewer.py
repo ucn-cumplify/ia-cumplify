@@ -1,0 +1,132 @@
+"""The OpenAI evidence reviewer: one structured call, mapped onto the review judgment."""
+
+from datetime import date
+from types import SimpleNamespace
+
+import pytest
+from chat_http import SECRET, configure
+from openai import OpenAIError
+
+from ia_cumplify.adapters.inbound.http.dependencies import get_evidence_reviewer, reset_wiring_cache
+from ia_cumplify.adapters.outbound.openai.evidence_reviewer import OpenAIEvidenceReviewerAdapter
+from ia_cumplify.adapters.outbound.openai.llm_evidence_review_schema import LlmEvidenceReview, LlmReviewRequirement
+from ia_cumplify.domain.evidence_review import EvidenceReviewSubject, ReviewArticle, ReviewLegalBody
+from ia_cumplify.domain.exceptions import EvidenceReviewError
+
+
+def test_the_adapter_sends_the_subject_and_maps_the_review():
+    adapter = OpenAIEvidenceReviewerAdapter(
+        api_key="sk-test",
+        model="gpt-5.6-luna",
+        reasoning_effort="low",
+        timeout_seconds=80,
+        max_retries=0,
+    )
+    completions = _Completions(
+        LlmEvidenceReview(
+            nature="explicit_obligations",
+            requirements=[
+                LlmReviewRequirement(
+                    text=" Constituir el comité. ",
+                    status="accredited",
+                    citations=[],
+                    missing="",
+                )
+            ],
+            verdict="accredited",
+            summary=" El acta acredita la constitución. ",
+        ),
+        usage=SimpleNamespace(prompt_tokens=20, completion_tokens=8, total_tokens=28, prompt_tokens_details=None),
+    )
+    adapter._client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+    subject = _subject()
+
+    judgment = adapter.review(subject)
+
+    assert completions.kwargs["model"] == "gpt-5.6-luna"
+    assert completions.kwargs["reasoning_effort"] == "low"
+    assert completions.kwargs["response_format"] is LlmEvidenceReview
+    assert completions.kwargs["messages"][0]["role"] == "system"
+    assert subject.article.text in completions.kwargs["messages"][1]["content"]
+    assert "data:image" not in completions.kwargs["messages"][1]["content"]
+    assert judgment.nature == "explicit_obligations"
+    assert judgment.requirements[0].text == "Constituir el comité."
+    assert judgment.summary == "El acta acredita la constitución."
+    assert judgment.model == "gpt-5.6-luna"
+    assert judgment.review_version == "evidence-review-v1@gpt-5.6-luna"
+    assert judgment.usage.prompt_tokens == 20
+    assert judgment.usage.llm_calls == 1
+
+
+def test_a_provider_error_does_not_repeat_the_request():
+    adapter = OpenAIEvidenceReviewerAdapter(
+        api_key="sk-test",
+        model="gpt-5.6-luna",
+        reasoning_effort="low",
+        timeout_seconds=80,
+        max_retries=0,
+    )
+    adapter._client = SimpleNamespace(
+        chat=SimpleNamespace(completions=_Completions(None, error=OpenAIError(SECRET)))
+    )
+
+    with pytest.raises(EvidenceReviewError) as raised:
+        adapter.review(_subject())
+
+    assert str(raised.value) == "OpenAI error while reviewing evidence: OpenAIError"
+    assert SECRET not in str(raised.value)
+
+
+def test_the_reviewer_is_wired_with_the_shared_openai_settings(monkeypatch):
+    configure(
+        monkeypatch,
+        openai_api_key="sk-test",
+        openai_model="gpt-test",
+        openai_reasoning_effort="low",
+    )
+    created: dict = {}
+
+    class _Client:
+        def __init__(self, **kwargs) -> None:
+            created.update(kwargs)
+
+    monkeypatch.setattr("ia_cumplify.adapters.outbound.openai.evidence_reviewer.OpenAI", _Client)
+    reset_wiring_cache()
+
+    reviewer = get_evidence_reviewer()
+
+    assert reviewer._model == "gpt-test"
+    assert reviewer._reasoning_effort == "low"
+    assert created["api_key"] == "sk-test"
+    assert created["timeout"] == 180
+    assert created["max_retries"] == 0
+
+
+class _Completions:
+    def __init__(self, parsed, usage=None, error: Exception | None = None) -> None:
+        self.parsed = parsed
+        self.usage = usage
+        self.error = error
+        self.kwargs = None
+
+    def parse(self, **kwargs):
+        self.kwargs = kwargs
+        if self.error is not None:
+            raise self.error
+        message = SimpleNamespace(parsed=self.parsed, refusal=None)
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)], usage=self.usage)
+
+
+def _subject() -> EvidenceReviewSubject:
+    return EvidenceReviewSubject(
+        reference_date=date(2026, 10, 14),
+        article=ReviewArticle(
+            number="1",
+            text=f"Acta {SECRET}",
+            title="Portada ![foto](data:image/png;base64,AAAA)",
+            section=None,
+        ),
+        legal_body=ReviewLegalBody(title="Reglamento", type="Reglamento", number=None),
+        obligation=None,
+        files=(),
+    )

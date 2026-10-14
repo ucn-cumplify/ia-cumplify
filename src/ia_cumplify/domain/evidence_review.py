@@ -3,7 +3,7 @@ from datetime import date
 from typing import Literal
 
 from ia_cumplify.domain.classification import TokenUsage
-from ia_cumplify.domain.evidence_text import FileReadStatus
+from ia_cumplify.domain.evidence_text import ExtractedFragment, FileReadStatus
 
 # Per review, the caps agreed for one call (plan O1). The backend applies the same ones
 # before it sends the request. The character cap of extracted file text is separate.
@@ -140,3 +140,25 @@ class EvidenceReview:
     usage: TokenUsage
     model: str | None
     review_version: str
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewSourceFile:
+    """One file as the model sees it: the status and the text that was read, never the bytes."""
+
+    id: str
+    filename: str
+    status: FileReadStatus
+    truncated: bool
+    fragments: tuple[ExtractedFragment, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceReviewSubject:
+    """What a review judges. It is built from the request, not loaded from the database."""
+
+    reference_date: date
+    article: ReviewArticle
+    legal_body: ReviewLegalBody
+    obligation: ReviewObligation | None
+    files: tuple[ReviewSourceFile, ...]

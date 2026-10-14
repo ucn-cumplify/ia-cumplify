@@ -9,7 +9,7 @@ from chat_http import HEADERS, SECRET, configure
 from fastapi.testclient import TestClient
 
 from ia_cumplify.adapters.inbound.http.app import create_app
-from ia_cumplify.adapters.inbound.http.dependencies import get_db_pool
+from ia_cumplify.adapters.inbound.http.dependencies import get_db_pool, get_evidence_reviewer
 from ia_cumplify.adapters.inbound.http.routers import evidence_reviews
 from ia_cumplify.adapters.inbound.http.schemas.evidence_review import EvidenceReviewResponse, parse_evidence_review
 from ia_cumplify.adapters.outbound.documents.text_extractor import extract_text
@@ -17,6 +17,7 @@ from ia_cumplify.application.use_cases.review_evidence import assemble_evidence_
 from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.evidence_review import ReviewCitation, ReviewJudgment, ReviewRequirement
 from ia_cumplify.domain.evidence_text import ReadLimits
+from ia_cumplify.domain.exceptions import EvidenceReviewError
 
 REVIEW = "/api/v1/evidence-reviews"
 
@@ -106,8 +107,9 @@ def test_eleven_files_and_a_payload_over_25_mb_are_rejected():
         parse_evidence_review(json.dumps(_review()), [("grande.bin", b"x" * (25 * 1024 * 1024 + 1))])
 
 
-def test_the_response_reports_each_file_and_leaves_the_judgment_empty(monkeypatch):
+def test_the_response_reports_each_file_and_the_judgment(monkeypatch):
     configure(monkeypatch)
+    reviewer = ScriptedReviewer(_plain_judgment())
     response = _post(
         _review(
             text=SECRET,
@@ -125,41 +127,42 @@ def test_the_response_reports_each_file_and_leaves_the_judgment_empty(monkeypatc
             ("notas.txt", b"texto que no se lee"),
             ("roto.pdf", b"this is not a pdf"),
         ],
+        reviewer=reviewer,
     )
 
     assert response.status_code == 200
-    assert response.json() == {
-        "files": [
-            {"id": "file-1", "filename": "nomina.csv", "status": "read", "truncated": False, "detail": None},
-            {"id": "file-2", "filename": "foto.png", "status": "unreadable", "truncated": False, "detail": None},
-            {"id": "file-3", "filename": "notas.txt", "status": "unsupported", "truncated": False, "detail": None},
-            {
-                "id": "file-4",
-                "filename": "roto.pdf",
-                "status": "error",
-                "truncated": False,
-                "detail": response.json()["files"][3]["detail"],
-            },
-        ],
-        "nature": None,
-        "requirements": [],
-        "verdict": None,
-        "summary": None,
-        "usage": _zero_usage(),
-        "model": None,
-        "review_version": "evidence-review-v1",
-    }
-    assert response.json()["files"][3]["detail"]
+    body = response.json()
+    assert body["files"] == [
+        {"id": "file-1", "filename": "nomina.csv", "status": "read", "truncated": False, "detail": None},
+        {"id": "file-2", "filename": "foto.png", "status": "unreadable", "truncated": False, "detail": None},
+        {"id": "file-3", "filename": "notas.txt", "status": "unsupported", "truncated": False, "detail": None},
+        {
+            "id": "file-4",
+            "filename": "roto.pdf",
+            "status": "error",
+            "truncated": False,
+            "detail": body["files"][3]["detail"],
+        },
+    ]
+    assert body["files"][3]["detail"]
+    assert body["nature"] == "informative"
+    assert body["requirements"] == []
+    assert body["verdict"] == "not_evaluable"
+    assert body["summary"] == ""
+    assert body["usage"] == _zero_usage()
+    assert body["model"] == "gpt-5.6-luna"
+    assert body["review_version"] == "evidence-review-v1@gpt-5.6-luna"
+    assert reviewer.subjects[0].files[0].fragments[0].text.startswith("Nombre")
     assert SECRET not in response.text
     assert "Nombre;RUT" not in response.text
 
 
 def test_a_judgment_is_returned_with_its_citations(monkeypatch):
     configure(monkeypatch)
-    monkeypatch.setattr(evidence_reviews, "judgment_for", lambda request: _judgment())
     response = _post(
         _review(text=SECRET, files=[{"id": "file-1", "filename": "nomina.csv"}]),
         [("nomina.csv", b"Nombre;RUT\nAna;1-9\n")],
+        reviewer=ScriptedReviewer(_judgment()),
     )
 
     assert response.status_code == 200
@@ -197,12 +200,12 @@ def test_a_judgment_is_returned_with_its_citations(monkeypatch):
             "missing": "Falta la fecha de la última capacitación.",
             "citations": [
                 {"file_id": "file-1", "locator": "sheet", "reference": "Nomina", "quote": "Ana | 1-9"},
-                {"file_id": "file-2", "locator": "slide", "reference": "2", "quote": "Capacitación 2024"},
                 {"file_id": "file-1", "locator": "body", "reference": "", "quote": "Nombre;RUT"},
             ],
         },
     ]
     assert SECRET not in response.text
+    assert "file-2" not in response.text
 
 
 def test_a_file_past_the_character_cap_is_marked_in_the_response():
@@ -232,23 +235,24 @@ def test_a_file_that_passes_the_size_cap_is_not_kept(monkeypatch):
 
 def test_the_review_works_without_a_database(monkeypatch):
     configure(monkeypatch, database_url="")
-    app = create_app()
+    app = _open_app()
     with TestClient(app) as client:
         assert app.state.db_pool is None
         response = client.post(REVIEW, headers=HEADERS, data={"review": json.dumps(_review(text=SECRET))})
     assert response.status_code == 200
-    assert response.json()["review_version"] == "evidence-review-v1"
+    assert response.json()["review_version"] == "evidence-review-v1@gpt-5.6-luna"
     assert response.json()["files"] == []
     assert SECRET not in response.text
     included, route = _evidence_route(app)
     assert get_db_pool not in _dependency_calls(route.dependant)
+    assert get_evidence_reviewer in _dependency_calls(route.dependant)
     assert get_db_pool not in [item.dependency for item in included.include_context.dependencies]
 
 
 def test_a_configured_database_is_not_opened_for_the_review(monkeypatch):
     configure(monkeypatch, database_url="postgresql://db.example/cumplify")
     monkeypatch.setattr("ia_cumplify.adapters.inbound.http.app.ConnectionPool", _IdlePool)
-    app = create_app()
+    app = _open_app()
     with TestClient(app) as client:
         pool = app.state.db_pool
         assert isinstance(pool, _IdlePool)
@@ -268,6 +272,22 @@ def test_an_id_is_not_accepted_in_place_of_the_article_or_the_regulation(monkeyp
         response = _post(_review(**changes))
         assert response.status_code == 422
         assert "e7d00000" not in response.text
+
+
+def test_a_missing_openai_key_is_503_before_the_body(monkeypatch):
+    configure(monkeypatch)
+    response = _post("{", override=False)
+    assert response.status_code == 503
+    assert response.json() == {"detail": "OPENAI_API_KEY is not configured."}
+    assert SECRET not in response.text
+
+
+def test_a_provider_failure_is_502_and_keeps_the_request_out_of_the_error(monkeypatch):
+    configure(monkeypatch)
+    response = _post(_review(text=SECRET), reviewer=_BrokenReviewer())
+    assert response.status_code == 502
+    assert response.json() == {"detail": "OpenAI error while reviewing evidence: APIError (HTTP 500)"}
+    assert SECRET not in response.text
 
 
 def test_missing_or_wrong_api_key_is_rejected_before_the_body(monkeypatch):
@@ -353,6 +373,7 @@ def _judgment() -> ReviewJudgment:
                         reference="1",
                         quote="En la faena Calama, el 15 de marzo de 2026",
                     ),
+                    ReviewCitation(file_id="file-1", locator="page", reference="2", quote="  "),
                 ),
                 missing="",
             ),
@@ -375,8 +396,49 @@ def _judgment() -> ReviewJudgment:
     )
 
 
-def _post(review, uploads: list[tuple[str, bytes]] | None = None, *, headers=HEADERS):
+class ScriptedReviewer:
+    def __init__(self, judgment: ReviewJudgment) -> None:
+        self.judgment = judgment
+        self.subjects = []
+
+    @property
+    def version(self) -> str:
+        return self.judgment.review_version
+
+    def review(self, subject):
+        self.subjects.append(subject)
+        return self.judgment
+
+
+class _BrokenReviewer:
+    version = "evidence-review-v1@gpt-5.6-luna"
+
+    def review(self, subject) -> ReviewJudgment:
+        raise EvidenceReviewError("OpenAI error while reviewing evidence: APIError (HTTP 500)")
+
+
+def _plain_judgment() -> ReviewJudgment:
+    return ReviewJudgment(
+        nature="informative",
+        requirements=(),
+        verdict="not_evaluable",
+        summary="",
+        usage=TokenUsage(),
+        model="gpt-5.6-luna",
+        review_version="evidence-review-v1@gpt-5.6-luna",
+    )
+
+
+def _open_app(reviewer=None):
     app = create_app()
+    app.dependency_overrides[get_evidence_reviewer] = lambda: reviewer or ScriptedReviewer(_plain_judgment())
+    return app
+
+
+def _post(review, uploads: list[tuple[str, bytes]] | None = None, *, headers=HEADERS, reviewer=None, override=True):
+    app = create_app()
+    if override:
+        app.dependency_overrides[get_evidence_reviewer] = lambda: reviewer or ScriptedReviewer(_plain_judgment())
     data = {"review": review if isinstance(review, str) else json.dumps(review)}
     files = [("files", (filename, content, "application/octet-stream")) for filename, content in uploads or []]
     with TestClient(app) as client:
