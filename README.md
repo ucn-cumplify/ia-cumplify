@@ -311,7 +311,7 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
 |---|---|---|
 | GET | `/health` | Responde `{"status": "ok"}`. No exige `X-API-Key` |
 | POST | `/api/v1/legal-bodies/classify` | Clasifica los artículos de un cuerpo legal ya hidratado |
-| POST | `/api/v1/applicability-reasons` | Un motivo en español por artículo sugerido. Lee la norma y solo esos artículos, nunca el texto del perfil |
+| POST | `/api/v1/applicability-reasons` | Un motivo en español por artículo sugerido y, desde `applicability-v2`, su naturaleza y sus obligaciones explícitas (C9). Lee la norma y solo esos artículos, nunca el texto del perfil |
 | POST | `/api/v1/company-profiles/classify` | Clasifica en las mismas seis dimensiones el texto con que una empresa se describe; no usa la base |
 | POST | `/api/v1/embeddings` | Devuelve un vector por cada texto, en el mismo orden |
 | POST | `/api/v1/chat` | Responde una pregunta del chat en streaming (Server-Sent Events), solo con los pasajes del pedido y citando cada afirmación; no usa la base |

@@ -13,7 +13,7 @@ A2 = "9c3d2b51-2e4f-5a6b-0d7c-8e9f0a1b2c3d"
 A3 = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
 
-def context(article_id: str, number: str, text: str) -> ApplicabilityArticleContext:
+def context(article_id: str, number: str, text: str, *, write_reason: bool = True) -> ApplicabilityArticleContext:
     return ApplicabilityArticleContext(
         article=Article(
             id=article_id,
@@ -25,11 +25,12 @@ def context(article_id: str, number: str, text: str) -> ApplicabilityArticleCont
         ),
         matched_values=("Minería", "Gestión de relaves"),
         actions=("Monitoreo de la estabilidad de los depósitos de relaves",),
+        write_reason=write_reason,
     )
 
 
 def test_prompt_version() -> None:
-    assert APPLICABILITY_PROMPT_VERSION == "applicability-v1"
+    assert APPLICABILITY_PROMPT_VERSION == "applicability-v2"
 
 
 def test_system_prompt_forbids_quoting_the_profile_and_dictating() -> None:
@@ -37,6 +38,47 @@ def test_system_prompt_forbids_quoting_the_profile_and_dictating() -> None:
     assert "company description" in text
     assert "do not dictate" in text
     assert "do not mention articles that are not in" in text.casefold() or "not in articles to explain" in text
+
+
+def test_system_prompt_decides_nature_with_the_c9_rules() -> None:
+    # Decision 7 of the sprint 3 plan, and the same three values as the evidence review.
+    text = APPLICABILITY_SYSTEM_PROMPT
+    for nature in ("explicit_obligations", "informative", "referral"):
+        assert nature in text
+    assert "only obliges or empowers the State" in text
+    assert "It is a referral even when the added text imposes an obligation" in text
+    assert "referred_legal_body" in text
+    assert "Decide it only from the article text, never from the matched values or the actions" in text
+
+
+def test_obligations_come_only_from_the_article_text() -> None:
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "Take them only from the article text" in text
+    assert "never turn an action into an obligation" in text
+    assert "An obligation that falls only on the State is not an obligation of the company" in text
+    assert "For informative and referral articles, obligations is empty" in text
+
+
+def test_the_rule_against_dictating_is_limited_to_the_reason() -> None:
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "Do not dictate in the reason" in text
+    assert "This rule is only for the reason" in text
+    assert 'Write a reason only for the articles marked "Write a reason: yes"' in text
+
+
+def test_user_content_says_which_articles_get_a_reason() -> None:
+    body = LegalBody(id=BODY_ID, title="Ley 16744", summary="Resumen.", type="Ley")
+    content = render_applicability_user_content(
+        body,
+        [
+            context(A1, "Artículo 66", "Texto del artículo 66."),
+            context(A2, "Artículo 67", "Texto del artículo 67.", write_reason=False),
+        ],
+    )
+    first, second = content.split(f"Article ID: {A2}")
+    assert "Write a reason: yes" in first and "Write a reason: no" not in first
+    assert "Write a reason: no" in second
+    assert f"Return exactly these 2 article_id values: {A1}, {A2}" in content
 
 
 def test_user_content_has_only_requested_articles_and_no_profile_block() -> None:

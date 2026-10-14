@@ -61,9 +61,10 @@ def explain_applicability(
         raise HTTPException(status_code=502, detail=type(exc).__name__) from exc
 
     logger.info(
-        "Applicability reasons for legal body %s: %d of %d articles",
+        "Applicability reasons for legal body %s: %d reasons and %d analyses for %d articles",
         body.legal_body_id,
         len(result.reasons),
+        len(result.analyses),
         len(articles),
     )
     response = ExplainApplicabilityResponse.from_domain(result)

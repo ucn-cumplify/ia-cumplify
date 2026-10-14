@@ -11,7 +11,12 @@ from ia_cumplify.adapters.inbound.http.app import create_app
 from ia_cumplify.adapters.inbound.http.dependencies import get_db_pool
 from ia_cumplify.adapters.inbound.http.routers.applicability import get_explain_applicability_use_case
 from ia_cumplify.adapters.outbound.openai import applicability_reasoner as applicability_reasoner_module
-from ia_cumplify.domain.applicability import ApplicabilityReasons, ArticleApplicabilityReason
+from ia_cumplify.domain.applicability import (
+    ApplicabilityReasons,
+    ArticleAnalysis,
+    ArticleApplicabilityReason,
+    ArticleObligation,
+)
 from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.exceptions import ApplicabilityError, LegalBodyNotFoundError
 from ia_cumplify.domain.legal_body import LegalBody
@@ -65,8 +70,17 @@ def success_result() -> ApplicabilityReasons:
     return ApplicabilityReasons(
         legal_body=LegalBody(id=NORM_ID, title="Ley 16744", summary="", type="Ley"),
         reasons=(ArticleApplicabilityReason(ARTICLE_ID, "Motivo de prueba."),),
-        reason_version="applicability-v1@test",
+        reason_version="applicability-v2@test",
         usage=TokenUsage(prompt_tokens=9, completion_tokens=3, total_tokens=12, llm_calls=1),
+        analyses=(
+            ArticleAnalysis(
+                ARTICLE_ID,
+                "explicit_obligations",
+                (ArticleObligation("Monitorear los relaves", "El titular monitorea la estabilidad de sus depósitos."),),
+                None,
+            ),
+            ArticleAnalysis(OTHER_ID, "referral", (), "Ley N° 20.780"),
+        ),
     )
 
 
@@ -110,12 +124,34 @@ def test_200_returns_reasons_and_does_not_send_the_app_id_to_the_use_case(monkey
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["reasons"] == [{"article_id": ARTICLE_ID, "reason": "Motivo de prueba."}]
-    assert body["reason_version"] == "applicability-v1@test"
+    assert body["analyses"] == [
+        {
+            "article_id": ARTICLE_ID,
+            "nature": "explicit_obligations",
+            "obligations": [
+                {"title": "Monitorear los relaves", "summary": "El titular monitorea la estabilidad de sus depósitos."}
+            ],
+            "referred_legal_body": None,
+        },
+        {"article_id": OTHER_ID, "nature": "referral", "obligations": [], "referred_legal_body": "Ley N° 20.780"},
+    ]
+    assert body["reason_version"] == "applicability-v2@test"
     assert body["usage"]["llm_calls"] == 1
     assert "dev_metrics" in body
     assert use_case.calls[0][0] == NORM_ID
     assert use_case.calls[0][1][0].article_id == ARTICLE_ID
     assert use_case.calls[0][1][0].matched_values == ("Minería",)
+    # Without write_reason, the article still gets its reason, as with applicability-v1.
+    assert use_case.calls[0][1][0].write_reason is True
+
+
+def test_write_reason_false_reaches_the_use_case(monkeypatch) -> None:
+    configure(monkeypatch, openai_api_key="sk-test-fake")
+    use_case = ScriptedUseCase(success_result())
+    articles = [{"article_id": ARTICLE_ID, "matched_values": ["Minería"], "actions": [], "write_reason": False}]
+    response = post(json=payload(articles=articles), use_case=use_case)
+    assert response.status_code == 200, response.text
+    assert use_case.calls[0][1][0].write_reason is False
 
 
 def test_404_when_the_legal_body_is_missing(monkeypatch) -> None:
@@ -205,7 +241,17 @@ def post_with_the_real_adapter(monkeypatch, article: dict, usage: dict):
 
     def answer(request: httpx2.Request) -> httpx2.Response:
         requests.append(json.loads(request.content))
-        reasons = {"reasons": [{"article_id": ARTICLE_ID, "reason": "Motivo de prueba."}]}
+        reasons = {
+            "reasons": [
+                {
+                    "article_id": ARTICLE_ID,
+                    "nature": "explicit_obligations",
+                    "referred_legal_body": "",
+                    "obligations": [{"title": "Informar", "summary": "El empleador informa a sus trabajadores."}],
+                    "reason": "Motivo de prueba.",
+                }
+            ]
+        }
         message = {"role": "assistant", "content": json.dumps(reasons), "refusal": None}
         return httpx2.Response(
             200,
@@ -251,7 +297,15 @@ def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypat
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["reasons"] == [{"article_id": ARTICLE_ID, "reason": "Motivo de prueba."}]
-    assert body["reason_version"] == "applicability-v1@fake-model"
+    assert body["analyses"] == [
+        {
+            "article_id": ARTICLE_ID,
+            "nature": "explicit_obligations",
+            "obligations": [{"title": "Informar", "summary": "El empleador informa a sus trabajadores."}],
+            "referred_legal_body": None,
+        }
+    ]
+    assert body["reason_version"] == "applicability-v2@fake-model"
     assert body["usage"] == {
         "prompt_tokens": 900,
         "completion_tokens": 80,
@@ -266,6 +320,40 @@ def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypat
     assert "El empleador debe informar. Anexo: [archivo omitido] Fin." in prompt
     # A null section reaches the model empty, not as "None".
     assert "Number: Artículo 1\nSection: \n" in prompt
+
+
+def test_the_schema_sent_to_openai_has_every_field_required_and_no_default(monkeypatch) -> None:
+    # Structured outputs need every property required. A default left in the schema has not run against
+    # OpenAI in this service, so applicability-v2 declares none, like applicability-v1.
+    article = {"id": ARTICLE_ID, "legal_body_id": NORM_ID, "number": "Artículo 1", "section": "", "text": "Texto.", "order": 1}
+    usage = {"prompt_tokens": 9, "completion_tokens": 3, "total_tokens": 12}
+    response, requests = post_with_the_real_adapter(monkeypatch, article, usage)
+    assert response.status_code == 200, response.text
+    [request] = requests
+    response_format = request["response_format"]
+    assert response_format["type"] == "json_schema"
+    assert response_format["json_schema"]["strict"] is True
+
+    objects: list[dict] = []
+
+    def walk(node: object) -> None:
+        if isinstance(node, dict):
+            assert "default" not in node, node
+            if node.get("type") == "object":
+                objects.append(node)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(response_format["json_schema"]["schema"])
+    assert objects
+    for node in objects:
+        assert sorted(node["required"]) == sorted(node["properties"]), node
+        assert node["additionalProperties"] is False
+    item = response_format["json_schema"]["schema"]["$defs"]["LlmArticleReason"]
+    assert list(item["properties"]) == ["article_id", "nature", "referred_legal_body", "obligations", "reason"]
 
 
 # parse() dumps the completion it built, and pydantic warns that the malformed counts are not int.

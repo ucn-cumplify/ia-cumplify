@@ -12,8 +12,11 @@ from ia_cumplify.adapters.outbound.openai.usage import call_usage
 from ia_cumplify.domain.applicability import (
     ApplicabilityArticleContext,
     ApplicabilityReasonerOutput,
+    ArticleAnalysis,
     ArticleApplicabilityReason,
+    ArticleObligation,
     MAX_REASON_CHARS,
+    close_analysis,
 )
 from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.exceptions import ApplicabilityError
@@ -21,7 +24,8 @@ from ia_cumplify.domain.legal_body import LegalBody
 
 
 class OpenAIApplicabilityReasonerAdapter:
-    """One model call per request: one reason per requested article that was found on the legal body."""
+    """One model call per request. For each requested article found on the legal body: what it asks of
+    the company and, unless the caller keeps its own text, one reason for the match."""
 
     def __init__(
         self,
@@ -79,10 +83,12 @@ class OpenAIApplicabilityReasonerAdapter:
                 f"Model did not return valid applicability reasons for legal body {legal_body.id}.{refused}"
             )
 
-        allowed = {item.article.id for item in articles}
+        found = {item.article.id for item in articles}
+        with_reason = {item.article.id for item in articles if item.write_reason}
         return ApplicabilityReasonerOutput(
-            reasons=map_parsed_reasons(message.parsed, allowed, self._max_reason_chars),
+            reasons=map_parsed_reasons(message.parsed, with_reason, self._max_reason_chars),
             usage=call_usage(getattr(completion, "usage", None)),
+            analyses=map_parsed_analyses(message.parsed, found),
         )
 
 
@@ -104,3 +110,32 @@ def map_parsed_reasons(
         seen.add(article_id)
         reasons.append(ArticleApplicabilityReason(article_id=article_id, reason=reason))
     return tuple(reasons)
+
+
+def map_parsed_analyses(parsed: LlmApplicabilityReasons, allowed: set[str]) -> tuple[ArticleAnalysis, ...]:
+    """Keeps the first usable analysis per allowed article_id, closed with the C9 rules.
+
+    An analysis survives when the reason of the same item is dropped: the two are independent.
+    """
+    seen: set[str] = set()
+    analyses: list[ArticleAnalysis] = []
+    for item in parsed.reasons:
+        article_id = item.article_id.strip()
+        if article_id not in allowed or article_id in seen:
+            continue
+        analysis = close_analysis(
+            ArticleAnalysis(
+                article_id=article_id,
+                nature=item.nature,
+                obligations=tuple(
+                    ArticleObligation(title=obligation.title, summary=obligation.summary)
+                    for obligation in item.obligations
+                ),
+                referred_legal_body=item.referred_legal_body,
+            )
+        )
+        if analysis is None:
+            continue
+        seen.add(article_id)
+        analyses.append(analysis)
+    return tuple(analyses)

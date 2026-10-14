@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
+from ia_cumplify.domain.article_nature import ArticleNature
 from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.evidence_text import ExtractedFragment, FileReadStatus
 
@@ -73,8 +74,6 @@ class EvidenceReviewRequest:
     files: tuple[ReviewFile, ...]
 
 
-# obligaciones explícitas, informativo, remisión.
-ArticleNature = Literal["explicit_obligations", "informative", "referral"]
 # acreditada, parcial, no acreditada, no evaluable.
 RequirementStatus = Literal["accredited", "partial", "not_accredited", "not_evaluable"]
 # página, hoja, diapositiva, o el cuerpo cuando el formato no tiene esas partes.
