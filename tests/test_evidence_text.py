@@ -10,13 +10,22 @@ from pptx import Presentation
 from pptx.util import Inches
 
 from ia_cumplify.adapters.outbound.documents.text_extractor import extract_text
-from ia_cumplify.domain.evidence_text import BODY, PAGE, SHEET, SLIDE
+from ia_cumplify.domain.evidence_text import (
+    BODY,
+    ERROR,
+    PAGE,
+    READ,
+    SHEET,
+    SLIDE,
+    UNREADABLE,
+    UNSUPPORTED,
+)
 
 
 def test_pdf_text_comes_back_per_page():
     content = _pdf(["Acta de constitucion del Comite Paritario.", "En la planta no funciona el Comite Paritario."])
 
-    fragments = extract_text(".pdf", content)
+    fragments = _fragments(".pdf", content)
 
     assert [(f.locator, f.reference, f.text) for f in fragments] == [
         (PAGE, "1", "Acta de constitucion del Comite Paritario."),
@@ -35,7 +44,7 @@ def test_docx_keeps_paragraphs_and_tables_in_order():
     document.add_paragraph("No hay actas de otros meses de 2026.")
     content = _save(document.save)
 
-    fragment = extract_text(".docx", content)[0]
+    fragment = _fragments(".docx", content)[0]
 
     assert fragment.locator == BODY
     assert fragment.reference == ""
@@ -52,7 +61,7 @@ def test_docx_keeps_paragraphs_and_tables_in_order():
 def test_minimal_docx_package_is_readable():
     content = _minimal_docx("Fecha: 3 de marzo de 2026.")
 
-    fragment = extract_text(".DOCX", content)[0]
+    fragment = _fragments(".DOCX", content)[0]
 
     assert fragment.text == "Fecha: 3 de marzo de 2026."
 
@@ -68,7 +77,7 @@ def test_xlsx_is_read_per_sheet_with_values():
     workbook.create_sheet("Vacia")
     content = _save(workbook.save)
 
-    fragments = extract_text(".xlsx", content)
+    fragments = _fragments(".xlsx", content)
 
     assert [(f.locator, f.reference, f.text) for f in fragments] == [
         (SHEET, "Camiones", "Patente | Kilometraje | Trabajo\nBBCD-11 | 120430 | Cambio de aceite"),
@@ -83,12 +92,12 @@ def test_csv_detects_utf8_comma_cp1252_semicolon_and_tab():
     bom = b"\xef\xbb\xbf" + "Nombre;Nota\nAna;\"tiene coma, y punto\"\n".encode()
     tabs = "Patente\tTrabajo\nBBCD-11\tCambio de aceite\n".encode()
 
-    assert extract_text(".csv", utf8)[0].text == (
+    assert _fragments(".csv", utf8)[0].text == (
         "Nombre,RUT,Fecha de la última capacitación\nRepresentante de la empresa 1,15.111.111-1,2026-03-15"
     )
-    assert extract_text(".csv", cp1252)[0].text == "Nombre;Ciudad\nAna;Concepción"
-    assert extract_text(".csv", bom)[0].text == "Nombre;Nota\nAna;tiene coma, y punto"
-    assert extract_text(".csv", tabs)[0].text == "Patente\tTrabajo\nBBCD-11\tCambio de aceite"
+    assert _fragments(".csv", cp1252)[0].text == "Nombre;Ciudad\nAna;Concepción"
+    assert _fragments(".csv", bom)[0].text == "Nombre;Nota\nAna;tiene coma, y punto"
+    assert _fragments(".csv", tabs)[0].text == "Patente\tTrabajo\nBBCD-11\tCambio de aceite"
 
 
 def test_pptx_text_and_tables_come_back_per_slide():
@@ -107,7 +116,7 @@ def test_pptx_text_and_tables_come_back_per_slide():
     note.text_frame.text = "Segunda diapositiva"
     content = _save(presentation.save)
 
-    fragments = extract_text(".pptx", content)
+    fragments = _fragments(".pptx", content)
 
     assert [(f.locator, f.reference) for f in fragments] == [(SLIDE, "1"), (SLIDE, "2")]
     assert fragments[0].text == "\n".join(
@@ -118,6 +127,43 @@ def test_pptx_text_and_tables_come_back_per_slide():
         ]
     )
     assert fragments[1].text == "Segunda diapositiva"
+
+
+def test_a_scanned_pdf_and_an_image_are_unreadable():
+    scanned = extract_text(".pdf", _pdf(["", "   "]))
+    image = extract_text(".png", b"\x89PNG\r\n\x1a\nnot-parsed")
+
+    assert scanned.status == UNREADABLE
+    assert scanned.detail is None
+    assert [(fragment.reference, fragment.text) for fragment in scanned.fragments] == [("1", ""), ("2", "")]
+    assert image.status == UNREADABLE
+    assert image.fragments == ()
+    assert extract_text(".jpg", b"not-a-jpeg").status == UNREADABLE
+
+
+def test_an_unknown_extension_is_unsupported():
+    result = extract_text(".txt", b"esto es texto, pero el formato no se lee")
+
+    assert result.status == UNSUPPORTED
+    assert result.fragments == ()
+    assert result.detail is None
+    assert extract_text(".doc", b"PK").status == UNSUPPORTED
+
+
+def test_a_broken_file_is_an_error_and_keeps_no_fragments():
+    result = extract_text(".pdf", b"this is not a pdf")
+
+    assert result.status == ERROR
+    assert result.fragments == ()
+    assert result.detail
+    assert extract_text(".docx", b"not a word file").status == ERROR
+
+
+def _fragments(extension: str, content: bytes):
+    result = extract_text(extension, content)
+    assert result.status == READ
+    assert result.detail is None
+    return result.fragments
 
 
 def _save(save) -> bytes:

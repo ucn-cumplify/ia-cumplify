@@ -2,7 +2,8 @@
 
 The file comes back as locatable fragments: one per PDF page, per Excel sheet and per
 PowerPoint slide, and a single body for Word (paragraphs and tables in document order)
-and for CSV. Status, size limits and truncation are not applied here.
+and for CSV. Each file also comes back with a status: read, unreadable (a scanned PDF
+or an image), unsupported or error. Size limits and truncation are not applied here.
 """
 
 from __future__ import annotations
@@ -21,17 +22,58 @@ from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pypdf import PdfReader
 
-from ia_cumplify.domain.evidence_text import BODY, PAGE, SHEET, SLIDE, ExtractedFragment
+from ia_cumplify.domain.evidence_text import (
+    BODY,
+    ERROR,
+    PAGE,
+    READ,
+    SHEET,
+    SLIDE,
+    UNREADABLE,
+    UNSUPPORTED,
+    ExtractedFile,
+    ExtractedFragment,
+)
+
+# Raster images have no text layer. They are not parsed.
+_IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tif", ".tiff"})
 
 _READERS: dict[str, Callable[[bytes], tuple[ExtractedFragment, ...]]] = {}
 
 
-def extract_text(extension: str, content: bytes) -> tuple[ExtractedFragment, ...]:
-    """Extract text from ``content``. ``extension`` includes the dot, as in ``.pdf``."""
-    reader = _READERS.get(extension.lower())
+def extract_text(extension: str, content: bytes) -> ExtractedFile:
+    """Read ``content``. ``extension`` includes the dot, as in ``.pdf``.
+
+    A reader that raises becomes ``error`` and does not propagate. An extension
+    with no reader is ``unsupported``. An image, or a file whose fragments are
+    all blank, is ``unreadable``.
+    """
+    normalized = extension.strip().lower()
+    if normalized and not normalized.startswith("."):
+        normalized = f".{normalized}"
+
+    if normalized in _IMAGE_EXTENSIONS:
+        return ExtractedFile(UNREADABLE, ())
+
+    reader = _READERS.get(normalized)
     if reader is None:
-        raise ValueError(f"No text reader for extension {extension!r}.")
-    return reader(content)
+        return ExtractedFile(UNSUPPORTED, ())
+
+    try:
+        fragments = reader(content)
+    except Exception as exc:
+        return ExtractedFile(ERROR, (), _error_detail(exc))
+
+    if not any(fragment.text.strip() for fragment in fragments):
+        return ExtractedFile(UNREADABLE, fragments)
+    return ExtractedFile(READ, fragments)
+
+
+def _error_detail(exc: Exception) -> str:
+    message = " ".join(str(exc).split())
+    if not message:
+        return type(exc).__name__
+    return message[:500]
 
 
 def extract_pdf(content: bytes) -> tuple[ExtractedFragment, ...]:
