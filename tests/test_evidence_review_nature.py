@@ -27,6 +27,17 @@ def test_the_prompt_decides_nature_with_the_c9_rules():
     assert "not_evaluable" in text
 
 
+def test_a_file_that_proves_a_breach_does_not_accredit_the_requirement():
+    text = EVIDENCE_REVIEW_SYSTEM_PROMPT.casefold()
+    assert "accredited: the files show that the company meets it." in text
+    assert "partial: the files show that the company meets only part of it." in text
+    assert "not_accredited: the files do not show that the company meets it." in text
+    assert "not_evaluable: the files that were read have no text from which to judge it." in text
+    assert "proves the company fails the exigencia does not accredit it" in text
+    assert "even when it talks about the same subject" in text
+    assert "talking about the subject is not enough" in text
+
+
 @pytest.mark.parametrize("nature", ["informative", "referral"])
 def test_an_article_with_nothing_to_verify_drops_requirements_and_is_not_evaluable(nature):
     judgment = ReviewJudgment(

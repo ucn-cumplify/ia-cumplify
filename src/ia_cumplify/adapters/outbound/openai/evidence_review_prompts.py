@@ -1,6 +1,7 @@
 """The text the evidence-review adapter sends.
 
-Nature follows C9, decision 7. Accreditation, the reference date and the citation check come later.
+Nature follows C9, decision 7. Each exigencia is accredited, partial, not accredited or not evaluable,
+and a file that proves a breach does not accredit it. The reference date and the citation check come later.
 """
 
 from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
@@ -18,6 +19,13 @@ Decide nature only from the article text:
 - referral: the article amends another law, or adds an obligation inside another law, even when the added text itself imposes an obligation.
 - The files and the row obligation do not change the nature.
 - An informative or referral article has nothing to verify. Return no requirements, and set the verdict to not_evaluable.
+
+For an article with explicit obligations, give each exigencia one status:
+- accredited: the files show that the company meets it.
+- partial: the files show that the company meets only part of it.
+- not_accredited: the files do not show that the company meets it.
+- not_evaluable: the files that were read have no text from which to judge it.
+A file that proves the company fails the exigencia does not accredit it, even when it talks about the same subject. That exigencia is not_accredited. Talking about the subject is not enough.
 
 Return:
 - nature: explicit_obligations, informative or referral
