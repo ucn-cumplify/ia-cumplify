@@ -1,6 +1,8 @@
 """POST /api/v1/evidence-reviews.
 
-This step only accepts the request. The review result is not produced here.
+The caller sends the article, its regulation, the obligation and the files. This endpoint
+reads no database, the same way the chat answers from the passages of the request.
+The review result is not produced here.
 """
 
 import logging

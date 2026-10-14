@@ -9,6 +9,7 @@ from chat_http import HEADERS, SECRET, configure
 from fastapi.testclient import TestClient
 
 from ia_cumplify.adapters.inbound.http.app import create_app
+from ia_cumplify.adapters.inbound.http.dependencies import get_db_pool
 from ia_cumplify.adapters.inbound.http.routers import evidence_reviews
 from ia_cumplify.adapters.inbound.http.schemas.evidence_review import parse_evidence_review
 
@@ -126,9 +127,42 @@ def test_a_file_that_passes_the_size_cap_is_not_kept(monkeypatch):
     assert SECRET not in response.text
 
 
-def test_the_endpoint_does_not_need_the_database_or_openai(monkeypatch):
+def test_the_review_works_without_a_database(monkeypatch):
+    configure(monkeypatch, database_url="")
+    app = create_app()
+    with TestClient(app) as client:
+        assert app.state.db_pool is None
+        response = client.post(REVIEW, headers=HEADERS, data={"review": json.dumps(_review(text=SECRET))})
+    assert response.status_code == 204
+    assert SECRET not in response.text
+    included, route = _evidence_route(app)
+    assert get_db_pool not in _dependency_calls(route.dependant)
+    assert get_db_pool not in [item.dependency for item in included.include_context.dependencies]
+
+
+def test_a_configured_database_is_not_opened_for_the_review(monkeypatch):
+    configure(monkeypatch, database_url="postgresql://db.example/cumplify")
+    monkeypatch.setattr("ia_cumplify.adapters.inbound.http.app.ConnectionPool", _IdlePool)
+    app = create_app()
+    with TestClient(app) as client:
+        pool = app.state.db_pool
+        assert isinstance(pool, _IdlePool)
+        before = list(pool.operations)
+        response = client.post(REVIEW, headers=HEADERS, data={"review": json.dumps(_review())})
+        assert response.status_code == 204
+        assert pool.operations == before
+    assert pool.operations == ["close"]
+
+
+def test_an_id_is_not_accepted_in_place_of_the_article_or_the_regulation(monkeypatch):
     configure(monkeypatch)
-    assert _post(_review()).status_code == 204
+    for changes in (
+        {"legal_body_id": "e7d00000-0000-4000-8000-000000000001"},
+        {"article_id": "e7d00000-0000-4000-8000-000000000011"},
+    ):
+        response = _post(_review(**changes))
+        assert response.status_code == 422
+        assert "e7d00000" not in response.text
 
 
 def test_missing_or_wrong_api_key_is_rejected_before_the_body(monkeypatch):
@@ -160,6 +194,34 @@ def test_what_is_rejected_does_not_come_back_in_the_error(monkeypatch):
     for response in cases:
         assert response.status_code == 422
         assert SECRET not in response.text
+
+
+def _evidence_route(app):
+    for included in app.routes:
+        original = getattr(included, "original_router", None)
+        if original is not None and original.prefix == "/evidence-reviews":
+            return included, original.routes[0]
+    raise AssertionError("POST /api/v1/evidence-reviews is not registered")
+
+
+def _dependency_calls(dependant):
+    found = []
+    pending = [dependant]
+    while pending:
+        current = pending.pop()
+        found.append(current.call)
+        pending.extend(current.dependencies)
+    return found
+
+
+class _IdlePool:
+    """Stands in for the process pool. A review must not call it."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        self.operations: list[str] = []
+
+    def close(self) -> None:
+        self.operations.append("close")
 
 
 def _post(review, uploads: list[tuple[str, bytes]] | None = None, *, headers=HEADERS):
