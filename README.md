@@ -110,18 +110,21 @@ Todas las variables están en `.env.example`. Las principales:
 |---|---|---|
 | `SERVICE_API_KEY` | — | Secreto del header `X-API-Key`; igual a `AI_SERVICE_API_KEY` del backend |
 | `OPENAI_API_KEY` | — | Clave de OpenAI |
-| `OPENAI_MODEL` | `gpt-5.6-luna` | Modelo de la clasificación, del perfil y de los motivos; también del chat si `CHAT_MODEL` está vacía |
-| `OPENAI_REASONING_EFFORT` | `low` | Esfuerzo de razonamiento |
+| `OPENAI_MODEL` | `gpt-5.6-luna` | Modelo de la clasificación, del perfil y de los motivos; también del chat y de la revisión de respaldos si su modelo está vacío |
+| `OPENAI_REASONING_EFFORT` | `low` | Esfuerzo de razonamiento; también del chat y de la revisión si el suyo está vacío |
 | `DATABASE_URL` | — | La misma base que usa el backend |
 | `CLASSIFY_BATCH_SIZE` | 25 | Artículos que se clasifican por llamada al modelo; cada llamada lleva la norma completa |
 | `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-large` | Modelo de embeddings |
 | `OPENAI_EMBEDDING_DIMENSIONS` | 1024 | Tiene que coincidir con la columna `vector(1024)` del backend |
 | `EMBEDDINGS_MAX_TEXTS` | 256 | Textos máximos por pedido de embeddings; el backend envía lotes de 50 |
 | `PROFILE_TEXT_MAX_CHARS` | 4.000 | Largo máximo del texto de perfil; igual a `AI_PROFILE_TEXT_MAX_CHARS` del backend |
-| `OPENAI_TIMEOUT_SECONDS` | 180 | Plazo de cada llamada a OpenAI. Clasificar una norma completa puede tardar minutos. No lo usan el chat ni los motivos |
+| `OPENAI_TIMEOUT_SECONDS` | 180 | Plazo de cada llamada a OpenAI. Clasificar una norma completa puede tardar minutos. No lo usan el chat, los motivos ni la revisión de respaldos |
 | `OPENAI_MAX_RETRIES` | 2 | Reintentos del SDK ante 408, 409, 429, 5xx, plazos vencidos y errores de conexión. No los usan el chat ni los motivos |
 | `APPLICABILITY_REASONS_TIMEOUT_SECONDS` | 25 | Plazo de `POST /api/v1/applicability-reasons` |
 | `APPLICABILITY_REASONS_MAX_RETRIES` | 0 | Reintentos de los motivos |
+| `EVIDENCE_REVIEW_MODEL` | vacía (usa `OPENAI_MODEL`) | Modelo de `POST /api/v1/evidence-reviews` |
+| `EVIDENCE_REVIEW_REASONING_EFFORT` | vacía (usa `OPENAI_REASONING_EFFORT`) | Esfuerzo de razonamiento de la revisión |
+| `EVIDENCE_REVIEW_TIMEOUT_SECONDS` | 80 | Plazo de la revisión de respaldos |
 | `INCLUDE_DEV_METRICS` | `true` | Agrega `dev_metrics` con el tiempo de respuesta |
 
 - **`SERVICE_API_KEY`:** todo `/api/v1` la exige. Sin header o con otro valor, el servicio responde 401; si la variable
