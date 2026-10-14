@@ -145,9 +145,11 @@ El incumplimiento, la fecha, las instrucciones y lo que falta son reglas del pro
 | EVIDENCE_REVIEW_MODEL | vacía | Modelo de esta llamada. Vacía: `OPENAI_MODEL` |
 | EVIDENCE_REVIEW_REASONING_EFFORT | vacía | Esfuerzo. Vacío: `OPENAI_REASONING_EFFORT` |
 | EVIDENCE_REVIEW_TIMEOUT_SECONDS | 80 | Plazo de la llamada. No usa `OPENAI_TIMEOUT_SECONDS` |
-| OPENAI_MAX_RETRIES | 2 | Reintentos del SDK. Esta llamada no tiene reintentos propios |
+| EVIDENCE_REVIEW_MAX_RETRIES | 0 | Reintentos del SDK, que también reintenta un plazo vencido. No usa `OPENAI_MAX_RETRIES`: con un reintento, la revisión podría pasar los 90 s que espera el backend |
 
 `review_version` es `evidence-review-v1@<modelo usado>`.
+
+La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilos, fuera del bucle de eventos. Mientras una revisión espera al modelo, el servicio sigue atendiendo el chat, los demás endpoints y `/health`.
 
 **Errores:**
 
@@ -165,4 +167,4 @@ El incumplimiento, la fecha, las instrucciones y lo que falta son reglas del pro
 - No propone acciones. Eso sale de la base de conocimientos (fase 2B del plan).
 - No busca la cita en el texto del archivo ni recalcula el veredicto a partir de las exigencias.
 - No hace OCR. Una imagen o un PDF sin texto queda `unreadable`.
-- El plazo de 80 s queda por debajo de los 90 s previstos para la espera del backend (`AI_EVIDENCE_REVIEW_TIMEOUT_SECONDS`), que todavía no existe.
+- Un solo intento de 80 s queda por debajo de los 90 s previstos para la espera del backend (`AI_EVIDENCE_REVIEW_TIMEOUT_SECONDS`), que todavía no existe.

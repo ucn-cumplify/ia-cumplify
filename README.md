@@ -119,12 +119,13 @@ Todas las variables están en `.env.example`. Las principales:
 | `EMBEDDINGS_MAX_TEXTS` | 256 | Textos máximos por pedido de embeddings; el backend envía lotes de 50 |
 | `PROFILE_TEXT_MAX_CHARS` | 4.000 | Largo máximo del texto de perfil; igual a `AI_PROFILE_TEXT_MAX_CHARS` del backend |
 | `OPENAI_TIMEOUT_SECONDS` | 180 | Plazo de cada llamada a OpenAI. Clasificar una norma completa puede tardar minutos. No lo usan el chat, los motivos ni la revisión de respaldos |
-| `OPENAI_MAX_RETRIES` | 2 | Reintentos del SDK ante 408, 409, 429, 5xx, plazos vencidos y errores de conexión. No los usan el chat ni los motivos |
+| `OPENAI_MAX_RETRIES` | 2 | Reintentos del SDK ante 408, 409, 429, 5xx, plazos vencidos y errores de conexión. No los usan el chat, los motivos ni la revisión de respaldos |
 | `APPLICABILITY_REASONS_TIMEOUT_SECONDS` | 25 | Plazo de `POST /api/v1/applicability-reasons` |
 | `APPLICABILITY_REASONS_MAX_RETRIES` | 0 | Reintentos de los motivos |
 | `EVIDENCE_REVIEW_MODEL` | vacía (usa `OPENAI_MODEL`) | Modelo de `POST /api/v1/evidence-reviews` |
 | `EVIDENCE_REVIEW_REASONING_EFFORT` | vacía (usa `OPENAI_REASONING_EFFORT`) | Esfuerzo de razonamiento de la revisión |
 | `EVIDENCE_REVIEW_TIMEOUT_SECONDS` | 80 | Plazo de la revisión de respaldos |
+| `EVIDENCE_REVIEW_MAX_RETRIES` | 0 | Reintentos de la revisión. Con uno, podría pasar los 90 s que espera el backend |
 | `INCLUDE_DEV_METRICS` | `true` | Agrega `dev_metrics` con el tiempo de respuesta |
 
 - **`SERVICE_API_KEY`:** todo `/api/v1` la exige. Sin header o con otro valor, el servicio responde 401; si la variable

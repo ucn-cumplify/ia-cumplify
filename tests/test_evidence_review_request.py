@@ -2,6 +2,7 @@
 and the files, and returns the review.
 """
 
+import asyncio
 import json
 
 import pytest
@@ -290,6 +291,16 @@ def test_a_provider_failure_is_502_and_keeps_the_request_out_of_the_error(monkey
     assert SECRET not in response.text
 
 
+def test_the_reviewer_runs_off_the_event_loop(monkeypatch):
+    # A blocking model call on the loop would hold every other request of the process, /health included.
+    configure(monkeypatch)
+    reviewer = LoopProbeReviewer(_plain_judgment())
+    review = _review(files=[{"id": "file-1", "filename": "acta.csv"}])
+    response = _post(review, [("acta.csv", b"a;b\n1;2\n")], reviewer=reviewer)
+    assert response.status_code == 200
+    assert reviewer.on_event_loop is False
+
+
 def test_missing_or_wrong_api_key_is_rejected_before_the_body(monkeypatch):
     configure(monkeypatch)
     body = {"reference_date": "2026-10-14", "article": {"text": SECRET}}
@@ -408,6 +419,21 @@ class ScriptedReviewer:
     def review(self, subject):
         self.subjects.append(subject)
         return self.judgment
+
+
+class LoopProbeReviewer(ScriptedReviewer):
+    """Records whether review() ran on the thread of a running event loop."""
+
+    on_event_loop: bool | None = None
+
+    def review(self, subject):
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self.on_event_loop = False
+        else:
+            self.on_event_loop = True
+        return super().review(subject)
 
 
 class _BrokenReviewer:

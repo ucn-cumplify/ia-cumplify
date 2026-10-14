@@ -86,6 +86,8 @@ def test_empty_review_model_and_effort_use_the_shared_ones(monkeypatch):
         evidence_review_model="",
         evidence_review_reasoning_effort="",
         openai_timeout_seconds="42",
+        # conftest sets 0; the shared value must not reach the review.
+        openai_max_retries="2",
     )
     created: dict = {}
 
@@ -105,7 +107,7 @@ def test_empty_review_model_and_effort_use_the_shared_ones(monkeypatch):
     assert created["max_retries"] == 0
 
 
-def test_the_review_model_effort_and_timeout_are_its_own(monkeypatch):
+def test_the_review_model_effort_timeout_and_retries_are_its_own(monkeypatch):
     configure(
         monkeypatch,
         openai_api_key="sk-test",
@@ -114,6 +116,7 @@ def test_the_review_model_effort_and_timeout_are_its_own(monkeypatch):
         evidence_review_model="modelo-revision",
         evidence_review_reasoning_effort="medium",
         evidence_review_timeout_seconds="15",
+        evidence_review_max_retries="1",
     )
     created: dict = {}
 
@@ -129,6 +132,7 @@ def test_the_review_model_effort_and_timeout_are_its_own(monkeypatch):
     assert reviewer._model == "modelo-revision"
     assert reviewer._reasoning_effort == "medium"
     assert created["timeout"] == 15
+    assert created["max_retries"] == 1
 
 
 class _Completions:

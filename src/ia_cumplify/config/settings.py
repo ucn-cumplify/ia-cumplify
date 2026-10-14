@@ -64,6 +64,9 @@ class Settings(BaseSettings):
     evidence_review_model: str = ""
     evidence_review_reasoning_effort: str = ""
     evidence_review_timeout_seconds: float = 80
+    # 0: one attempt. The SDK also retries a timed-out call, so each retry adds up to another
+    # 80 s, past the 90 s the backend plans to wait (AI_EVIDENCE_REVIEW_TIMEOUT_SECONDS).
+    evidence_review_max_retries: int = 0
 
 
 @lru_cache

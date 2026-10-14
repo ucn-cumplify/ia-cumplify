@@ -8,6 +8,7 @@ import logging
 from collections.abc import Sequence
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 
 from ia_cumplify.adapters.inbound.http.dependencies import get_evidence_reviewer
 from ia_cumplify.adapters.inbound.http.schemas.evidence_review import (
@@ -51,7 +52,10 @@ async def create_evidence_review(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
-        result = use_case.execute(accepted)
+        # Reading the files and the model call block for up to the review timeout. On the event
+        # loop they would hold every other request of this single process, /health included; in
+        # the thread pool they run the way FastAPI runs a sync endpoint.
+        result = await run_in_threadpool(use_case.execute, accepted)
     except EvidenceReviewError as exc:
         logger.error("Evidence review failed for %d files: %s", len(accepted.files), type(exc).__name__)
         raise HTTPException(status_code=502, detail=str(exc)) from exc

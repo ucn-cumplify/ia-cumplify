@@ -175,7 +175,7 @@ Esta regla está en el prompt: el servicio no la vuelve a aplicar sobre la respu
 
 ---
 
-### EVR-011 — Usar plazo, modelo y esfuerzo propios
+### EVR-011 — Usar plazo, reintentos, modelo y esfuerzo propios, sin detener el servicio
 
 | Campo | Detalle |
 |---|---|
@@ -184,13 +184,17 @@ Esta regla está en el prompt: el servicio no la vuelve a aplicar sobre la respu
 
 **Descripción:**
 
-La llamada usa `EVIDENCE_REVIEW_TIMEOUT_SECONDS` (80). `EVIDENCE_REVIEW_MODEL` y `EVIDENCE_REVIEW_REASONING_EFFORT` vacíos usan `OPENAI_MODEL` y `OPENAI_REASONING_EFFORT`. Los reintentos siguen en `OPENAI_MAX_RETRIES`.
+La llamada usa `EVIDENCE_REVIEW_TIMEOUT_SECONDS` (80) y `EVIDENCE_REVIEW_MAX_RETRIES` (0), no `OPENAI_MAX_RETRIES`: el SDK también reintenta un plazo vencido, y cada reintento sumaría hasta otros 80 s a los 90 s que espera el backend. `EVIDENCE_REVIEW_MODEL` y `EVIDENCE_REVIEW_REASONING_EFFORT` vacíos usan `OPENAI_MODEL` y `OPENAI_REASONING_EFFORT`.
+
+La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilos, fuera del bucle de eventos. El servicio tiene un solo proceso: en el bucle, una revisión detendría el chat, los demás endpoints y `/health` hasta terminar.
 
 **Validaciones:**
 
 - Sin `OPENAI_API_KEY` la respuesta es 503, antes de validar el cuerpo.
 - Un fallo del proveedor es 502 y el detalle no repite el pedido.
 - Sin `SERVICE_API_KEY` la respuesta es 503. Con la clave ausente o incorrecta en el header, 401. En los dos casos no se lee el cuerpo.
+- Con `OPENAI_MAX_RETRIES` en 2, la revisión sigue con 0 reintentos, salvo que se configure `EVIDENCE_REVIEW_MAX_RETRIES`.
+- El revisor se llama fuera del bucle de eventos.
 
 ---
 
