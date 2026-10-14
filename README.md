@@ -149,7 +149,7 @@ contrato (`docs/Chat/api.md`).
 | `CHAT_MAX_COMPLETION_TOKENS` | 4.000 | Tope de salida por respuesta, razonamiento incluido | |
 | `CHAT_TIMEOUT_SECONDS` | 60 | Lectura, por intento: lo máximo que se esperan las cabeceras de OpenAI o su siguiente fragmento. La conexión tiene 5 s | |
 | `CHAT_MAX_RETRIES` | 0 | Reintentos del SDK, solo antes de que OpenAI responda 2xx. Con 0, el backend decide si reintenta | |
-| `CHAT_QUESTION_MAX_CHARS` | 2.000 | Largo máximo de la pregunta, recortada | `ChatTurn.QuestionMaxChars` |
+| `CHAT_QUESTION_MAX_CHARS` | 2.000 | Largo máximo de la pregunta, recortada | `ChatTurnRules.QuestionMaxChars` |
 | `CHAT_HISTORY_MAX_MESSAGES` | 6 | Mensajes máximos del historial, sin contar los vacíos | `ChatHistory.MaxMessages` |
 | `CHAT_HISTORY_MAX_CHARS` | 8.000 | Caracteres máximos del historial, sumados | `ChatHistory.MaxChars` |
 | `CHAT_MAX_PASSAGES` | 12 | Pasajes máximos por pedido | `ChatPassageLimits.MaxPassages` |
@@ -197,7 +197,7 @@ AI_SERVICE_URL=http://host.docker.internal:8000
 AI_SERVICE_API_KEY=<la misma SERVICE_API_KEY de este servicio>
 ```
 
-- **Interfaz:** la API corre en un contenedor, así que este servicio tiene que escuchar en una interfaz que el contenedor
+- **Interfaz:** la API se ejecuta en un contenedor, así que este servicio tiene que escuchar en una interfaz que el contenedor
   alcance. Sirven la de `uv run ia-cumplify` (`0.0.0.0`) o el puente de Docker (`--host 172.17.0.1` en Linux).
 - **Base de datos:** `DATABASE_URL` tiene que apuntar a la misma base que usa la API.
 

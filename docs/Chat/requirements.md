@@ -10,7 +10,7 @@ Dada una pregunta de un administrador, los mensajes recientes de su conversació
 
 El backend orquesta todo lo demás: recupera los pasajes filtrando por la empresa, guarda las conversaciones, aplica los límites y el presupuesto, registra el uso y reenvía el stream al navegador (diseño en su `docs/AI/plan-sprint-2-chatbot.md`, decisión 4, y en el plan del equipo, `docs/AI/plan-chatbot-rag.pdf`, tarea 4.1; los dos están en la rama `capstone-2s`). Este módulo no lee la base ni guarda estado: cada pedido trae todo lo necesario.
 
-Cubre las tareas 4.1 (endpoint), 4.2 (prompt y límites) y 4.3 (streaming y uso de tokens) del plan del equipo. En este documento, un número como 4.5, "tarea 4.10" o "plan del equipo, 5.1" es un punto de ese plan (4.5: fase 4, punto 5). Lo que falta acordar con el backend, el frontend o el equipo está al final de `api.md`, en "Pendiente de acordar".
+Cubre las tareas 4.1 (endpoint), 4.2 (prompt y límites) y 4.3 (streaming y uso de tokens) del plan del equipo. En este documento, un número como 4.5, "tarea 4.10" o "plan del equipo, 5.1" es un punto de ese plan (4.5: fase 4, punto 5). Lo ya acordado con el backend y el frontend está al final de `api.md`, en "Acordado", y lo que falta acordar, en "Pendiente de acordar".
 
 ---
 
