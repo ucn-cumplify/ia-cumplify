@@ -31,7 +31,7 @@ El sistema debe devolver un motivo en español por cada artículo del pedido que
 
 - `legal_body_id` es un UUID y la fila existe en `legal_bodies`.
 - `articles` tiene entre 1 y 10 elementos; `article_id` no se repite.
-- Cada artículo trae al menos un `matched_values`.
+- Cada artículo que pide motivo trae al menos un `matched_values`. Uno con `write_reason` en falso puede no traer ninguno (APR-008).
 - La respuesta incluye `reasons`, `analyses`, `reason_version` y `usage`.
 
 ---
@@ -164,6 +164,7 @@ Un artículo con `write_reason` en falso recibe su análisis y ningún motivo. A
 **Validaciones:**
 
 - Sin `write_reason`, el artículo recibe su motivo, como con `applicability-v1`.
+- Con `write_reason` en falso, `matched_values` puede ir vacía o faltar. El análisis no depende de los valores, y el 2026-10-14, 80 de las 111 sugerencias de las alertas de la IA de la base local no tenían sus valores coincidentes guardados.
 - Si el modelo escribe igual un motivo para un artículo con `write_reason` en falso, se descarta.
 
 ---

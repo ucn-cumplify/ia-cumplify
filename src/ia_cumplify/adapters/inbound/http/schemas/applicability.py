@@ -28,15 +28,23 @@ class ApplicabilityReasonArticleRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     article_id: UUID
-    matched_values: list[CandidateLabel] = Field(..., min_length=1, max_length=MAX_MATCHED_VALUES)
+    # At least one value when the article gets a reason (see the validator). An analysis-only request may
+    # send none: 80 of the 111 suggestions of the AI alerts in the local database kept no matched values.
+    matched_values: list[CandidateLabel] = Field(default_factory=list, max_length=MAX_MATCHED_VALUES)
     actions: list[CandidateLabel] = Field(default_factory=list, max_length=MAX_ACTIONS)
     write_reason: bool = Field(
         default=True,
         description=(
             "False when the caller keeps its own text for this article and only wants the analysis: "
-            "the article gets no entry in reasons."
+            "the article gets no entry in reasons, and matched_values may be empty."
         ),
     )
+
+    @model_validator(mode="after")
+    def a_reason_needs_matched_values(self) -> "ApplicabilityReasonArticleRequest":
+        if self.write_reason and not self.matched_values:
+            raise ValueError("matched_values needs at least one value when write_reason is true.")
+        return self
 
     def to_domain(self) -> ApplicabilityArticleInput:
         return ApplicabilityArticleInput(

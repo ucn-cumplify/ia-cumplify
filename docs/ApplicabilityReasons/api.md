@@ -40,7 +40,7 @@ POST /api/v1/applicability-reasons
 | legal_body_id | UUID | Sí | Id de la fila en `legal_bodies` |
 | articles | lista | Sí | 1 a 10 artículos. `article_id` no se puede repetir |
 | articles[].article_id | UUID | Sí | Id de la fila en `articles` |
-| articles[].matched_values | lista de string | Sí | Al menos 1, máximo 10. Los mismos valores que nombraría la plantilla del backend |
+| articles[].matched_values | lista de string | Sí, si el artículo pide motivo | Máximo 10. Con motivo, al menos 1: los mismos valores que nombraría la plantilla del backend. Con `write_reason` en `false` puede ir vacía o faltar |
 | articles[].actions | lista de string | No | Máximo 20. Valores de `activity_action` del artículo. Defecto: lista vacía |
 | articles[].write_reason | booleano | No | Defecto: `true`. En `false`, el artículo no recibe motivo y solo vuelve su análisis. Sirve cuando el backend conserva su propio texto, como en un par difuso del nivel 2 o en una alerta que ya tiene su motivo |
 
@@ -128,7 +128,7 @@ El backend de `capstone-2s` todavía no lee `analyses` (paso 0.18 del plan) y, c
 |---|---|
 | 401 | Falta `X-API-Key` o no coincide con `SERVICE_API_KEY` |
 | 404 | No existe la fila en `legal_bodies` |
-| 422 | Falta un campo, `articles` está vacío o pasa de 10, `article_id` repetido, `matched_values` vacío, o una etiqueta no cumple las reglas |
+| 422 | Falta un campo, `articles` está vacío o pasa de 10, `article_id` repetido, `matched_values` vacío en un artículo que pide motivo, o una etiqueta no cumple las reglas |
 | 502 | El proveedor falló, el modelo no devolvió un JSON válido o lo rechazó |
 | 503 | Falta `SERVICE_API_KEY`, `OPENAI_API_KEY` o `DATABASE_URL` |
 

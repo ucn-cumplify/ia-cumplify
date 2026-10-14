@@ -154,6 +154,25 @@ def test_write_reason_false_reaches_the_use_case(monkeypatch) -> None:
     assert use_case.calls[0][1][0].write_reason is False
 
 
+def test_an_analysis_only_article_may_come_without_matched_values(monkeypatch) -> None:
+    # Most suggestions of the AI alerts kept no matched values; the one-time fill (step 0.20) still needs
+    # their analysis. With a reason, the values stay required.
+    configure(monkeypatch, openai_api_key="sk-test-fake")
+    use_case = ScriptedUseCase(success_result())
+    without = [
+        {"article_id": ARTICLE_ID, "actions": ["Monitoreo de relaves"], "write_reason": False},
+        {"article_id": OTHER_ID, "matched_values": [], "write_reason": False},
+    ]
+    response = post(json=payload(articles=without), use_case=use_case)
+    assert response.status_code == 200, response.text
+    assert [item.matched_values for item in use_case.calls[0][1]] == [(), ()]
+
+    with_reason = [{"article_id": ARTICLE_ID, "actions": [], "write_reason": True}]
+    rejected = post(json=payload(articles=with_reason), use_case=use_case)
+    assert rejected.status_code == 422
+    assert len(use_case.calls) == 1
+
+
 def test_404_when_the_legal_body_is_missing(monkeypatch) -> None:
     configure(monkeypatch, openai_api_key="sk-test-fake")
     response = post(json=payload(), use_case=ScriptedUseCase(error=LegalBodyNotFoundError(NORM_ID)))
