@@ -1,6 +1,7 @@
 """Text extraction for evidence files: PDF pages, Word with tables, Excel sheets,
 CSV encoding and delimiter, and PowerPoint slides."""
 
+import zipfile
 from datetime import datetime
 from io import BytesIO
 
@@ -19,6 +20,7 @@ from ia_cumplify.domain.evidence_text import (
     SLIDE,
     UNREADABLE,
     UNSUPPORTED,
+    ReadLimits,
 )
 
 
@@ -159,6 +161,61 @@ def test_a_broken_file_is_an_error_and_keeps_no_fragments():
     assert extract_text(".docx", b"not a word file").status == ERROR
 
 
+def test_too_many_pages_or_slides_is_an_error():
+    pages = extract_text(".pdf", _pdf(["uno", "dos", "tres"]), ReadLimits(max_pages=2))
+    slides = extract_text(".pptx", _slides(2), ReadLimits(max_pages=1))
+
+    assert pages.status == ERROR
+    assert pages.fragments == ()
+    assert pages.detail == "The PDF has more than 2 pages."
+    assert slides.status == ERROR
+    assert slides.fragments == ()
+    assert slides.detail == "Slide count is over the limit of 1."
+
+
+def test_too_many_rows_is_an_error():
+    csv_file = extract_text(".csv", b"a\nb\nc\nd\n", ReadLimits(max_rows=3))
+    sheet = Workbook()
+    sheet.active.append(["uno"])
+    sheet.active.append(["dos"])
+    sheet.active.append(["tres"])
+    sheet.active.append(["cuatro"])
+    excel = extract_text(".xlsx", _save(sheet.save), ReadLimits(max_rows=3))
+    document = Document()
+    table = document.add_table(rows=4, cols=1)
+    for index, label in enumerate(("uno", "dos", "tres", "cuatro")):
+        table.cell(index, 0).text = label
+    word = extract_text(".docx", _save(document.save), ReadLimits(max_rows=3))
+
+    assert csv_file.detail == "The file has more than 3 rows."
+    assert excel.detail == "The file has more than 3 rows."
+    assert word.detail == "The file has more than 3 rows."
+    assert csv_file.fragments == excel.fragments == word.fragments == ()
+
+
+def test_a_zip_that_declares_too_much_uncompressed_data_is_not_opened():
+    content = _declare_uncompressed(_minimal_docx("Acta firmada."), 50_000_000)
+    limits = ReadLimits(max_uncompressed_bytes=1024)
+
+    for extension in (".docx", ".xlsx", ".pptx"):
+        result = extract_text(extension, content, limits)
+        assert result.status == ERROR
+        assert result.fragments == ()
+        assert result.detail == "Uncompressed size is over the limit of 1024 bytes."
+
+
+def test_a_zip_with_too_many_entries_is_not_opened():
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for name in ("a.xml", "b.xml", "c.xml"):
+            archive.writestr(name, b"<x/>")
+    result = extract_text(".docx", buffer.getvalue(), ReadLimits(max_zip_entries=2))
+
+    assert result.status == ERROR
+    assert result.fragments == ()
+    assert result.detail == "The archive has more than 2 entries."
+
+
 def _fragments(extension: str, content: bytes):
     result = extract_text(extension, content)
     assert result.status == READ
@@ -239,3 +296,28 @@ def _pdf(pages: list[str]) -> bytes:
     xref.extend(f"{offsets[number]:010d} 00000 n \n".encode() for number in range(1, size))
     trailer = f"trailer\n<< /Size {size} /Root 1 0 R >>\nstartxref\n{xref_at}\n%%EOF\n".encode()
     return b"".join([*chunks, *xref, trailer])
+
+
+def _slides(count: int) -> bytes:
+    presentation = Presentation()
+    blank = presentation.slide_layouts[6]
+    for number in range(count):
+        slide = presentation.slides.add_slide(blank)
+        box = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(4), Inches(1))
+        box.text_frame.text = f"Diapositiva {number + 1}"
+    return _save(presentation.save)
+
+
+def _declare_uncompressed(content: bytes, size: int) -> bytes:
+    """Rewrite the ZIP directory so each entry claims ``size`` bytes uncompressed."""
+    blob = bytearray(content)
+    encoded = size.to_bytes(4, "little")
+    for signature, offset in ((b"PK\x03\x04", 22), (b"PK\x01\x02", 24)):
+        start = 0
+        while True:
+            index = blob.find(signature, start)
+            if index < 0:
+                break
+            blob[index + offset : index + offset + 4] = encoded
+            start = index + 4
+    return bytes(blob)

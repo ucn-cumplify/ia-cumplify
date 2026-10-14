@@ -41,3 +41,19 @@ class ExtractedFile:
     status: FileReadStatus
     fragments: tuple[ExtractedFragment, ...]
     detail: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ReadLimits:
+    """How far a single file may be opened.
+
+    Word, Excel and PowerPoint are ZIP files: the uncompressed size is the sum
+    declared in the central directory, checked before the package is parsed.
+    Slides count toward ``max_pages``. The character cap that cuts extracted
+    text is separate and is not applied here.
+    """
+
+    max_pages: int = 100
+    max_rows: int = 10_000
+    max_uncompressed_bytes: int = 64 * 1024 * 1024
+    max_zip_entries: int = 4_096
