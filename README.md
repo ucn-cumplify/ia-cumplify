@@ -305,6 +305,33 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
   opciones están en «Evaluación del perfil embebido» de `docs/Embeddings/requirements.md`. `--self-test` comprueba la
   receta, esos casos y las métricas con datos inventados, sin servicio ni base.
 
+### Evaluación de los motivos y el análisis (`applicability-v2`)
+
+`scripts/applicability_eval.py` es el paso 0.17 del plan del sprint 3 y cubre APR-023 a APR-025 de
+`docs/ApplicabilityReasons/test.csv`. Pide el análisis de los artículos de `scripts/applicability_eval_set.json`
+(remisiones, informativos y una muestra con obligaciones explícitas) y revisa en cada uno la naturaleza, las
+obligaciones, la norma a la que remite y si trajo motivo.
+
+> **Gasta tokens reales**, en 8 pedidos. El costo esperado es del orden de un centavo de dólar, según la estimación del
+> plan para `applicability-v2` (unos US$0,001 por alerta); el script informa el gasto real.
+
+```bash
+export SERVICE_API_KEY=...        # la misma del servicio
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cumplify_db
+uv run python scripts/applicability_eval.py --dry-run
+uv run python scripts/applicability_eval.py --base-url http://127.0.0.1:8000
+```
+
+- **El servicio tiene que responder con `applicability-v2`.** Si responde con otra versión, el informe lo avisa.
+- **Artículos:** los busca en las alertas de la IA de la base local, con una conexión propia de solo lectura. Como
+  acciones les manda las frases que guardó la alerta, igual que el backend. Los casos con motivo traen en el set sus
+  valores coincidentes, porque esas sugerencias no los guardaron.
+- **Consola:** por artículo, la naturaleza esperada y la obtenida, las obligaciones y si trajo motivo. Al final, la
+  latencia del pedido más lento contra el plazo de 25 s, los tokens y el costo estimado. Los textos de las obligaciones y
+  de los motivos van a `--out`.
+- **`--dry-run`:** solo busca los casos en la base y muestra cuántas acciones y valores lleva cada artículo. No llama al
+  servicio ni pide `SERVICE_API_KEY`.
+
 ## Endpoints
 
 | Método | Ruta | Uso |
@@ -331,7 +358,7 @@ ia-cumplify/
 │   ├── config/
 │   └── cli.py                   # ia-cumplify (desarrollo) e ia-cumplify-serve (contenedor)
 ├── tests/                       # pytest, con un OpenAI simulado en 127.0.0.1
-├── scripts/                     # Evaluaciones manuales del chat, de la recuperación y del perfil embebido
+├── scripts/                     # Evaluaciones manuales del chat, de la recuperación, del perfil embebido y de los motivos
 ├── docs/                        # Contratos, requisitos y casos de prueba por módulo
 ├── Dockerfile                   # Imagen del perfil ia del Compose del backend
 ├── pyproject.toml
