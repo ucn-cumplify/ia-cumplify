@@ -216,10 +216,43 @@ def test_a_zip_with_too_many_entries_is_not_opened():
     assert result.detail == "The archive has more than 2 entries."
 
 
+def test_text_past_the_character_cap_is_cut_and_the_file_is_marked():
+    content = _pdf(["Acta firmada.", "Informe de la planta."])
+    first = len("Acta firmada.")
+
+    within = extract_text(".pdf", content, ReadLimits(max_chars=first + len("Informe de la planta.")))
+    cut = extract_text(".pdf", content, ReadLimits(max_chars=first + 7))
+    dropped = extract_text(".pdf", content, ReadLimits(max_chars=first))
+    nothing = extract_text(".csv", b"Nombre;RUT\nAna;1-9\n", ReadLimits(max_chars=0))
+    blank = extract_text(".pdf", _pdf(["", "   "]), ReadLimits(max_chars=1))
+
+    assert within.truncated is False
+    assert [(fragment.reference, fragment.text) for fragment in within.fragments] == [
+        ("1", "Acta firmada."),
+        ("2", "Informe de la planta."),
+    ]
+    assert cut.status == READ
+    assert cut.detail is None
+    assert cut.truncated is True
+    assert [(fragment.reference, fragment.text) for fragment in cut.fragments] == [
+        ("1", "Acta firmada."),
+        ("2", "Informe"),
+    ]
+    assert dropped.truncated is True
+    assert [(fragment.reference, fragment.text) for fragment in dropped.fragments] == [("1", "Acta firmada.")]
+    assert nothing.status == READ
+    assert nothing.truncated is True
+    assert nothing.fragments == ()
+    assert blank.status == UNREADABLE
+    assert blank.truncated is False
+    assert len(blank.fragments) == 2
+
+
 def _fragments(extension: str, content: bytes):
     result = extract_text(extension, content)
     assert result.status == READ
     assert result.detail is None
+    assert result.truncated is False
     return result.fragments
 
 

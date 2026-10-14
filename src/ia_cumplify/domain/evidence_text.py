@@ -35,12 +35,14 @@ class ExtractedFile:
 
     ``fragments`` keeps the pages, sheets or slides even when every one is empty,
     so a scanned PDF still reports how many pages it has. ``detail`` is set only
-    when ``status`` is ``error``.
+    when ``status`` is ``error``. ``truncated`` is set when the extracted text
+    passed the character cap and was cut.
     """
 
     status: FileReadStatus
     fragments: tuple[ExtractedFragment, ...]
     detail: str | None = None
+    truncated: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,11 +51,12 @@ class ReadLimits:
 
     Word, Excel and PowerPoint are ZIP files: the uncompressed size is the sum
     declared in the central directory, checked before the package is parsed.
-    Slides count toward ``max_pages``. The character cap that cuts extracted
-    text is separate and is not applied here.
+    Slides count toward ``max_pages``. Past ``max_chars``, the extracted text is
+    cut and the file is marked; that is not an error.
     """
 
     max_pages: int = 100
     max_rows: int = 10_000
     max_uncompressed_bytes: int = 64 * 1024 * 1024
     max_zip_entries: int = 4_096
+    max_chars: int = 200_000

@@ -6,7 +6,7 @@ and for CSV. Each file also comes back with a status: read, unreadable (a scanne
 or an image), unsupported or error.
 
 A file past the page, row or uncompressed-size limit is an error and is not returned
-in part. Cutting text that passes the character cap is not applied here.
+in part. Text past the character cap is cut, and the file is marked truncated.
 """
 
 from __future__ import annotations
@@ -79,9 +79,11 @@ def extract_text(
     except Exception as exc:
         return ExtractedFile(ERROR, (), _error_detail(exc))
 
-    if not any(fragment.text.strip() for fragment in fragments):
+    had_text = any(fragment.text.strip() for fragment in fragments)
+    if not had_text:
         return ExtractedFile(UNREADABLE, fragments)
-    return ExtractedFile(READ, fragments)
+    fragments, truncated = _cut_text(fragments, limits.max_chars)
+    return ExtractedFile(READ, fragments, truncated=truncated)
 
 
 def _error_detail(exc: Exception) -> str:
@@ -189,6 +191,28 @@ def _guard_zip(content: bytes, limits: ReadLimits) -> None:
                 raise ReadLimitExceeded(
                     f"Uncompressed size is over the limit of {limits.max_uncompressed_bytes} bytes."
                 )
+
+
+def _cut_text(
+    fragments: tuple[ExtractedFragment, ...], max_chars: int
+) -> tuple[tuple[ExtractedFragment, ...], bool]:
+    """Keep text up to ``max_chars``, counted across fragments in order.
+
+    The fragment that crosses the cap keeps its prefix. Later fragments are
+    dropped. A file whose text fits is not marked.
+    """
+    remaining = max(max_chars, 0)
+    kept: list[ExtractedFragment] = []
+    for fragment in fragments:
+        text = fragment.text
+        if len(text) <= remaining:
+            kept.append(fragment)
+            remaining -= len(text)
+            continue
+        if remaining:
+            kept.append(ExtractedFragment(fragment.locator, fragment.reference, text[:remaining]))
+        return tuple(kept), True
+    return tuple(kept), False
 
 
 def _count_rows(count: int, seen: int, limits: ReadLimits) -> int:
