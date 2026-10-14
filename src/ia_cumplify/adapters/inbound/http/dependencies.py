@@ -136,9 +136,9 @@ def get_evidence_reviewer() -> EvidenceReviewerPort:
         )
     return OpenAIEvidenceReviewerAdapter(
         api_key=settings.openai_api_key,
-        model=settings.openai_model,
-        reasoning_effort=settings.openai_reasoning_effort,
-        timeout_seconds=settings.openai_timeout_seconds,
+        model=settings.evidence_review_model or settings.openai_model,
+        reasoning_effort=settings.evidence_review_reasoning_effort or settings.openai_reasoning_effort,
+        timeout_seconds=settings.evidence_review_timeout_seconds,
         max_retries=settings.openai_max_retries,
     )
 

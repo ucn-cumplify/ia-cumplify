@@ -77,12 +77,15 @@ def test_a_provider_error_does_not_repeat_the_request():
     assert SECRET not in str(raised.value)
 
 
-def test_the_reviewer_is_wired_with_the_shared_openai_settings(monkeypatch):
+def test_empty_review_model_and_effort_use_the_shared_ones(monkeypatch):
     configure(
         monkeypatch,
         openai_api_key="sk-test",
         openai_model="gpt-test",
-        openai_reasoning_effort="low",
+        openai_reasoning_effort="high",
+        evidence_review_model="",
+        evidence_review_reasoning_effort="",
+        openai_timeout_seconds="42",
     )
     created: dict = {}
 
@@ -96,10 +99,36 @@ def test_the_reviewer_is_wired_with_the_shared_openai_settings(monkeypatch):
     reviewer = get_evidence_reviewer()
 
     assert reviewer._model == "gpt-test"
-    assert reviewer._reasoning_effort == "low"
+    assert reviewer._reasoning_effort == "high"
     assert created["api_key"] == "sk-test"
-    assert created["timeout"] == 180
+    assert created["timeout"] == 80
     assert created["max_retries"] == 0
+
+
+def test_the_review_model_effort_and_timeout_are_its_own(monkeypatch):
+    configure(
+        monkeypatch,
+        openai_api_key="sk-test",
+        openai_model="modelo-general",
+        openai_reasoning_effort="high",
+        evidence_review_model="modelo-revision",
+        evidence_review_reasoning_effort="medium",
+        evidence_review_timeout_seconds="15",
+    )
+    created: dict = {}
+
+    class _Client:
+        def __init__(self, **kwargs) -> None:
+            created.update(kwargs)
+
+    monkeypatch.setattr("ia_cumplify.adapters.outbound.openai.evidence_reviewer.OpenAI", _Client)
+    reset_wiring_cache()
+
+    reviewer = get_evidence_reviewer()
+
+    assert reviewer._model == "modelo-revision"
+    assert reviewer._reasoning_effort == "medium"
+    assert created["timeout"] == 15
 
 
 class _Completions:

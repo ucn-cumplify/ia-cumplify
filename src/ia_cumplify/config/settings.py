@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     # Fixed answers without OpenAI (chat_version fake-v1@fake), to integrate the backend without tokens.
     chat_fake_responder: bool = False
 
+    # POST /api/v1/evidence-reviews. Empty EVIDENCE_REVIEW_MODEL and EVIDENCE_REVIEW_REASONING_EFFORT
+    # use OPENAI_MODEL and OPENAI_REASONING_EFFORT. The timeout is its own: one structured call over
+    # several files, under the shared 180 s used by classification.
+    evidence_review_model: str = ""
+    evidence_review_reasoning_effort: str = ""
+    evidence_review_timeout_seconds: float = 80
+
 
 @lru_cache
 def get_settings() -> Settings:
