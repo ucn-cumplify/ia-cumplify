@@ -1,5 +1,5 @@
 """POST /api/v1/evidence-reviews accepts the article, its regulation, the row obligation
-and the files. It does not review them yet.
+and the files, and returns the review.
 """
 
 import json
@@ -11,7 +11,12 @@ from fastapi.testclient import TestClient
 from ia_cumplify.adapters.inbound.http.app import create_app
 from ia_cumplify.adapters.inbound.http.dependencies import get_db_pool
 from ia_cumplify.adapters.inbound.http.routers import evidence_reviews
-from ia_cumplify.adapters.inbound.http.schemas.evidence_review import parse_evidence_review
+from ia_cumplify.adapters.inbound.http.schemas.evidence_review import EvidenceReviewResponse, parse_evidence_review
+from ia_cumplify.adapters.outbound.documents.text_extractor import extract_text
+from ia_cumplify.application.use_cases.review_evidence import assemble_evidence_review
+from ia_cumplify.domain.classification import TokenUsage
+from ia_cumplify.domain.evidence_review import ReviewCitation, ReviewJudgment, ReviewRequirement
+from ia_cumplify.domain.evidence_text import ReadLimits
 
 REVIEW = "/api/v1/evidence-reviews"
 
@@ -101,20 +106,118 @@ def test_eleven_files_and_a_payload_over_25_mb_are_rejected():
         parse_evidence_review(json.dumps(_review()), [("grande.bin", b"x" * (25 * 1024 * 1024 + 1))])
 
 
-def test_the_endpoint_accepts_multipart_and_returns_no_review_yet(monkeypatch):
+def test_the_response_reports_each_file_and_leaves_the_judgment_empty(monkeypatch):
     configure(monkeypatch)
     response = _post(
         _review(
             text=SECRET,
-            files=[{"id": "file-1", "filename": "acta.pdf"}],
+            files=[
+                {"id": "file-1", "filename": "nomina.csv"},
+                {"id": "file-2", "filename": "foto.png"},
+                {"id": "file-3", "filename": "notas.txt"},
+                {"id": "file-4", "filename": "roto.pdf"},
+            ],
             obligation={"name": "Capacitación", "description": SECRET},
         ),
-        [("acta.pdf", b"%PDF")],
+        [
+            ("nomina.csv", b"Nombre;RUT\nAna;1-9\n"),
+            ("foto.png", b"\x89PNG\r\n\x1a\nnot-parsed"),
+            ("notas.txt", b"texto que no se lee"),
+            ("roto.pdf", b"this is not a pdf"),
+        ],
     )
 
-    assert response.status_code == 204
-    assert response.content == b""
+    assert response.status_code == 200
+    assert response.json() == {
+        "files": [
+            {"id": "file-1", "filename": "nomina.csv", "status": "read", "truncated": False, "detail": None},
+            {"id": "file-2", "filename": "foto.png", "status": "unreadable", "truncated": False, "detail": None},
+            {"id": "file-3", "filename": "notas.txt", "status": "unsupported", "truncated": False, "detail": None},
+            {
+                "id": "file-4",
+                "filename": "roto.pdf",
+                "status": "error",
+                "truncated": False,
+                "detail": response.json()["files"][3]["detail"],
+            },
+        ],
+        "nature": None,
+        "requirements": [],
+        "verdict": None,
+        "summary": None,
+        "usage": _zero_usage(),
+        "model": None,
+        "review_version": "evidence-review-v1",
+    }
+    assert response.json()["files"][3]["detail"]
     assert SECRET not in response.text
+    assert "Nombre;RUT" not in response.text
+
+
+def test_a_judgment_is_returned_with_its_citations(monkeypatch):
+    configure(monkeypatch)
+    monkeypatch.setattr(evidence_reviews, "judgment_for", lambda request: _judgment())
+    response = _post(
+        _review(text=SECRET, files=[{"id": "file-1", "filename": "nomina.csv"}]),
+        [("nomina.csv", b"Nombre;RUT\nAna;1-9\n")],
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["files"][0]["status"] == "read"
+    assert body["nature"] == "explicit_obligations"
+    assert body["verdict"] == "partial"
+    assert body["summary"] == "El acta acredita la constitución y falta la nómina completa."
+    assert body["model"] == "gpt-5.6-luna"
+    assert body["review_version"] == "evidence-review-v1@gpt-5.6-luna"
+    assert body["usage"] == {
+        "prompt_tokens": 20,
+        "completion_tokens": 8,
+        "total_tokens": 28,
+        "cached_tokens": 0,
+        "llm_calls": 1,
+    }
+    assert body["requirements"] == [
+        {
+            "text": "El acta indica la fecha, la faena y a quién representa cada integrante.",
+            "status": "accredited",
+            "missing": "",
+            "citations": [
+                {
+                    "file_id": "file-1",
+                    "locator": "page",
+                    "reference": "1",
+                    "quote": "En la faena Calama, el 15 de marzo de 2026",
+                }
+            ],
+        },
+        {
+            "text": "Cada integrante figura con su nombre, su RUT y la fecha de su última capacitación.",
+            "status": "partial",
+            "missing": "Falta la fecha de la última capacitación.",
+            "citations": [
+                {"file_id": "file-1", "locator": "sheet", "reference": "Nomina", "quote": "Ana | 1-9"},
+                {"file_id": "file-2", "locator": "slide", "reference": "2", "quote": "Capacitación 2024"},
+                {"file_id": "file-1", "locator": "body", "reference": "", "quote": "Nombre;RUT"},
+            ],
+        },
+    ]
+    assert SECRET not in response.text
+
+
+def test_a_file_past_the_character_cap_is_marked_in_the_response():
+    request = parse_evidence_review(
+        json.dumps(_review(files=[{"id": "file-1", "filename": "lista.csv"}])),
+        [("lista.csv", b"abcdefghij\n")],
+    )
+    extracted = (extract_text(".csv", request.files[0].content, ReadLimits(max_chars=4)),)
+    result = assemble_evidence_review(request, extracted, None)
+    body = EvidenceReviewResponse.from_domain(result).model_dump()
+
+    assert body["files"] == [
+        {"id": "file-1", "filename": "lista.csv", "status": "read", "truncated": True, "detail": None}
+    ]
+    assert "abcdefghij" not in EvidenceReviewResponse.from_domain(result).model_dump_json()
 
 
 def test_a_file_that_passes_the_size_cap_is_not_kept(monkeypatch):
@@ -133,7 +236,9 @@ def test_the_review_works_without_a_database(monkeypatch):
     with TestClient(app) as client:
         assert app.state.db_pool is None
         response = client.post(REVIEW, headers=HEADERS, data={"review": json.dumps(_review(text=SECRET))})
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert response.json()["review_version"] == "evidence-review-v1"
+    assert response.json()["files"] == []
     assert SECRET not in response.text
     included, route = _evidence_route(app)
     assert get_db_pool not in _dependency_calls(route.dependant)
@@ -149,7 +254,7 @@ def test_a_configured_database_is_not_opened_for_the_review(monkeypatch):
         assert isinstance(pool, _IdlePool)
         before = list(pool.operations)
         response = client.post(REVIEW, headers=HEADERS, data={"review": json.dumps(_review())})
-        assert response.status_code == 204
+        assert response.status_code == 200
         assert pool.operations == before
     assert pool.operations == ["close"]
 
@@ -222,6 +327,52 @@ class _IdlePool:
 
     def close(self) -> None:
         self.operations.append("close")
+
+
+def _zero_usage() -> dict:
+    return {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "cached_tokens": 0,
+        "llm_calls": 0,
+    }
+
+
+def _judgment() -> ReviewJudgment:
+    return ReviewJudgment(
+        nature="explicit_obligations",
+        requirements=(
+            ReviewRequirement(
+                text="El acta indica la fecha, la faena y a quién representa cada integrante.",
+                status="accredited",
+                citations=(
+                    ReviewCitation(
+                        file_id="file-1",
+                        locator="page",
+                        reference="1",
+                        quote="En la faena Calama, el 15 de marzo de 2026",
+                    ),
+                ),
+                missing="",
+            ),
+            ReviewRequirement(
+                text="Cada integrante figura con su nombre, su RUT y la fecha de su última capacitación.",
+                status="partial",
+                citations=(
+                    ReviewCitation(file_id="file-1", locator="sheet", reference="Nomina", quote="Ana | 1-9"),
+                    ReviewCitation(file_id="file-2", locator="slide", reference="2", quote="Capacitación 2024"),
+                    ReviewCitation(file_id="file-1", locator="body", reference="", quote="Nombre;RUT"),
+                ),
+                missing="Falta la fecha de la última capacitación.",
+            ),
+        ),
+        verdict="partial",
+        summary="El acta acredita la constitución y falta la nómina completa.",
+        usage=TokenUsage(prompt_tokens=20, completion_tokens=8, total_tokens=28, llm_calls=1),
+        model="gpt-5.6-luna",
+        review_version="evidence-review-v1@gpt-5.6-luna",
+    )
 
 
 def _post(review, uploads: list[tuple[str, bytes]] | None = None, *, headers=HEADERS):

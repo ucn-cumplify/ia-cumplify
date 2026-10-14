@@ -1,5 +1,9 @@
 from dataclasses import dataclass
 from datetime import date
+from typing import Literal
+
+from ia_cumplify.domain.classification import TokenUsage
+from ia_cumplify.domain.evidence_text import FileReadStatus
 
 # Per review, the caps agreed for one call (plan O1). The backend applies the same ones
 # before it sends the request. The character cap of extracted file text is separate.
@@ -67,3 +71,72 @@ class EvidenceReviewRequest:
     legal_body: ReviewLegalBody
     obligation: ReviewObligation | None
     files: tuple[ReviewFile, ...]
+
+
+# obligaciones explícitas, informativo, remisión.
+ArticleNature = Literal["explicit_obligations", "informative", "referral"]
+# acreditada, parcial, no acreditada, no evaluable.
+RequirementStatus = Literal["accredited", "partial", "not_accredited", "not_evaluable"]
+# página, hoja, diapositiva, o el cuerpo cuando el formato no tiene esas partes.
+CitationLocator = Literal["page", "sheet", "slide", "body"]
+
+# Prompt id. The model name is appended once a review is actually run: "evidence-review-v1@<model>".
+REVIEW_PROMPT_VERSION = "evidence-review-v1"
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewedFile:
+    """How one uploaded file came back from reading. The extracted text is not part of the response."""
+
+    id: str
+    filename: str
+    status: FileReadStatus
+    truncated: bool
+    detail: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewCitation:
+    """A literal excerpt and where it sits in the file the caller sent."""
+
+    file_id: str
+    locator: CitationLocator
+    reference: str
+    quote: str
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewRequirement:
+    """One exigencia of the article, with the citations that support its status and what is missing."""
+
+    text: str
+    status: RequirementStatus
+    citations: tuple[ReviewCitation, ...]
+    missing: str
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewJudgment:
+    """What the model concludes. File statuses are not part of it: reading the files decides those."""
+
+    nature: ArticleNature
+    requirements: tuple[ReviewRequirement, ...]
+    verdict: RequirementStatus
+    summary: str
+    usage: TokenUsage
+    model: str
+    review_version: str
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceReview:
+    """The body of POST /api/v1/evidence-reviews."""
+
+    files: tuple[ReviewedFile, ...]
+    nature: ArticleNature | None
+    requirements: tuple[ReviewRequirement, ...]
+    verdict: RequirementStatus | None
+    summary: str | None
+    usage: TokenUsage
+    model: str | None
+    review_version: str

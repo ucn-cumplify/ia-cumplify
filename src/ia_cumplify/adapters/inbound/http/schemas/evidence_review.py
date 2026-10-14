@@ -13,6 +13,7 @@ from typing import Annotated
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator
 
+from ia_cumplify.adapters.inbound.http.schemas.classification import TokenUsageResponse
 from ia_cumplify.domain.chat import replace_lone_surrogates
 from ia_cumplify.domain.evidence_review import (
     ARTICLE_NUMBER_MAX_CHARS,
@@ -26,7 +27,11 @@ from ia_cumplify.domain.evidence_review import (
     OBLIGATION_DESCRIPTION_MAX_CHARS,
     OBLIGATION_NAME_MAX_CHARS,
     TITLE_MAX_CHARS,
+    ArticleNature,
+    CitationLocator,
+    EvidenceReview,
     EvidenceReviewRequest,
+    RequirementStatus,
     ReviewArticle,
     ReviewFile,
     ReviewLegalBody,
@@ -242,3 +247,78 @@ def _upload_filename(filename: str | None) -> str:
     if not name or name in {".", ".."}:
         raise ValueError("Each uploaded file needs a filename.")
     return name
+
+
+class ReviewCitationResponse(BaseModel):
+    file_id: str
+    locator: CitationLocator
+    reference: str = Field(..., description="1-based page or slide, sheet name, or empty for a body")
+    quote: str
+
+
+class ReviewRequirementResponse(BaseModel):
+    text: str
+    status: RequirementStatus
+    citations: list[ReviewCitationResponse]
+    missing: str = Field(..., description="What the files do not show. Empty when nothing is missing")
+
+
+class ReviewedFileResponse(BaseModel):
+    id: str
+    filename: str
+    status: str
+    truncated: bool
+    detail: str | None = None
+
+
+class EvidenceReviewResponse(BaseModel):
+    """What POST /api/v1/evidence-reviews returns. The extracted text of a file is not included."""
+
+    files: list[ReviewedFileResponse]
+    nature: ArticleNature | None = Field(
+        default=None, description="explicit_obligations, informative or referral. Null before the model runs"
+    )
+    requirements: list[ReviewRequirementResponse]
+    verdict: RequirementStatus | None = None
+    summary: str | None = None
+    usage: TokenUsageResponse
+    model: str | None = None
+    review_version: str
+
+    @classmethod
+    def from_domain(cls, result: EvidenceReview) -> "EvidenceReviewResponse":
+        return cls(
+            files=[
+                ReviewedFileResponse(
+                    id=item.id,
+                    filename=item.filename,
+                    status=item.status,
+                    truncated=item.truncated,
+                    detail=item.detail,
+                )
+                for item in result.files
+            ],
+            nature=result.nature,
+            requirements=[
+                ReviewRequirementResponse(
+                    text=item.text,
+                    status=item.status,
+                    citations=[
+                        ReviewCitationResponse(
+                            file_id=citation.file_id,
+                            locator=citation.locator,
+                            reference=citation.reference,
+                            quote=citation.quote,
+                        )
+                        for citation in item.citations
+                    ],
+                    missing=item.missing,
+                )
+                for item in result.requirements
+            ],
+            verdict=result.verdict,
+            summary=result.summary,
+            usage=TokenUsageResponse.from_domain(result.usage),
+            model=result.model,
+            review_version=result.review_version,
+        )
