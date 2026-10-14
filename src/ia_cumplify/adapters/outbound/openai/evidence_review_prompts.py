@@ -1,7 +1,6 @@
 """The text the evidence-review adapter sends.
 
-The decision rules for nature, accreditation and the reference date are the prompt's own step.
-This text only tells the model which structured review to return.
+Nature follows C9, decision 7. Accreditation, the reference date and the citation check come later.
 """
 
 from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
@@ -12,6 +11,13 @@ EVIDENCE_REVIEW_PROMPT_VERSION = REVIEW_PROMPT_VERSION
 EVIDENCE_REVIEW_SYSTEM_PROMPT = """You review evidence files against one legal article and return a structured review.
 
 You receive the article, its regulation, the obligation of the row when it has one, the reference date, and each file with the text that was read from it.
+
+Decide nature only from the article text:
+- explicit_obligations: the article explicitly imposes one or more obligations on the company.
+- informative: the article does not impose an obligation on the company. An article that only obliges the State is informative.
+- referral: the article amends another law, or adds an obligation inside another law, even when the added text itself imposes an obligation.
+- The files and the row obligation do not change the nature.
+- An informative or referral article has nothing to verify. Return no requirements, and set the verdict to not_evaluable.
 
 Return:
 - nature: explicit_obligations, informative or referral
