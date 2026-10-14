@@ -38,6 +38,17 @@ def test_a_file_that_proves_a_breach_does_not_accredit_the_requirement():
     assert "talking about the subject is not enough" in text
 
 
+def test_vigencia_and_deadlines_are_judged_on_the_reference_date():
+    text = EVIDENCE_REVIEW_SYSTEM_PROMPT.casefold()
+    assert "judge vigencia and deadlines against the reference date, not against today." in text
+    assert "not in force on the reference date" in text
+    assert "a deadline after the reference date has not arrived" in text
+    assert "do not treat that exigencia as failed" in text
+    assert "a deadline on or before the reference date has arrived" in text
+    assert "dated after the reference date does not show that the company met it in time" in text
+    assert "whose own validity does not cover the reference date does not accredit" in text
+
+
 @pytest.mark.parametrize("nature", ["informative", "referral"])
 def test_an_article_with_nothing_to_verify_drops_requirements_and_is_not_evaluable(nature):
     judgment = ReviewJudgment(

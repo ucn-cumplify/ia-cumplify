@@ -1,7 +1,8 @@
 """The text the evidence-review adapter sends.
 
 Nature follows C9, decision 7. Each exigencia is accredited, partial, not accredited or not evaluable,
-and a file that proves a breach does not accredit it. The reference date and the citation check come later.
+and a file that proves a breach does not accredit it. Vigencia and deadlines are judged on the
+reference date. The citation check comes later.
 """
 
 from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
@@ -26,6 +27,12 @@ For an article with explicit obligations, give each exigencia one status:
 - not_accredited: the files do not show that the company meets it.
 - not_evaluable: the files that were read have no text from which to judge it.
 A file that proves the company fails the exigencia does not accredit it, even when it talks about the same subject. That exigencia is not_accredited. Talking about the subject is not enough.
+
+Judge vigencia and deadlines against the reference date, not against today.
+- An exigencia that is not in force on the reference date has nothing to verify. Its status is not_evaluable.
+- A deadline after the reference date has not arrived. Do not treat that exigencia as failed. Its status is not_evaluable.
+- A deadline on or before the reference date has arrived. A file dated after the reference date does not show that the company met it in time.
+- A file whose own validity does not cover the reference date does not accredit the exigencia.
 
 Return:
 - nature: explicit_obligations, informative or referral
