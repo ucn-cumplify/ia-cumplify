@@ -260,7 +260,10 @@ class ReviewRequirementResponse(BaseModel):
     text: str
     status: RequirementStatus
     citations: list[ReviewCitationResponse]
-    missing: str = Field(..., description="What the files do not show. Empty when nothing is missing")
+    missing: str = Field(
+        ...,
+        description="What does not appear in the files. Empty when nothing is missing. It does not recommend an action",
+    )
 
 
 class ReviewedFileResponse(BaseModel):

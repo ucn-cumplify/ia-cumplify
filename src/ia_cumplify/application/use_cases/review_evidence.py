@@ -13,6 +13,7 @@ from ia_cumplify.domain.evidence_review import (
     EvidenceReview,
     EvidenceReviewRequest,
     EvidenceReviewSubject,
+    ReviewJudgment,
     ReviewRequirement,
     ReviewSourceFile,
     ReviewedFile,
@@ -31,7 +32,7 @@ class ReviewEvidenceUseCase:
         extracted = tuple(
             extract_text(_extension(item.filename), item.content, self._limits) for item in request.files
         )
-        judgment = self._reviewer.review(_subject(request, extracted))
+        judgment = _closed_when_nothing_to_verify(self._reviewer.review(_subject(request, extracted)))
         known = {item.id for item in request.files}
         judgment = replace(
             judgment,
@@ -99,6 +100,13 @@ def _subject(request: EvidenceReviewRequest, extracted: tuple[ExtractedFile, ...
             for item, reading in zip(request.files, extracted, strict=True)
         ),
     )
+
+
+def _closed_when_nothing_to_verify(judgment: ReviewJudgment) -> ReviewJudgment:
+    """An informative or referral article has no exigencia to check, so the verdict is not evaluable."""
+    if judgment.nature == "explicit_obligations":
+        return judgment
+    return replace(judgment, requirements=(), verdict="not_evaluable")
 
 
 def _known_requirements(
