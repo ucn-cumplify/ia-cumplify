@@ -14,10 +14,10 @@ from ia_cumplify.domain.applicability import (
     MAX_REASON_CHARS,
     MAX_REFERRED_LEGAL_BODY_CHARS,
     ApplicabilityArticleInput,
+    ApplicabilityNature,
     ApplicabilityReasons,
     ArticleAnalysis,
 )
-from ia_cumplify.domain.article_nature import ArticleNature
 
 
 def _unique(labels: list[str]) -> tuple[str, ...]:
@@ -88,7 +88,7 @@ class ArticleObligationResponse(BaseModel):
 
 class ArticleAnalysisResponse(BaseModel):
     article_id: str
-    nature: ArticleNature = Field(..., description="explicit_obligations, informative or referral")
+    nature: ApplicabilityNature = Field(..., description="explicit_obligations, informative or referral")
     obligations: list[ArticleObligationResponse] = Field(
         ...,
         max_length=MAX_OBLIGATIONS,

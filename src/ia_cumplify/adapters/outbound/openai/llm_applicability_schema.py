@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from ia_cumplify.domain.article_nature import ArticleNature
+from ia_cumplify.domain.applicability import ApplicabilityNature
 
 # Every field is required and has no default, like the schema of applicability-v1 that already ran against
 # OpenAI. Lengths are checked in code after parsing: a constraint here would fail the whole response, and
@@ -24,7 +24,7 @@ class LlmArticleReason(BaseModel):
     article_id: str = Field(..., description="The exact article_id from ARTICLES TO EXPLAIN.")
     # Nature and obligations come before the reason, so the model reads the article before it writes
     # about the match.
-    nature: ArticleNature = Field(
+    nature: ApplicabilityNature = Field(
         ..., description="explicit_obligations, informative or referral, decided only from the article text."
     )
     referred_legal_body: str = Field(

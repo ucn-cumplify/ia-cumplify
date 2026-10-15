@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from typing import get_args
+from typing import Literal, get_args
 
 from ia_cumplify.domain.article import Article
-from ia_cumplify.domain.article_nature import ArticleNature
 from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.legal_body import LegalBody
 
@@ -21,7 +20,11 @@ MAX_OBLIGATION_TITLE_CHARS = 200
 MAX_OBLIGATION_SUMMARY_CHARS = 1000
 MAX_REFERRED_LEGAL_BODY_CHARS = 300
 
-ARTICLE_NATURES: frozenset[str] = frozenset(get_args(ArticleNature))
+# What an article asks of the company (C9, decision 7 of the sprint 3 plan): obligaciones explícitas,
+# informativo, remisión. The evidence review declares its own ArticleNature: the two may differ until both
+# follow the same rules.
+ApplicabilityNature = Literal["explicit_obligations", "informative", "referral"]
+APPLICABILITY_NATURES: frozenset[str] = frozenset(get_args(ApplicabilityNature))
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,7 +75,7 @@ class ArticleAnalysis:
     """
 
     article_id: str
-    nature: ArticleNature
+    nature: ApplicabilityNature
     obligations: tuple[ArticleObligation, ...]
     referred_legal_body: str | None
 
@@ -101,7 +104,7 @@ def close_analysis(analysis: ArticleAnalysis) -> ArticleAnalysis | None:
     names. An article with explicit obligations and no usable one is dropped, so the backend
     shows it as not evaluated instead of an empty list. Texts come back on one line.
     """
-    if analysis.nature not in ARTICLE_NATURES:
+    if analysis.nature not in APPLICABILITY_NATURES:
         return None
     if analysis.nature == "explicit_obligations":
         obligations = _usable_obligations(analysis.obligations)
