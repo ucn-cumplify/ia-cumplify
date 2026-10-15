@@ -10,7 +10,9 @@ Dado un cuerpo legal y un puñado de artículos ya elegidos para una alerta (com
 
 El pedido llega desde `backend-cumplify` al armar el borrador de la alerta (`SuggestionAlertDraftLoader`, con `AI_APPLICABILITY_REASONS_ENABLED=true`). Si la llamada falla, se vence o un artículo no trae motivo, ese artículo conserva la plantilla de §11.4. Este módulo no escribe en la base.
 
-Desde `applicability-v2` (paso 0.16 del plan del sprint 3, C9), cada artículo trae además su análisis: la naturaleza, las obligaciones explícitas que impone a la empresa y la norma a la que remite. Las obligaciones sugeridas de una alerta dejan de salir de las frases de `activity_action`, que describen actividades y aparecen también en artículos informativos o que modifican otra ley.
+Desde `applicability-v2` (paso 0.16 del plan del sprint 3, C9), cada artículo trae además su análisis: la naturaleza, las obligaciones explícitas que impone a la empresa con el respaldo que acredita cada una, la norma a la que remite y, si es procedimental, la autorización a la que sirve. Las obligaciones sugeridas de una alerta dejan de salir de las frases de `activity_action`, que describen actividades y aparecen también en artículos informativos o que modifican otra ley.
+
+Qué es una obligación lo fijó el cliente el 2026-10-15 (decisión 21 del plan): solo lo que se verifica con un respaldo, porque una obligación se corresponde con un respaldo en todo momento. Un artículo que exige una autorización es una obligación; los antecedentes para obtenerla son información procedimental, ligada a esa autorización.
 
 ---
 
@@ -119,15 +121,20 @@ Cada respuesta informa qué versión del prompt la produjo y cuántos tokens cos
 
 **Descripción:**
 
-Cada artículo vuelve con su naturaleza, que sale solo de su texto, nunca de los valores coincidentes ni de las acciones. Las reglas son las de C9 (decisión 7 del plan del sprint 3), las mismas de la revisión de respaldos:
-- `explicit_obligations`: impone obligaciones a la empresa, o al tipo de empresa al que se dirige. Una prohibición también cuenta, aunque el artículo conceda un beneficio del Estado: la Ley 21.840, art. 1, concede un bono y prohíbe a las instituciones públicas o privadas retenerlo o compensarlo (APR-025 de `test.csv`).
-- `informative`: no impone obligaciones a la empresa. Un artículo que solo obliga o faculta al Estado es informativo.
-- `referral`: modifica otra ley, aunque el texto agregado imponga una obligación. Trae la norma a la que remite si el texto la nombra.
+Cada artículo vuelve con su naturaleza, que sale solo de su texto, nunca de los valores coincidentes ni de las acciones. Las reglas son las de C9 (decisión 7 del plan del sprint 3) con el criterio del cliente (decisión 21). El modelo revisa las naturalezas en este orden y se queda con la primera que corresponde:
+1. `referral`: modifica otra ley, aunque el texto agregado imponga una obligación o regule un trámite. Trae la norma a la que remite si el texto la nombra.
+2. `explicit_obligations`: impone a la empresa, o al tipo de empresa al que se dirige, al menos una obligación que un respaldo acredita. Exigir una autorización, un permiso, una licencia o un registro impone la obligación de tenerlo, aunque el artículo también diga cómo pedirlo. Una prohibición cuenta solo si un respaldo acredita que se cumple, como la autorización que la levanta.
+3. `procedural`: solo regula cómo obtener, renovar o tramitar una autorización: la solicitud, los antecedentes que la acompañan, los pasos y plazos, o lo que la autoridad hace con ella. Trae la autorización a la que sirve, como la nombra el artículo o la norma.
+4. `informative`: cualquier otro artículo. No impone obligaciones a la empresa: solo obliga o faculta al Estado, otorga un beneficio, condona una deuda, define términos o fija la vigencia.
+
+La revisión de respaldos (`docs/EvidenceReview`) todavía usa las tres naturalezas anteriores, sin `procedural`, y declara su propio tipo: las dos se igualan cuando adopte la decisión 21.
+
+El 2026-10-15, con la regla anterior («una prohibición también cuenta»), la Ley 21.840, art. 1 quedó como `explicit_obligations`: concede un bono y prohíbe a las instituciones públicas o privadas retenerlo o compensarlo. Con el criterio del cliente es informativo, porque ningún respaldo acredita esa prohibición (APR-024 de `test.csv`).
 
 **Validaciones:**
 
-- Un artículo informativo o de remisión vuelve sin obligaciones, aunque el modelo las haya escrito.
-- Solo una remisión conserva `referred_legal_body`, en una línea y con hasta 300 caracteres; si no, vuelve `null`.
+- Un artículo informativo, de remisión o procedimental vuelve sin obligaciones, aunque el modelo las haya escrito.
+- Solo una remisión conserva `referred_legal_body`, y solo un artículo procedimental conserva `procedure_for`, en una línea y con hasta 300 caracteres; si no, vuelven `null`.
 - Un artículo que no aparece en `analyses` quedó sin evaluar. El análisis no depende del motivo: un motivo descartado no se lleva el análisis.
 
 ---
@@ -141,11 +148,11 @@ Cada artículo vuelve con su naturaleza, que sale solo de su texto, nunca de los
 
 **Descripción:**
 
-Con `explicit_obligations`, el artículo trae cada obligación que impone a la empresa, con un título y un resumen de una o dos oraciones. Una acción de `activity_action` nunca se convierte en obligación, y una obligación que recae solo en el Estado no cuenta. La regla de no dictaminar de APR-004 vale solo para el motivo: el resumen de una obligación puede decir lo que la empresa debe hacer, porque repite el artículo.
+Con `explicit_obligations`, el artículo trae cada obligación que impone a la empresa, con un título, un resumen de una o dos oraciones y el respaldo que la acredita (`evidence`): el documento o registro que la empresa mostraría para probar que cumplió, como la autorización que debe tener. El modelo nombra el respaldo antes de listar la obligación; si no puede, no es una obligación. Una acción de `activity_action` nunca se convierte en obligación, y una obligación que recae solo en el Estado no cuenta. La regla de no dictaminar de APR-004 vale solo para el motivo: el resumen de una obligación puede decir lo que la empresa debe hacer, porque repite el artículo.
 
 **Validaciones:**
 
-- Se descartan las obligaciones sin título o sin resumen, las de más de 200 caracteres de título o 1000 de resumen, y las repetidas. Quedan como máximo 10, en una línea cada texto.
+- Se descartan las obligaciones sin título, sin resumen o sin respaldo, las de más de 200 caracteres de título, 1000 de resumen o 300 de respaldo, y las repetidas. Quedan como máximo 10, en una línea cada texto.
 - Si no queda ninguna, el artículo no trae análisis y el backend lo muestra sin evaluar, en vez de una lista vacía.
 
 ---
@@ -173,7 +180,7 @@ Un artículo con `write_reason` en falso recibe su análisis y ningún motivo. A
 
 - Leer el cuerpo legal y los artículos pedidos.
 - Escribir un motivo por artículo con el modelo y el esfuerzo de razonamiento configurados (`OPENAI_MODEL`, `OPENAI_REASONING_EFFORT`).
-- Decidir en la misma llamada la naturaleza de cada artículo y sus obligaciones explícitas, y cerrar en código las reglas de C9.
+- Decidir en la misma llamada la naturaleza de cada artículo y sus obligaciones explícitas con su respaldo, y cerrar en código las reglas de C9 y el criterio del cliente.
 - Usar timeout y reintentos propios (`APPLICABILITY_REASONS_TIMEOUT_SECONDS`, `APPLICABILITY_REASONS_MAX_RETRIES`), más cortos que los de clasificar, para caber en la espera del backend.
 - Quitar del texto que se envía al modelo las imágenes y los demás archivos embebidos como data URI.
 - Informar siempre la versión del prompt y el uso de tokens.
@@ -189,4 +196,4 @@ Un artículo con `write_reason` en falso recibe su análisis y ningún motivo. A
 - `APPLICABILITY_PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, un llamador no distingue los motivos nuevos de los anteriores.
 - El tope de 10 artículos y de 2000 caracteres del motivo son constantes de este servicio. El backend envía como máximo 3 artículos y descarta un motivo de más de 2000; si alguno de los dos lados cambia su tope y el otro no, el pedido válido para uno falla o se ignora en el otro.
 - Las pruebas automáticas (`tests/`) cubren el caso de uso, el contrato HTTP y que el prompt no lleva artículos no pedidos ni un bloque de descripción de empresa. No llaman a OpenAI: el tono del motivo (no dictaminar, no citar un perfil) se calibra a mano contra el servicio (APR-011 a APR-015 en `test.csv`).
-- La naturaleza y las obligaciones dependen de que el modelo siga el prompt. Las pruebas automáticas fijan el texto del prompt y el cierre en código, y la evaluación con artículos ya alertados (paso 0.17: `scripts/applicability_eval.py`, casos APR-023 a APR-025 de `test.csv`) lo comprobó el 2026-10-14 con 9 pedidos y 10 artículos. Acertó en todos, después de corregir la expectativa de la Ley 21.840, art. 1. El pedido más lento tardó 6,9 s de los 25 s de plazo y la ejecución costó US$0,0050. Un cambio del prompt pide volver a ejecutarla.
+- La naturaleza, las obligaciones y sus respaldos dependen de que el modelo siga el prompt. Las pruebas automáticas fijan el texto del prompt y el cierre en código. La evaluación con artículos reales (paso 0.17: `scripts/applicability_eval.py`, casos APR-023 a APR-027 de `test.csv`) se ejecutó el 2026-10-14 con las reglas anteriores: el pedido más lento tardó 6,9 s de los 25 s de plazo y costó US$0,0050. Con el criterio del cliente cambió el prompt, así que hay que volver a ejecutarla, ahora con 15 pedidos.

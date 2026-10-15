@@ -1,4 +1,4 @@
-"""Manual evaluation set of applicability-v2: APR-023 to APR-025 of docs/ApplicabilityReasons/test.csv
+"""Manual evaluation set of applicability-v2: APR-023 to APR-027 of docs/ApplicabilityReasons/test.csv
 (step 0.17 of the sprint 3 plan).
 
 It spends real tokens. It sends each case of applicability_eval_set.json to an ia-cumplify that is
@@ -11,9 +11,10 @@ collects only tests/.
 SERVICE_API_KEY and DATABASE_URL come from the environment or the arguments, never from .env. Each
 article is looked up in the AI alerts of the local database (source_analysis_id 'ai-suggestion:'), with
 this script's own read-only connection, and travels with the activity phrases its alert kept, which are
-the actions the backend sends. A failed connection shows only the type of psycopg's error, whose message
-can repeat DATABASE_URL with its password. --dry-run stops after the lookup, before any request.
-Responses go to --out, outside the repository; the console shows metrics only.
+the actions the backend sends. A case marked "alerted": false reads its article straight from the legal
+body, without actions or app, because no alert suggested it. A failed connection shows only the type of
+psycopg's error, whose message can repeat DATABASE_URL with its password. --dry-run stops after the
+lookup, before any request. Responses go to --out, outside the repository; the console shows metrics only.
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ from urllib.parse import urlsplit
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 DEFAULT_SET = HERE / "applicability_eval_set.json"
-NATURES = ("explicit_obligations", "informative", "referral")
+NATURES = ("explicit_obligations", "informative", "referral", "procedural")
 NIL_UUID = "00000000-0000-0000-0000-000000000000"
 MAX_MATCHED_VALUES = 10
 MAX_ACTIONS = 20
@@ -74,6 +75,26 @@ ARTICLE_QUERY = """
 """
 
 
+# A case marked "alerted": false: no alert suggested the article, so it is read from its legal body, without
+# actions, stored values or app.
+ARTICLE_ONLY_QUERY = """
+    SELECT lb.id::text AS legal_body_id,
+           NULL::text AS legal_requirement_id,
+           a.id::text AS article_id,
+           coalesce(a.number, '') AS article,
+           coalesce(lb.number, '') AS law,
+           ARRAY[]::text[] AS actions,
+           ARRAY[]::text[] AS stored_values
+    FROM articles a
+    JOIN legal_bodies lb ON lb.id = a.legal_body_id
+    WHERE lower(regexp_replace(coalesce(lb.number, ''), '[^0-9A-Za-z]', '', 'g')) = %(law)s
+      AND unaccent(lower(coalesce(a.number, ''))) ~ %(article)s
+      AND (%(legal_body_id)s::uuid IS NULL OR a.legal_body_id = %(legal_body_id)s::uuid)
+    ORDER BY a."order", a.id
+    LIMIT 1
+"""
+
+
 class SetError(ValueError):
     """The evaluation set does not have the expected shape."""
 
@@ -106,6 +127,9 @@ def article_pattern(number: str) -> str:
     token = plain(number)
     if not re.fullmatch(r"[0-9a-z]+", token):
         raise SetError(f"article {number!r}: one number or one word, such as 74 or único")
+    if token.isdigit():
+        # A digit followed by º, which Unicode counts as a letter, ends no word: "6" has to find "Artículo 6º".
+        return rf"^\s*art\D*{token}(?![0-9])"
     return rf"^\s*art\D*\m{token}\M"
 
 
@@ -123,6 +147,8 @@ def load_set(path: Path) -> list[dict]:
             raise SetError(f"case {case['id']}: write_reason must be true or false")
         if not case["articles"]:
             raise SetError(f"case {case['id']}: no articles")
+        if not isinstance(case.get("alerted", True), bool):
+            raise SetError(f"case {case['id']}: alerted must be true or false")
         for article in case["articles"]:
             article_pattern(str(article.get("number", "")))
             if article.get("expected", {}).get("nature") not in NATURES:
@@ -167,9 +193,10 @@ class Database:
         rows: list[dict] = []
         for spec in case["articles"]:
             params = {"law": law_key(case["law"]), "article": article_pattern(str(spec["number"])), "legal_body_id": legal_body_id}
+            alerted = case.get("alerted", True)
             try:
                 with self._connection.cursor() as cursor:
-                    cursor.execute(ARTICLE_QUERY, params)
+                    cursor.execute(ARTICLE_QUERY if alerted else ARTICLE_ONLY_QUERY, params)
                     row = cursor.fetchone()
             except self._error as exc:
                 raise DatabaseError(
@@ -177,7 +204,8 @@ class Database:
                     "extensión unaccent"
                 ) from None
             if row is None:
-                raise NoData(f"{case['law']}, artículo {spec['number']}: no está en las alertas de la IA de esta base")
+                where = "en las alertas de la IA de esta base" if alerted else "en esta base"
+                raise NoData(f"{case['law']}, artículo {spec['number']}: no está {where}")
             if any(found["article_id"] == row["article_id"] for found in rows):
                 raise NoData(f"{case['law']}, artículo {spec['number']}: repite un artículo del mismo caso")
             if legal_body_id is None:
@@ -288,6 +316,15 @@ def check_articles(case: dict, rows: list[dict], body: dict) -> list[dict]:
             wanted = expected.get("referred")
             if wanted and key(wanted) not in key(analysis.get("referred_legal_body") or ""):
                 failures.append("norma a la que remite")
+            wanted = expected.get("procedure_for")
+            if wanted and key(wanted) not in key(analysis.get("procedure_for") or ""):
+                failures.append("autorización a la que sirve")
+            evidence = [(obligation.get("evidence") or "").strip() for obligation in analysis.get("obligations") or []]
+            if not all(evidence):
+                failures.append("obligación sin respaldo")
+            wanted_any = expected.get("evidence_any") or []
+            if wanted_any and not any(key(word) in key(text) for text in evidence for word in wanted_any):
+                failures.append("respaldo esperado")
         if case["write_reason"] != (row["article_id"] in with_reason):
             failures.append("motivo de más" if row["article_id"] in with_reason else "sin motivo")
         checks.append(
@@ -297,6 +334,8 @@ def check_articles(case: dict, rows: list[dict], body: dict) -> list[dict]:
                 "nature": analysis.get("nature") if analysis else None,
                 "obligations": len(analysis.get("obligations") or []) if analysis else None,
                 "referred": analysis.get("referred_legal_body") if analysis else None,
+                "procedure_for": analysis.get("procedure_for") if analysis else None,
+                "evidence": [item.get("evidence") for item in analysis.get("obligations") or []] if analysis else [],
                 "reason": row["article_id"] in with_reason,
                 "passed": not failures,
                 "failures": failures,
@@ -460,9 +499,11 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{result.case['id']}: {result.skipped}")
                 continue
             for row, article in zip(result.rows, result.request["articles"], strict=True):
+                outside = "" if result.case.get("alerted", True) else " | fuera de las alertas"
                 print(
                     f"{result.case['id']}: {row['law']}, {row['article']} | acciones: {len(article['actions'])} | "
                     f"valores: {len(article['matched_values'])} | write_reason: {str(article['write_reason']).lower()}"
+                    f"{outside}"
                 )
         return 0 if all(result.skipped is None for result in results) else 1
 
