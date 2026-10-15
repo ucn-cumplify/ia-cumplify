@@ -120,7 +120,7 @@ Cada respuesta informa qué versión del prompt la produjo y cuántos tokens cos
 **Descripción:**
 
 Cada artículo vuelve con su naturaleza, que sale solo de su texto, nunca de los valores coincidentes ni de las acciones. Las reglas son las de C9 (decisión 7 del plan del sprint 3), las mismas de la revisión de respaldos:
-- `explicit_obligations`: impone obligaciones a la empresa, o al tipo de empresa al que se dirige. Una prohibición también cuenta.
+- `explicit_obligations`: impone obligaciones a la empresa, o al tipo de empresa al que se dirige. Una prohibición también cuenta, aunque el artículo conceda un beneficio del Estado: la Ley 21.840, art. 1, concede un bono y prohíbe a las instituciones públicas o privadas retenerlo o compensarlo (APR-025 de `test.csv`).
 - `informative`: no impone obligaciones a la empresa. Un artículo que solo obliga o faculta al Estado es informativo.
 - `referral`: modifica otra ley, aunque el texto agregado imponga una obligación. Trae la norma a la que remite si el texto la nombra.
 
@@ -189,4 +189,4 @@ Un artículo con `write_reason` en falso recibe su análisis y ningún motivo. A
 - `APPLICABILITY_PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, un llamador no distingue los motivos nuevos de los anteriores.
 - El tope de 10 artículos y de 2000 caracteres del motivo son constantes de este servicio. El backend envía como máximo 3 artículos y descarta un motivo de más de 2000; si alguno de los dos lados cambia su tope y el otro no, el pedido válido para uno falla o se ignora en el otro.
 - Las pruebas automáticas (`tests/`) cubren el caso de uso, el contrato HTTP y que el prompt no lleva artículos no pedidos ni un bloque de descripción de empresa. No llaman a OpenAI: el tono del motivo (no dictaminar, no citar un perfil) se calibra a mano contra el servicio (APR-011 a APR-015 en `test.csv`).
-- La naturaleza y las obligaciones dependen de que el modelo siga el prompt. Las pruebas automáticas fijan el texto del prompt y el cierre en código. Falta ejecutar la evaluación con artículos ya alertados (paso 0.17: `scripts/applicability_eval.py`, casos APR-023 a APR-025 de `test.csv`), que mide también la latencia: la v2 escribe más que la v1 y el plazo sigue en 25 s.
+- La naturaleza y las obligaciones dependen de que el modelo siga el prompt. Las pruebas automáticas fijan el texto del prompt y el cierre en código, y la evaluación con artículos ya alertados (paso 0.17: `scripts/applicability_eval.py`, casos APR-023 a APR-025 de `test.csv`) lo comprobó el 2026-10-14 con 9 pedidos y 10 artículos. Acertó en todos, después de corregir la expectativa de la Ley 21.840, art. 1. El pedido más lento tardó 6,9 s de los 25 s de plazo y la ejecución costó US$0,0050. Un cambio del prompt pide volver a ejecutarla.

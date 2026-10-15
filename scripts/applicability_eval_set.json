@@ -50,14 +50,6 @@
       "articles": [{"number": "41", "expected": {"nature": "informative"}}]
     },
     {
-      "id": "APR-024-d",
-      "group": "APR-024",
-      "law": "21.840",
-      "write_reason": false,
-      "note": "Concede un bono.",
-      "articles": [{"number": "1", "expected": {"nature": "informative"}}]
-    },
-    {
       "id": "APR-025-a",
       "group": "APR-025",
       "law": "21.813",
@@ -77,6 +69,14 @@
         {"number": "1", "expected": {"nature": "explicit_obligations", "min_obligations": 1}},
         {"number": "2", "expected": {"nature": "explicit_obligations", "min_obligations": 1}}
       ]
+    },
+    {
+      "id": "APR-025-c",
+      "group": "APR-025",
+      "law": "21.840",
+      "write_reason": false,
+      "note": "Concede un bono, pero prohíbe a las instituciones públicas o privadas retenerlo o compensarlo: una prohibición que alcanza a la empresa. Su alerta no guardó valores coincidentes, así que va sin motivo.",
+      "articles": [{"number": "1", "expected": {"nature": "explicit_obligations", "min_obligations": 1}}]
     }
   ]
 }

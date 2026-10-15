@@ -312,8 +312,8 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
 (remisiones, informativos y una muestra con obligaciones explícitas) y revisa en cada uno la naturaleza, las
 obligaciones, la norma a la que remite y si trajo motivo.
 
-> **Gasta tokens reales**, en 8 pedidos. El costo esperado es del orden de un centavo de dólar, según la estimación del
-> plan para `applicability-v2` (unos US$0,001 por alerta); el script informa el gasto real.
+> **Gasta tokens reales**, en 9 pedidos. La ejecución del 2026-10-14 costó US$0,0050 (unos US$0,0006 por pedido,
+> sin descontar la caché); el script informa el gasto de cada ejecución.
 
 ```bash
 export SERVICE_API_KEY=...        # la misma del servicio
