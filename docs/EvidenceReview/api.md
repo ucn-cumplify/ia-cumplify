@@ -168,3 +168,7 @@ La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilo
 - No busca la cita en el texto del archivo ni recalcula el veredicto a partir de las exigencias.
 - No hace OCR. Una imagen o un PDF sin texto queda `unreadable`.
 - Un solo intento de 80 s queda por debajo de los 90 s previstos para la espera del backend (`AI_EVIDENCE_REVIEW_TIMEOUT_SECONDS`), que todavía no existe.
+
+## Evaluación manual
+
+`scripts/evidence_review_eval.py` arma los 20 casos EVR-012 a EVR-031 y los manda a un servicio que ya está en marcha. No lee la base y no forma parte de pytest. Lo ejecuta el usuario: gasta tokens (el plan estima unos US$0,20 por corrida completa). El esfuerzo lo pone el servicio (`EVIDENCE_REVIEW_REASONING_EFFORT`, vacío usa `OPENAI_REASONING_EFFORT`). Una corrida con `low` y otra con `medium`, cada una con `--label`, se comparan con `--compare`. `--check-set` solo arma los archivos.
