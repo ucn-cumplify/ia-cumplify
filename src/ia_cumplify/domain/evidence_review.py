@@ -73,15 +73,21 @@ class EvidenceReviewRequest:
     files: tuple[ReviewFile, ...]
 
 
-# obligaciones explícitas, informativo, remisión.
-ArticleNature = Literal["explicit_obligations", "informative", "referral"]
+# obligaciones explícitas, informativo, remisión, información procedimental (C9, decisiones 7 y 21).
+ArticleNature = Literal["explicit_obligations", "informative", "referral", "procedural"]
 # acreditada, parcial, no acreditada, no evaluable.
 RequirementStatus = Literal["accredited", "partial", "not_accredited", "not_evaluable"]
 # página, hoja, diapositiva, o el cuerpo cuando el formato no tiene esas partes.
 CitationLocator = Literal["page", "sheet", "slide", "body"]
 
-# Prompt id. The model name is appended once a review is actually run: "evidence-review-v1@<model>".
-REVIEW_PROMPT_VERSION = "evidence-review-v1"
+# The respaldo of one exigencia, and the authorization a procedural article serves. Past the cap the
+# text is dropped instead of failing the whole review.
+MAX_REQUIREMENT_EVIDENCE_CHARS = 300
+MAX_PROCEDURE_FOR_CHARS = 300
+
+# Prompt id. The model name is appended once a review is actually run: "evidence-review-v2@<model>".
+# v2 adopts decision 21 (procedural nature and the respaldo of each exigencia) and checks citations.
+REVIEW_PROMPT_VERSION = "evidence-review-v2"
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,12 +113,18 @@ class ReviewCitation:
 
 @dataclass(frozen=True, slots=True)
 class ReviewRequirement:
-    """One exigencia of the article, with the citations that support its status and what is missing."""
+    """One exigencia of the article, with the respaldo that accredits it.
+
+    ``evidence`` is that respaldo, as a short name of the document or record. Without one it is not
+    an exigencia (decision 21). The citations support the status, and ``missing`` says what does not
+    appear.
+    """
 
     text: str
     status: RequirementStatus
     citations: tuple[ReviewCitation, ...]
     missing: str
+    evidence: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,6 +138,7 @@ class ReviewJudgment:
     usage: TokenUsage
     model: str
     review_version: str
+    procedure_for: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -140,6 +153,7 @@ class EvidenceReview:
     usage: TokenUsage
     model: str | None
     review_version: str
+    procedure_for: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

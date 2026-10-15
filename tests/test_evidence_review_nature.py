@@ -1,4 +1,4 @@
-"""C9, decision 7: nature comes from the article, and an informative or referral article is not evaluable."""
+"""C9, decisions 7 and 21: nature comes from the article, and a quote has to be in the file."""
 
 from datetime import date
 
@@ -11,6 +11,7 @@ from ia_cumplify.domain.evidence_review import (
     EvidenceReviewRequest,
     ReviewArticle,
     ReviewCitation,
+    ReviewFile,
     ReviewJudgment,
     ReviewLegalBody,
     ReviewRequirement,
@@ -25,6 +26,11 @@ def test_the_prompt_decides_nature_with_the_c9_rules():
     assert "even when the added text itself imposes an obligation" in text
     assert "has nothing to verify" in text
     assert "not_evaluable" in text
+    assert "name its respaldo in evidence" in text
+    assert "if you cannot name one, it is not a requirement" in text
+    assert "a prohibition counts only when a respaldo accredits" in text
+    assert "the antecedents for an application are not requirements" in text
+    assert "procedural" in text
 
 
 def test_a_file_that_proves_a_breach_does_not_accredit_the_requirement():
@@ -63,13 +69,14 @@ def test_missing_describes_the_absence_and_does_not_recommend_an_action():
     assert "do not recommend an action, a task, or what the company should do" in text
 
 
-@pytest.mark.parametrize("nature", ["informative", "referral"])
+@pytest.mark.parametrize("nature", ["informative", "referral", "procedural"])
 def test_an_article_with_nothing_to_verify_drops_requirements_and_is_not_evaluable(nature):
     judgment = ReviewJudgment(
         nature=nature,
         requirements=(
             ReviewRequirement(
                 text="Constituir el comité.",
+                evidence="Acta de constitución",
                 status="accredited",
                 citations=(
                     ReviewCitation(file_id="file-1", locator="page", reference="1", quote="Comité constituido"),
@@ -81,7 +88,8 @@ def test_an_article_with_nothing_to_verify_drops_requirements_and_is_not_evaluab
         summary="El artículo no exige nada a la empresa.",
         usage=TokenUsage(prompt_tokens=4, completion_tokens=2, total_tokens=6, llm_calls=1),
         model="gpt-5.6-luna",
-        review_version="evidence-review-v1@gpt-5.6-luna",
+        review_version="evidence-review-v2@gpt-5.6-luna",
+        procedure_for="Permiso de edificación" if nature == "procedural" else "no va",
     )
 
     result = ReviewEvidenceUseCase(_Reviewer(judgment)).execute(_request())
@@ -91,35 +99,125 @@ def test_an_article_with_nothing_to_verify_drops_requirements_and_is_not_evaluab
     assert result.verdict == "not_evaluable"
     assert result.summary == "El artículo no exige nada a la empresa."
     assert result.usage.prompt_tokens == 4
+    if nature == "procedural":
+        assert result.procedure_for == "Permiso de edificación"
+    else:
+        assert result.procedure_for is None
 
 
-def test_an_article_with_explicit_obligations_keeps_what_the_model_returned():
+def test_an_article_with_explicit_obligations_keeps_a_quote_that_is_in_the_file():
     judgment = ReviewJudgment(
         nature="explicit_obligations",
         requirements=(
-            ReviewRequirement(text="Constituir el comité.", status="partial", citations=(), missing="Falta el acta."),
+            ReviewRequirement(
+                text="Constituir el comité.",
+                evidence="Acta de constitución",
+                status="partial",
+                citations=(
+                    ReviewCitation(file_id="acta", locator="body", reference="", quote="Comité   CONSTITUIDO"),
+                ),
+                missing="Falta el acta.",
+            ),
         ),
-        verdict="partial",
+        verdict="accredited",
         summary="Falta el acta.",
         usage=TokenUsage(),
         model="gpt-5.6-luna",
-        review_version="evidence-review-v1@gpt-5.6-luna",
+        review_version="evidence-review-v2@gpt-5.6-luna",
+        procedure_for="Permiso de edificación",
+    )
+
+    result = ReviewEvidenceUseCase(_Reviewer(judgment)).execute(_request("El comité constituido en Calama.".encode()))
+
+    assert result.nature == "explicit_obligations"
+    assert result.procedure_for is None
+    assert result.verdict == "partial"
+    assert result.requirements[0].text == "Constituir el comité."
+    assert result.requirements[0].evidence == "Acta de constitución"
+    assert result.requirements[0].citations[0].quote == "Comité   CONSTITUIDO"
+
+
+def test_a_requirement_without_a_respaldo_is_dropped():
+    judgment = _explicit(
+        ReviewRequirement(text="Presentar el formulario.", evidence="  ", status="accredited", citations=(), missing=""),
     )
 
     result = ReviewEvidenceUseCase(_Reviewer(judgment)).execute(_request())
 
-    assert result.nature == "explicit_obligations"
+    assert result.requirements == ()
+    assert result.verdict == "not_evaluable"
+
+
+def test_a_quote_that_is_not_in_the_file_does_not_keep_the_requirement_accredited():
+    judgment = _explicit(
+        ReviewRequirement(
+            text="Constituir el comité.",
+            evidence="Acta de constitución",
+            status="accredited",
+            citations=(ReviewCitation(file_id="acta", locator="body", reference="", quote="firmado por todos"),),
+            missing="",
+        ),
+        ReviewRequirement(
+            text="Sesionar cada mes.",
+            evidence="Libro de actas",
+            status="not_accredited",
+            citations=(),
+            missing="No aparece el acta de abril.",
+        ),
+    )
+
+    result = ReviewEvidenceUseCase(_Reviewer(judgment)).execute(_request("El comité constituido en Calama.".encode()))
+
+    assert result.requirements[0].status == "not_accredited"
+    assert result.requirements[0].citations == ()
+    assert result.requirements[0].missing == "cita no encontrada"
+    assert result.requirements[1].status == "not_accredited"
+    assert result.verdict == "not_accredited"
+
+
+def test_the_verdict_is_partial_when_one_requirement_is_accredited_and_another_is_not():
+    judgment = _explicit(
+        ReviewRequirement(
+            text="Constituir el comité.",
+            evidence="Acta de constitución",
+            status="accredited",
+            citations=(ReviewCitation(file_id="acta", locator="body", reference="", quote="comité constituido"),),
+            missing="",
+        ),
+        ReviewRequirement(
+            text="Sesionar cada mes.",
+            evidence="Libro de actas",
+            status="not_accredited",
+            citations=(),
+            missing="No aparece el acta de abril.",
+        ),
+    )
+
+    result = ReviewEvidenceUseCase(_Reviewer(judgment)).execute(_request("El comité constituido en Calama.".encode()))
+
     assert result.verdict == "partial"
-    assert result.requirements[0].text == "Constituir el comité."
 
 
-def _request() -> EvidenceReviewRequest:
+def _explicit(*requirements: ReviewRequirement) -> ReviewJudgment:
+    return ReviewJudgment(
+        nature="explicit_obligations",
+        requirements=requirements,
+        verdict="accredited",
+        summary="Resumen.",
+        usage=TokenUsage(),
+        model="gpt-5.6-luna",
+        review_version="evidence-review-v2@gpt-5.6-luna",
+    )
+
+
+def _request(content: bytes | None = None) -> EvidenceReviewRequest:
+    files = () if content is None else (ReviewFile(id="acta", filename="acta.csv", content=content),)
     return EvidenceReviewRequest(
         reference_date=date(2026, 10, 14),
         article=ReviewArticle(number="74", text="Agrégase el siguiente inciso a la ley N° 20.780."),
         legal_body=ReviewLegalBody(title="Ley 21.806", type="Ley", number="21806"),
         obligation=None,
-        files=(),
+        files=files,
     )
 
 

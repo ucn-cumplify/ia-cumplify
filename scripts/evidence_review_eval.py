@@ -1,4 +1,4 @@
-"""Manual evaluation set of evidence-review-v1: EVR-012 to EVR-031 of docs/EvidenceReview/test.csv.
+"""Manual evaluation set of evidence-review-v2: EVR-012 to EVR-031 of docs/EvidenceReview/test.csv.
 
 It spends real tokens. It builds each case's files and posts them to an ia-cumplify that is already
 running, and that service calls OpenAI. It is not part of pytest, which collects only tests/.
@@ -37,7 +37,7 @@ DEFAULT_SET = HERE / "evidence_review_eval_set.json"
 NATURES = ("explicit_obligations", "informative", "referral")
 STATUSES = ("accredited", "partial", "not_accredited", "not_evaluable")
 FILE_STATUSES = ("read", "unreadable", "unsupported", "error")
-VERSION_PREFIX = "evidence-review-v1@"
+VERSION_PREFIX = "evidence-review-v2@"
 # US$ per million tokens, the rates of the sprint 3 plan.
 INPUT_PRICE = 0.20
 OUTPUT_PRICE = 1.20

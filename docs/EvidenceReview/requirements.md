@@ -94,8 +94,10 @@ La respuesta trae la naturaleza, las exigencias con su estado, sus citas y lo qu
 
 **Validaciones:**
 
-- `review_version` es `evidence-review-v1@<modelo usado>`.
-- Una cita a un archivo que no vino en el pedido, o con la cita en blanco, no sale en la respuesta.
+- `review_version` es `evidence-review-v2@<modelo usado>`.
+- Cada exigencia trae `evidence`, el respaldo que la acredita. Sin ese nombre, no sale.
+- `procedure_for` nombra la autorización de un artículo `procedural` y es `null` en las otras naturalezas.
+- Una cita se busca en el texto leído de su archivo, sin distinguir mayúsculas ni espacios. Una cita a otro archivo, en blanco o que no aparece, no sale. Una exigencia `accredited` o `partial` sin citas que queden baja a `not_accredited`, con la marca `cita no encontrada` en `missing`. El veredicto se recalcula a partir de las exigencias.
 - `usage` informa tokens de entrada, de salida, totales, cacheados y llamadas. No informa `reasoning_tokens` ni `dev_metrics`.
 
 ---
@@ -109,9 +111,9 @@ La respuesta trae la naturaleza, las exigencias con su estado, sus citas y lo qu
 
 **Descripción:**
 
-La naturaleza se decide solo con el texto del artículo (decisión 7). Cuentan las obligaciones que recaen en la empresa. Un artículo que solo obliga al Estado es `informative`. Un artículo que modifica otra ley, o que agrega una obligación dentro de otra, es `referral`, aunque el texto agregado imponga una obligación. El resto, cuando impone obligaciones a la empresa, es `explicit_obligations`.
+La naturaleza se decide solo con el texto del artículo (decisiones 7 y 21), en el orden `referral`, `explicit_obligations`, `procedural`, `informative`. Cuentan las obligaciones que recaen en la empresa y que un respaldo puede acreditar. Un artículo que solo obliga al Estado es `informative`. Un artículo que modifica otra ley, o que agrega una obligación dentro de otra, es `referral`, aunque el texto agregado imponga una obligación. Exigir una autorización impone la obligación de tenerla. Un artículo que solo regula el trámite es `procedural` y `procedure_for` nombra esa autorización. Una prohibición cuenta solo si un respaldo acredita que se respetó. Los antecedentes de una solicitud no son exigencias.
 
-Un artículo informativo o de remisión no tiene nada que verificar y su veredicto es `not_evaluable`. El servicio vacía las exigencias y fija ese veredicto después de la respuesta del modelo.
+Un artículo informativo, de remisión o procedimental no tiene nada que verificar y su veredicto es `not_evaluable`. El servicio vacía las exigencias y fija ese veredicto después de la respuesta del modelo. Una exigencia sin `evidence` se descarta.
 
 ---
 
@@ -202,9 +204,10 @@ La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilo
 
 - Recibir el pedido en partes y leer PDF, Word, Excel, CSV y PowerPoint.
 - Aplicar los topes de archivos, de tamaño, de páginas, de filas, de ZIP y de caracteres.
-- Pedir al modelo una revisión con el prompt `evidence-review-v1`.
-- Cerrar en código el artículo informativo o de remisión: sin exigencias y con veredicto `not_evaluable`.
-- Descartar una cita a un archivo que no vino en el pedido, o con la cita en blanco.
+- Pedir al modelo una revisión con el prompt `evidence-review-v2`.
+- Cerrar en código el artículo informativo, de remisión o procedimental: sin exigencias y con veredicto `not_evaluable`. Solo el procedimental conserva `procedure_for`.
+- Descartar una exigencia que no nombra su respaldo.
+- Buscar cada cita en el texto de su archivo, sin distinguir mayúsculas ni espacios, y descartar las que no aparecen. Una exigencia sin citas verificadas no puede quedar acreditada ni parcial: baja a `not_accredited`, con la marca `cita no encontrada`. El veredicto se recalcula a partir de las exigencias.
 - Informar el estado de cada archivo, la revisión, el consumo, el modelo y `review_version`.
 - Probar el adaptador real contra un cliente falso de OpenAI, sin salir de la máquina.
 - El set manual `scripts/evidence_review_eval.py` (EVR-012 a EVR-031), para comparar el esfuerzo `low` con `medium`. Lo ejecuta el usuario.
@@ -213,13 +216,12 @@ La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilo
 
 - Guardar la revisión, armar el pedido desde la fila y cambiar el estado del artículo o de la obligación. Eso vive en `backend-cumplify`.
 - Proponer acciones o armar el plan. La fase 2A parte de lo que falta; la fase 2B propone acciones desde la base de conocimientos.
-- Buscar cada cita en el texto de su archivo, sin distinguir mayúsculas ni espacios, y descartar las que no aparecen. Una exigencia sin citas verificadas no puede quedar acreditada ni parcial: baja a `not_accredited`, con la marca «cita no encontrada». El veredicto se recalcula a partir de las exigencias.
 - OCR de escaneos y fotos.
 
 ## Deuda técnica conocida
 
-- `evidence-review-v1` no se sube al cambiar el prompt. Quien llama distingue el modelo (`review_version` termina en `@<modelo>`), no cada edición de las reglas.
+- `evidence-review-v2` no se sube al cambiar una redacción del prompt. Quien llama distingue el modelo (`review_version` termina en `@<modelo>`), no cada edición de las reglas. El salto desde `evidence-review-v1` es el de la decisión 21 y la verificación de la cita.
 - El incumplimiento, la fecha de referencia, las instrucciones dentro del archivo y la forma de `missing` dependen de que el modelo siga el prompt. Las pruebas automáticas fijan el texto del prompt; no llaman a OpenAI.
-- La cita no se comprueba contra el texto leído. Una cita inventada, si nombra un archivo del pedido y trae texto, sale en la respuesta.
+- La corrida del 2026-10-15 en EVR-012 a EVR-031 es de `evidence-review-v1`. No cubre la naturaleza procedimental ni la marca `cita no encontrada`.
 - Los topes de 10 archivos, 25 MB y 200 000 caracteres están en este servicio. El backend tiene que aplicar los mismos antes de enviar el pedido.
 - Las pruebas automáticas cubren el contrato, el prompt y el adaptador real contra un cliente falso de OpenAI (`tests/test_evidence_review_fake.py`). El set real se corrió el 2026-10-15 con `gpt-5.6-luna`: `low` acertó 15 de 20 y `medium` también 15 de 20, con un costo de unos US$0,016 por corrida. No justifica subir el esfuerzo. Los cinco fallos de `low` están en EVR-012, EVR-013, EVR-015, EVR-019 y EVR-021 de `test.csv`.

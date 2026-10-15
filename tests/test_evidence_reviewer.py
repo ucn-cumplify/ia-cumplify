@@ -25,9 +25,11 @@ def test_the_adapter_sends_the_subject_and_maps_the_review():
     completions = _Completions(
         LlmEvidenceReview(
             nature="explicit_obligations",
+            procedure_for="",
             requirements=[
                 LlmReviewRequirement(
                     text=" Constituir el comité. ",
+                    evidence=" Acta de constitución ",
                     status="accredited",
                     citations=[],
                     missing="",
@@ -51,9 +53,11 @@ def test_the_adapter_sends_the_subject_and_maps_the_review():
     assert "data:image" not in completions.kwargs["messages"][1]["content"]
     assert judgment.nature == "explicit_obligations"
     assert judgment.requirements[0].text == "Constituir el comité."
+    assert judgment.requirements[0].evidence == "Acta de constitución"
+    assert judgment.procedure_for is None
     assert judgment.summary == "El acta acredita la constitución."
     assert judgment.model == "gpt-5.6-luna"
-    assert judgment.review_version == "evidence-review-v1@gpt-5.6-luna"
+    assert judgment.review_version == "evidence-review-v2@gpt-5.6-luna"
     assert judgment.usage.prompt_tokens == 20
     assert judgment.usage.llm_calls == 1
 
