@@ -7,7 +7,7 @@ from ia_cumplify.domain.legal_body import LegalBody
 # Bump on every change to SYSTEM_PROMPT or to the user-message layout. The backend does not store
 # this version on the alert; it still travels in the response so a caller can tell which prompt wrote
 # the reasons and the analysis.
-APPLICABILITY_PROMPT_VERSION = "applicability-v2"
+APPLICABILITY_PROMPT_VERSION = "applicability-v3"
 
 APPLICABILITY_SYSTEM_PROMPT = """You read Chilean regulatory articles for a compliance platform. For each listed article you decide what it asks of the company and, when asked, write a short reason in Spanish for why it matched the company.
 

@@ -14,7 +14,7 @@ MAX_MATCHED_VALUES = 10
 MAX_ACTIONS = 20
 # A reason longer than this is dropped; the backend keeps the template (MaxApplicabilityReasonLength).
 MAX_REASON_CHARS = 2000
-# The analysis of applicability-v2. Past these caps an obligation, the name of the law a referral amends,
+# The analysis, since applicability-v2. Past these caps an obligation, the name of the law a referral amends,
 # or the authorization a procedural article serves is dropped instead of reaching the alert.
 MAX_OBLIGATIONS = 10
 MAX_OBLIGATION_TITLE_CHARS = 200
@@ -118,7 +118,7 @@ class ApplicabilityReasonerOutput:
 class ApplicabilityReasons:
     legal_body: LegalBody
     reasons: tuple[ArticleApplicabilityReason, ...]
-    # "<prompt version>@<model>", e.g. "applicability-v2@gpt-5.6-luna".
+    # "<prompt version>@<model>", e.g. "applicability-v3@gpt-5.6-luna".
     reason_version: str
     usage: TokenUsage
     analyses: tuple[ArticleAnalysis, ...] = ()

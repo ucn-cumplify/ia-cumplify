@@ -105,7 +105,8 @@ Cada respuesta informa qué versión del prompt la produjo y cuántos tokens cos
 
 **Validaciones:**
 
-- `reason_version` es `<APPLICABILITY_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `applicability-v2@gpt-5.6-luna`.
+- `reason_version` es `<APPLICABILITY_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `applicability-v3@gpt-5.6-luna`.
+- Versiones con análisis: `applicability-v2` (ia #31) lo agregó; `applicability-v3` (2026-10-15) aclara que nombrar otra ley no es una remisión. El filtro de letras de otro alfabeto está en el código, no en el prompt.
 - Todo cambio del prompt o del armado del mensaje de usuario sube `APPLICABILITY_PROMPT_VERSION`. La limpieza de los datos que llegan al mensaje no cuenta como cambio del armado: por ejemplo, reemplazar un adjunto por `[archivo omitido]` o leer una `section` nula como texto vacío, que cambiaron el 2026-10-08 sin subirla.
 - `usage.llm_calls` vale 1 cuando se llamó al modelo, y 0 cuando `reasons` queda vacío sin llamarlo.
 - Cada campo del `usage` del proveedor se lee por separado: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta (caso APR-017 de `test.csv`).

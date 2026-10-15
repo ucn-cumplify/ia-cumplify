@@ -71,7 +71,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
       "procedure_for": null
     }
   ],
-  "reason_version": "applicability-v2@gpt-5.6-luna",
+  "reason_version": "applicability-v3@gpt-5.6-luna",
   "usage": {
     "prompt_tokens": 900,
     "completion_tokens": 80,
@@ -144,4 +144,4 @@ El backend de `capstone-2s` todavía no lee `analyses` (paso 0.18 del plan) y, c
 - No arma los valores coincidentes ni las acciones: los envía el backend.
 - No lee el perfil de la empresa ni el texto declarado.
 - El timeout del cliente es menor que el del backend a propósito: si el modelo se pasa, este servicio responde 502 y el backend deja la plantilla.
-- `applicability-v2` escribe más que la v1: un título, un resumen y un respaldo por obligación. El plazo de 25 s no cambió. La evaluación del paso 0.17 mide la latencia además del costo. Si el modelo se pasa con frecuencia, el síntoma es que las alertas vuelven a la plantilla y quedan sin análisis.
+- Desde `applicability-v2`, el modelo escribe más que con la v1: un título, un resumen y un respaldo por obligación. El plazo de 25 s no cambió. La evaluación del paso 0.17 mide la latencia además del costo. Si el modelo se pasa con frecuencia, el síntoma es que las alertas vuelven a la plantilla y quedan sin análisis.

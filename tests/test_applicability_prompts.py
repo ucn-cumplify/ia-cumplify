@@ -30,7 +30,7 @@ def context(article_id: str, number: str, text: str, *, write_reason: bool = Tru
 
 
 def test_prompt_version() -> None:
-    assert APPLICABILITY_PROMPT_VERSION == "applicability-v2"
+    assert APPLICABILITY_PROMPT_VERSION == "applicability-v3"
 
 
 def test_system_prompt_forbids_quoting_the_profile_and_dictating() -> None:
