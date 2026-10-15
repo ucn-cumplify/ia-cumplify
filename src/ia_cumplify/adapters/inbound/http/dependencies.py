@@ -139,7 +139,7 @@ def get_evidence_reviewer() -> EvidenceReviewerPort:
         model=settings.evidence_review_model or settings.openai_model,
         reasoning_effort=settings.evidence_review_reasoning_effort or settings.openai_reasoning_effort,
         timeout_seconds=settings.evidence_review_timeout_seconds,
-        max_retries=settings.openai_max_retries,
+        max_retries=settings.evidence_review_max_retries,
     )
 
 
