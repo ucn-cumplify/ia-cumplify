@@ -41,10 +41,11 @@ def test_system_prompt_forbids_quoting_the_profile_and_dictating() -> None:
 
 
 def test_system_prompt_decides_nature_with_the_c9_rules() -> None:
-    # Decision 7 of the sprint 3 plan, and the same three values as the evidence review.
+    # Decisions 7 and 21 of the sprint 3 plan. The evidence review still has only the first three values.
     text = APPLICABILITY_SYSTEM_PROMPT
-    for nature in ("explicit_obligations", "informative", "referral"):
+    for nature in ("explicit_obligations", "informative", "referral", "procedural"):
         assert nature in text
+    assert "Check the natures in this order and keep the first that fits" in text
     assert "only obliges or empowers the State" in text
     assert "It is a referral even when the added text imposes an obligation" in text
     assert "referred_legal_body" in text
@@ -56,7 +57,25 @@ def test_obligations_come_only_from_the_article_text() -> None:
     assert "Take them only from the article text" in text
     assert "never turn an action into an obligation" in text
     assert "An obligation that falls only on the State is not an obligation of the company" in text
-    assert "For informative and referral articles, obligations is empty" in text
+    assert "For informative, referral and procedural articles, obligations is empty" in text
+
+
+def test_an_obligation_needs_the_respaldo_that_accredits_it() -> None:
+    # Decision 21, the client's criterion: an obligation corresponds to a respaldo at all times.
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "Before you list an obligation, name its respaldo" in text
+    assert "If you cannot name one, it is not an obligation" in text
+    assert "imposes the obligation to hold it" in text
+    assert "A prohibition counts only when a respaldo accredits compliance with it" in text
+    assert "evidence: the respaldo that accredits it" in text
+
+
+def test_the_antecedents_for_an_application_are_procedural() -> None:
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "The antecedents for an application are not obligations" in text
+    assert "what the authority does with the application" in text
+    assert "Put the authorization it serves in procedure_for" in text
+    assert "unless it regulates an application, which is procedural" in text
 
 
 def test_the_rule_against_dictating_is_limited_to_the_reason() -> None:

@@ -8,9 +8,11 @@ from ia_cumplify.domain.applicability import (
     MAX_ACTIONS,
     MAX_ARTICLES,
     MAX_MATCHED_VALUES,
+    MAX_OBLIGATION_EVIDENCE_CHARS,
     MAX_OBLIGATION_SUMMARY_CHARS,
     MAX_OBLIGATION_TITLE_CHARS,
     MAX_OBLIGATIONS,
+    MAX_PROCEDURE_FOR_CHARS,
     MAX_REASON_CHARS,
     MAX_REFERRED_LEGAL_BODY_CHARS,
     ApplicabilityArticleInput,
@@ -84,20 +86,31 @@ class ArticleApplicabilityReasonResponse(BaseModel):
 class ArticleObligationResponse(BaseModel):
     title: str = Field(..., max_length=MAX_OBLIGATION_TITLE_CHARS)
     summary: str = Field(..., max_length=MAX_OBLIGATION_SUMMARY_CHARS)
+    evidence: str = Field(
+        ..., max_length=MAX_OBLIGATION_EVIDENCE_CHARS, description="The respaldo that accredits the obligation"
+    )
 
 
 class ArticleAnalysisResponse(BaseModel):
     article_id: str
-    nature: ApplicabilityNature = Field(..., description="explicit_obligations, informative or referral")
+    nature: ApplicabilityNature = Field(..., description="explicit_obligations, informative, referral or procedural")
     obligations: list[ArticleObligationResponse] = Field(
         ...,
         max_length=MAX_OBLIGATIONS,
-        description="At least one for explicit_obligations; empty for informative and referral",
+        description="At least one for explicit_obligations, each with its respaldo; empty for the other natures",
     )
     referred_legal_body: str | None = Field(
         ...,
         max_length=MAX_REFERRED_LEGAL_BODY_CHARS,
         description="For a referral, the law it amends or points to, as the article names it; otherwise null",
+    )
+    procedure_for: str | None = Field(
+        ...,
+        max_length=MAX_PROCEDURE_FOR_CHARS,
+        description=(
+            "For a procedural article, the authorization it serves, as the article or the legal body names it; "
+            "otherwise null"
+        ),
     )
 
     @classmethod
@@ -106,9 +119,11 @@ class ArticleAnalysisResponse(BaseModel):
             article_id=analysis.article_id,
             nature=analysis.nature,
             obligations=[
-                ArticleObligationResponse(title=item.title, summary=item.summary) for item in analysis.obligations
+                ArticleObligationResponse(title=item.title, summary=item.summary, evidence=item.evidence)
+                for item in analysis.obligations
             ],
             referred_legal_body=analysis.referred_legal_body,
+            procedure_for=analysis.procedure_for,
         )
 
 

@@ -10,9 +10,11 @@ from ia_cumplify.adapters.outbound.openai.llm_applicability_schema import (
 )
 from ia_cumplify.application.use_cases.explain_applicability import ExplainApplicabilityUseCase
 from ia_cumplify.domain.applicability import (
+    MAX_OBLIGATION_EVIDENCE_CHARS,
     MAX_OBLIGATION_SUMMARY_CHARS,
     MAX_OBLIGATION_TITLE_CHARS,
     MAX_OBLIGATIONS,
+    MAX_PROCEDURE_FOR_CHARS,
     MAX_REASON_CHARS,
     MAX_REFERRED_LEGAL_BODY_CHARS,
     ApplicabilityArticleContext,
@@ -61,7 +63,11 @@ def item(
     )
 
 
-OBLIGATION = ArticleObligation("Constituir el comité", "El empleador constituye un Comité Paritario en la faena.")
+OBLIGATION = ArticleObligation(
+    "Constituir el comité",
+    "El empleador constituye un Comité Paritario en la faena.",
+    "Acta de constitución del Comité Paritario",
+)
 
 
 def explicit(article_id: str, *obligations: ArticleObligation) -> ArticleAnalysis:
@@ -73,14 +79,18 @@ def llm_item(
     reason: str = "",
     *,
     nature: str = "informative",
-    obligations: tuple[tuple[str, str], ...] = (),
+    obligations: tuple[tuple[str, str, str], ...] = (),
     referred: str = "",
+    procedure: str = "",
 ) -> LlmArticleReason:
     return LlmArticleReason(
         article_id=article_id,
         nature=nature,
         referred_legal_body=referred,
-        obligations=[LlmObligation(title=title, summary=summary) for title, summary in obligations],
+        procedure_for=procedure,
+        obligations=[
+            LlmObligation(title=title, summary=summary, evidence=evidence) for title, summary, evidence in obligations
+        ],
         reason=reason,
     )
 
@@ -254,7 +264,9 @@ def test_write_reason_reaches_the_reasoner() -> None:
 
 
 def test_foreign_and_duplicate_analyses_keep_the_first_usable() -> None:
-    second = ArticleObligation("Sesionar cada mes", "El comité sesiona al menos una vez al mes.")
+    second = ArticleObligation(
+        "Sesionar cada mes", "El comité sesiona al menos una vez al mes.", "Actas de las sesiones"
+    )
     reasoner = FakeReasoner(
         output=ApplicabilityReasonerOutput(
             reasons=(),
@@ -286,18 +298,24 @@ def test_a_referral_without_a_usable_law_keeps_its_nature() -> None:
 
 def test_explicit_obligations_without_a_usable_obligation_is_not_evaluated() -> None:
     unusable = (
-        ArticleObligation("   ", "Resumen."),
-        ArticleObligation("Título", " "),
-        ArticleObligation("T" * (MAX_OBLIGATION_TITLE_CHARS + 1), "Resumen."),
-        ArticleObligation("Título", "S" * (MAX_OBLIGATION_SUMMARY_CHARS + 1)),
+        ArticleObligation("   ", "Resumen.", "Respaldo."),
+        ArticleObligation("Título", " ", "Respaldo."),
+        ArticleObligation("T" * (MAX_OBLIGATION_TITLE_CHARS + 1), "Resumen.", "Respaldo."),
+        ArticleObligation("Título", "S" * (MAX_OBLIGATION_SUMMARY_CHARS + 1), "Respaldo."),
     )
     assert close_analysis(ArticleAnalysis(A1, "explicit_obligations", unusable, None)) is None
     assert close_analysis(ArticleAnalysis(A1, "explicit_obligations", (), None)) is None
 
 
 def test_obligations_are_trimmed_deduplicated_and_capped() -> None:
-    noisy = ArticleObligation("  Constituir\nel comité ", " El empleador constituye  un Comité Paritario en la faena. ")
-    many = tuple(ArticleObligation(f"Obligación {n}", f"Resumen {n}.") for n in range(MAX_OBLIGATIONS + 3))
+    noisy = ArticleObligation(
+        "  Constituir\nel comité ",
+        " El empleador constituye  un Comité Paritario en la faena. ",
+        " Acta de constitución del\nComité Paritario ",
+    )
+    many = tuple(
+        ArticleObligation(f"Obligación {n}", f"Resumen {n}.", f"Respaldo {n}.") for n in range(MAX_OBLIGATIONS + 3)
+    )
     closed = close_analysis(ArticleAnalysis(A1, "explicit_obligations", (noisy, OBLIGATION, *many), "Ley 1"))
     assert closed is not None
     assert closed.referred_legal_body is None
@@ -317,14 +335,84 @@ def test_map_parsed_analyses_closes_each_article_with_the_c9_rules() -> None:
                 A1,
                 "Motivo.",
                 nature="explicit_obligations",
-                obligations=(("Constituir el comité", "El empleador constituye un Comité Paritario en la faena."),),
+                obligations=(
+                    (
+                        "Constituir el comité",
+                        "El empleador constituye un Comité Paritario en la faena.",
+                        "Acta de constitución del Comité Paritario",
+                    ),
+                ),
                 referred="Ley N° 16.744",
+                procedure="Permiso de edificación",
             ),
-            llm_item(A2, nature="referral", obligations=(("Pagar", "Paga el impuesto."),), referred="Ley N° 20.780"),
+            llm_item(
+                A2,
+                nature="referral",
+                obligations=(("Pagar", "Paga el impuesto.", "Comprobante de pago"),),
+                referred="Ley N° 20.780",
+            ),
             llm_item(A3, nature="informative"),
         ]
     )
     assert map_parsed_analyses(parsed, {A1, A2}) == (
         explicit(A1),
         ArticleAnalysis(A2, "referral", (), "Ley N° 20.780"),
+    )
+
+
+def test_an_obligation_without_its_respaldo_is_not_an_obligation() -> None:
+    # Decision 21, the client's criterion: an obligation corresponds to a respaldo at all times.
+    without = ArticleObligation("No retener el bono", "Las instituciones no retienen el bono.", "  ")
+    too_long = ArticleObligation(
+        "Informar", "El titular informa a la autoridad.", "R" * (MAX_OBLIGATION_EVIDENCE_CHARS + 1)
+    )
+    assert close_analysis(ArticleAnalysis(A1, "explicit_obligations", (without, too_long), None)) is None
+    closed = close_analysis(ArticleAnalysis(A1, "explicit_obligations", (without, OBLIGATION), None))
+    assert closed == explicit(A1)
+
+
+def test_a_procedural_article_keeps_only_the_authorization_it_serves() -> None:
+    closed = close_analysis(
+        ArticleAnalysis(A1, "procedural", (OBLIGATION,), "Ley N° 20.780", "  Permiso de\nedificación ")
+    )
+    assert closed == ArticleAnalysis(A1, "procedural", (), None, "Permiso de edificación")
+    too_long = "P" * (MAX_PROCEDURE_FOR_CHARS + 1)
+    assert close_analysis(ArticleAnalysis(A1, "procedural", (), None, too_long)) == ArticleAnalysis(
+        A1, "procedural", (), None, None
+    )
+    assert close_analysis(ArticleAnalysis(A1, "procedural", (), None, "   ")) == ArticleAnalysis(
+        A1, "procedural", (), None, None
+    )
+
+
+def test_only_a_procedural_article_keeps_procedure_for() -> None:
+    for nature in ("informative", "referral"):
+        analysis = ArticleAnalysis(A1, nature, (), None, "Permiso de edificación")  # type: ignore[arg-type]
+        closed = close_analysis(analysis)
+        assert closed == ArticleAnalysis(A1, nature, (), None, None)  # type: ignore[arg-type]
+    closed = close_analysis(ArticleAnalysis(A1, "explicit_obligations", (OBLIGATION,), None, "Permiso de edificación"))
+    assert closed == explicit(A1)
+
+
+def test_map_parsed_analyses_reads_the_respaldo_and_the_procedure() -> None:
+    parsed = LlmApplicabilityReasons(
+        reasons=[
+            llm_item(
+                A1,
+                nature="explicit_obligations",
+                obligations=(
+                    ("Sin respaldo", "El titular cumple algo que ningún documento acredita.", ""),
+                    (
+                        "Constituir el comité",
+                        "El empleador constituye un Comité Paritario en la faena.",
+                        "Acta de constitución del Comité Paritario",
+                    ),
+                ),
+            ),
+            llm_item(A2, nature="procedural", procedure="Permiso de edificación"),
+        ]
+    )
+    assert map_parsed_analyses(parsed, {A1, A2}) == (
+        explicit(A1),
+        ArticleAnalysis(A2, "procedural", (), None, "Permiso de edificación"),
     )

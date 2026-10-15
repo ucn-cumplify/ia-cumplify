@@ -128,10 +128,11 @@ def map_parsed_analyses(parsed: LlmApplicabilityReasons, allowed: set[str]) -> t
                 article_id=article_id,
                 nature=item.nature,
                 obligations=tuple(
-                    ArticleObligation(title=obligation.title, summary=obligation.summary)
+                    ArticleObligation(title=obligation.title, summary=obligation.summary, evidence=obligation.evidence)
                     for obligation in item.obligations
                 ),
                 referred_legal_body=item.referred_legal_body,
+                procedure_for=item.procedure_for,
             )
         )
         if analysis is None:

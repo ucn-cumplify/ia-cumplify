@@ -16,6 +16,13 @@ class LlmObligation(BaseModel):
             "Only from the article text."
         ),
     )
+    evidence: str = Field(
+        ...,
+        description=(
+            "The respaldo that accredits the obligation: a short Spanish name of the document or record the "
+            "company would show to prove it complied. Without one, it is not an obligation."
+        ),
+    )
 
 
 class LlmArticleReason(BaseModel):
@@ -25,7 +32,8 @@ class LlmArticleReason(BaseModel):
     # Nature and obligations come before the reason, so the model reads the article before it writes
     # about the match.
     nature: ApplicabilityNature = Field(
-        ..., description="explicit_obligations, informative or referral, decided only from the article text."
+        ...,
+        description="explicit_obligations, informative, referral or procedural, decided only from the article text.",
     )
     referred_legal_body: str = Field(
         ...,
@@ -34,11 +42,18 @@ class LlmArticleReason(BaseModel):
             "Empty when the article names none or is not a referral."
         ),
     )
+    procedure_for: str = Field(
+        ...,
+        description=(
+            "For a procedural article, the authorization, permit, license or registration it serves, as the "
+            "article or the legal body names it. Empty when the article is not procedural."
+        ),
+    )
     obligations: list[LlmObligation] = Field(
         ...,
         description=(
-            "For explicit_obligations, each obligation the article imposes on the company. "
-            "Empty for informative and referral."
+            "For explicit_obligations, each obligation the article imposes on the company, with its respaldo. "
+            "Empty for informative, referral and procedural."
         ),
     )
     reason: str = Field(

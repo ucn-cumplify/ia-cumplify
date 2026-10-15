@@ -26,6 +26,7 @@ APP_ID = "7c8e9f01-2345-6789-abcd-ef0123456789"
 NORM_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 ARTICLE_ID = "8b2c1a40-1d3e-4f5a-9c6b-7d8e9f0a1b2c"
 OTHER_ID = "9c3d2b51-2e4f-5a6b-0d7c-8e9f0a1b2c3d"
+THIRD_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
 
 def payload(**changes: object) -> dict:
@@ -76,10 +77,17 @@ def success_result() -> ApplicabilityReasons:
             ArticleAnalysis(
                 ARTICLE_ID,
                 "explicit_obligations",
-                (ArticleObligation("Monitorear los relaves", "El titular monitorea la estabilidad de sus depósitos."),),
+                (
+                    ArticleObligation(
+                        "Monitorear los relaves",
+                        "El titular monitorea la estabilidad de sus depósitos.",
+                        "Registro del monitoreo de los depósitos",
+                    ),
+                ),
                 None,
             ),
             ArticleAnalysis(OTHER_ID, "referral", (), "Ley N° 20.780"),
+            ArticleAnalysis(THIRD_ID, "procedural", (), None, "Permiso de edificación"),
         ),
     )
 
@@ -129,11 +137,29 @@ def test_200_returns_reasons_and_does_not_send_the_app_id_to_the_use_case(monkey
             "article_id": ARTICLE_ID,
             "nature": "explicit_obligations",
             "obligations": [
-                {"title": "Monitorear los relaves", "summary": "El titular monitorea la estabilidad de sus depósitos."}
+                {
+                    "title": "Monitorear los relaves",
+                    "summary": "El titular monitorea la estabilidad de sus depósitos.",
+                    "evidence": "Registro del monitoreo de los depósitos",
+                }
             ],
             "referred_legal_body": None,
+            "procedure_for": None,
         },
-        {"article_id": OTHER_ID, "nature": "referral", "obligations": [], "referred_legal_body": "Ley N° 20.780"},
+        {
+            "article_id": OTHER_ID,
+            "nature": "referral",
+            "obligations": [],
+            "referred_legal_body": "Ley N° 20.780",
+            "procedure_for": None,
+        },
+        {
+            "article_id": THIRD_ID,
+            "nature": "procedural",
+            "obligations": [],
+            "referred_legal_body": None,
+            "procedure_for": "Permiso de edificación",
+        },
     ]
     assert body["reason_version"] == "applicability-v2@test"
     assert body["usage"]["llm_calls"] == 1
@@ -266,7 +292,14 @@ def post_with_the_real_adapter(monkeypatch, article: dict, usage: dict):
                     "article_id": ARTICLE_ID,
                     "nature": "explicit_obligations",
                     "referred_legal_body": "",
-                    "obligations": [{"title": "Informar", "summary": "El empleador informa a sus trabajadores."}],
+                    "procedure_for": "",
+                    "obligations": [
+                        {
+                            "title": "Informar",
+                            "summary": "El empleador informa a sus trabajadores.",
+                            "evidence": "Registro de entrega de la información",
+                        }
+                    ],
                     "reason": "Motivo de prueba.",
                 }
             ]
@@ -320,8 +353,15 @@ def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypat
         {
             "article_id": ARTICLE_ID,
             "nature": "explicit_obligations",
-            "obligations": [{"title": "Informar", "summary": "El empleador informa a sus trabajadores."}],
+            "obligations": [
+                {
+                    "title": "Informar",
+                    "summary": "El empleador informa a sus trabajadores.",
+                    "evidence": "Registro de entrega de la información",
+                }
+            ],
             "referred_legal_body": None,
+            "procedure_for": None,
         }
     ]
     assert body["reason_version"] == "applicability-v2@fake-model"
@@ -371,8 +411,18 @@ def test_the_schema_sent_to_openai_has_every_field_required_and_no_default(monke
     for node in objects:
         assert sorted(node["required"]) == sorted(node["properties"]), node
         assert node["additionalProperties"] is False
-    item = response_format["json_schema"]["schema"]["$defs"]["LlmArticleReason"]
-    assert list(item["properties"]) == ["article_id", "nature", "referred_legal_body", "obligations", "reason"]
+    definitions = response_format["json_schema"]["schema"]["$defs"]
+    item = definitions["LlmArticleReason"]
+    assert list(item["properties"]) == [
+        "article_id",
+        "nature",
+        "referred_legal_body",
+        "procedure_for",
+        "obligations",
+        "reason",
+    ]
+    assert item["properties"]["nature"]["enum"] == ["explicit_obligations", "informative", "referral", "procedural"]
+    assert list(definitions["LlmObligation"]["properties"]) == ["title", "summary", "evidence"]
 
 
 # parse() dumps the completion it built, and pydantic warns that the malformed counts are not int.
