@@ -306,16 +306,16 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
   opciones están en «Evaluación del perfil embebido» de `docs/Embeddings/requirements.md`. `--self-test` comprueba la
   receta, esos casos y las métricas con datos inventados, sin servicio ni base.
 
-### Evaluación de los motivos y el análisis (`applicability-v2`)
+### Evaluación de los motivos y el análisis (`applicability-v3`)
 
 `scripts/applicability_eval.py` es el paso 0.17 del plan del sprint 3 y cubre APR-023 a APR-027 de
 `docs/ApplicabilityReasons/test.csv`. Pide el análisis de los artículos de `scripts/applicability_eval_set.json`
 (remisiones, informativos, obligaciones explícitas, autorizaciones e información procedimental) y revisa en cada uno
-la naturaleza, las obligaciones con su respaldo, la norma a la que remite, la autorización a la que sirve y si trajo
+la naturaleza, las obligaciones con su respaldo, la norma que modifica, la autorización a la que sirve y si trajo
 motivo.
 
-> **Gasta tokens reales**, en 15 pedidos: alrededor de US$0,01. La ejecución del 2026-10-14, con 9 pedidos y las
-> reglas anteriores al criterio del cliente, costó US$0,0050. El script informa el gasto de cada ejecución.
+> **Gasta tokens reales**, en 15 pedidos. La ejecución del 2026-10-15 costó US$0,0093 (unos US$0,0006 por pedido,
+> sin descontar la caché) y su pedido más lento tardó 4,7 s. El script informa el gasto de cada ejecución.
 
 ```bash
 export SERVICE_API_KEY=...        # la misma del servicio
@@ -324,7 +324,7 @@ uv run python scripts/applicability_eval.py --dry-run
 uv run python scripts/applicability_eval.py --base-url http://127.0.0.1:8000
 ```
 
-- **El servicio tiene que responder con `applicability-v2`.** Si responde con otra versión, el informe lo avisa.
+- **El servicio tiene que responder con `applicability-v3`.** Si responde con otra versión, el informe lo avisa.
 - **Artículos:** los busca en las alertas de la IA de la base local, con una conexión propia de solo lectura. Como
   acciones les manda las frases que guardó la alerta, igual que el backend. Los casos con motivo traen en el set sus
   valores coincidentes, porque esas sugerencias no los guardaron. Un caso con `"alerted": false` lee su artículo de

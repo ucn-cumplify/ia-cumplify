@@ -10,6 +10,7 @@ from ia_cumplify.domain.applicability import (
     ArticleApplicabilityReason,
     MAX_REASON_CHARS,
     close_analysis,
+    has_foreign_letters,
 )
 from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.exceptions import LegalBodyNotFoundError
@@ -88,7 +89,7 @@ def _usable(
     if item.article_id not in allowed:
         return None
     reason = item.reason.strip()
-    if not reason or len(reason) > max_chars:
+    if not reason or len(reason) > max_chars or has_foreign_letters(reason):
         return None
     return ArticleApplicabilityReason(article_id=item.article_id, reason=reason)
 

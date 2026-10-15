@@ -30,7 +30,7 @@ def context(article_id: str, number: str, text: str, *, write_reason: bool = Tru
 
 
 def test_prompt_version() -> None:
-    assert APPLICABILITY_PROMPT_VERSION == "applicability-v2"
+    assert APPLICABILITY_PROMPT_VERSION == "applicability-v3"
 
 
 def test_system_prompt_forbids_quoting_the_profile_and_dictating() -> None:
@@ -76,6 +76,15 @@ def test_the_antecedents_for_an_application_are_procedural() -> None:
     assert "what the authority does with the application" in text
     assert "Put the authorization it serves in procedure_for" in text
     assert "unless it regulates an application, which is procedural" in text
+
+
+def test_naming_another_law_is_not_a_referral() -> None:
+    # Ley 21.800, art. 4° (2026-10-15): it requires an authorization and says that another decree governs the
+    # navigable channels. The model took it for a referral while the field said "amends or points to".
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "does not amend it and is not a referral" in text
+    assert "decide its nature from what the article itself requires" in text
+    assert "points to" not in text
 
 
 def test_the_rule_against_dictating_is_limited_to_the_reason() -> None:

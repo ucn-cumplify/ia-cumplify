@@ -38,7 +38,7 @@ class LlmArticleReason(BaseModel):
     referred_legal_body: str = Field(
         ...,
         description=(
-            "For a referral, the law or regulation it amends or points to, as the article names it. "
+            "For a referral, the law or regulation it amends, as the article names it. "
             "Empty when the article names none or is not a referral."
         ),
     )
