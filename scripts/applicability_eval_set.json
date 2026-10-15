@@ -1,0 +1,132 @@
+{
+  "description": "Set de evaluación de applicability-v2 (paso 0.17 del plan del sprint 3): APR-023 a APR-027 de docs/ApplicabilityReasons/test.csv. Cada artículo se busca en las alertas de la IA de la base local; como acciones viajan las frases que guardó su alerta, como las envía el backend. Los valores coincidentes de los casos con motivo salen del motivo guardado de su alerta, porque esas sugerencias no guardaron sus valores. Un caso con \"alerted\": false lee su artículo de la norma, sin acciones, porque ninguna alerta lo sugirió. Desde el 2026-10-15 rige el criterio del cliente (decisión 21 del plan): una obligación se acredita con un respaldo, y los antecedentes para obtener una autorización son información procedimental.",
+  "cases": [
+    {
+      "id": "APR-023-a",
+      "group": "APR-023",
+      "law": "21.806",
+      "write_reason": false,
+      "note": "Agrega un inciso a la ley N° 20.780: remisión, aunque el texto agregado imponga una obligación.",
+      "articles": [{"number": "74", "expected": {"nature": "referral", "referred": "20780"}}]
+    },
+    {
+      "id": "APR-023-b",
+      "group": "APR-023",
+      "law": "21.817",
+      "write_reason": false,
+      "note": "Modifica la ley N° 20.000.",
+      "articles": [{"number": "único", "expected": {"nature": "referral", "referred": "20000"}}]
+    },
+    {
+      "id": "APR-023-c",
+      "group": "APR-023",
+      "law": "21.792",
+      "write_reason": false,
+      "note": "Incorpora en el Código Aeronáutico un artículo que obliga a las empresas de transporte aéreo: la obligación es de la otra ley.",
+      "articles": [{"number": "único", "expected": {"nature": "referral", "referred": "aeronautico"}}]
+    },
+    {
+      "id": "APR-024-a",
+      "group": "APR-024",
+      "law": "21.800",
+      "write_reason": false,
+      "note": "Dice cómo se financia el gasto fiscal de la ley.",
+      "articles": [{"number": "sexto", "expected": {"nature": "informative"}}]
+    },
+    {
+      "id": "APR-024-b",
+      "group": "APR-024",
+      "law": "21.795",
+      "write_reason": false,
+      "note": "Condona deudas: no obliga a la empresa.",
+      "articles": [{"number": "1", "expected": {"nature": "informative"}}]
+    },
+    {
+      "id": "APR-024-c",
+      "group": "APR-024",
+      "law": "21.802",
+      "write_reason": false,
+      "note": "Faculta a los inspectores municipales: es una facultad del Estado.",
+      "articles": [{"number": "41", "expected": {"nature": "informative"}}]
+    },
+    {
+      "id": "APR-024-d",
+      "group": "APR-024",
+      "law": "21.840",
+      "write_reason": false,
+      "note": "Concede un bono y prohíbe a las instituciones públicas o privadas retenerlo o compensarlo. Con el criterio del cliente, esa prohibición no es una obligación: ningún respaldo acredita que se respetó.",
+      "articles": [{"number": "1", "expected": {"nature": "informative"}}]
+    },
+    {
+      "id": "APR-025-a",
+      "group": "APR-025",
+      "law": "21.813",
+      "write_reason": true,
+      "matched_values": ["Energía"],
+      "note": "El titular debe informar a la autoridad toda transferencia de su título.",
+      "articles": [{"number": "28", "expected": {"nature": "explicit_obligations", "min_obligations": 1}}]
+    },
+    {
+      "id": "APR-025-b",
+      "group": "APR-025",
+      "law": "E2E-1",
+      "write_reason": true,
+      "matched_values": ["Logística", "Transporte y tránsito"],
+      "note": "Norma sintética de la prueba de punta a punta de las alertas. Dos artículos en un pedido, como los manda el backend: mide la latencia de un pedido con varias obligaciones.",
+      "articles": [
+        {"number": "1", "expected": {"nature": "explicit_obligations", "min_obligations": 1}},
+        {"number": "2", "expected": {"nature": "explicit_obligations", "min_obligations": 1}}
+      ]
+    },
+    {
+      "id": "APR-026-a",
+      "group": "APR-026",
+      "law": "21.800",
+      "write_reason": false,
+      "note": "La extracción de áridos requiere autorización municipal, antecedida por una habilitación técnica de la DOH: obligación, con esas resoluciones como respaldo.",
+      "articles": [{"number": "4", "expected": {"nature": "explicit_obligations", "min_obligations": 1, "evidence_any": ["autorizacion", "habilitacion"]}}]
+    },
+    {
+      "id": "APR-026-b",
+      "group": "APR-026",
+      "law": "21.837",
+      "write_reason": false,
+      "note": "Los vehículos de competencias sin patente deben contar con un permiso de circulación provisional: obligación, con el permiso como respaldo.",
+      "articles": [{"number": "1", "expected": {"nature": "explicit_obligations", "min_obligations": 1, "evidence_any": ["permiso"]}}]
+    },
+    {
+      "id": "APR-026-c",
+      "group": "APR-026",
+      "law": "21.815",
+      "alerted": false,
+      "write_reason": false,
+      "note": "El feriante debe tener el permiso de uso en ferias libres: obligación, con el permiso como respaldo. Ninguna alerta lo sugirió.",
+      "articles": [{"number": "18", "expected": {"nature": "explicit_obligations", "min_obligations": 1, "evidence_any": ["permiso"]}}]
+    },
+    {
+      "id": "APR-027-a",
+      "group": "APR-027",
+      "law": "21.800",
+      "write_reason": false,
+      "note": "La solicitud de habilitación técnica y lo que debe contener: información procedimental de la habilitación del artículo 4°.",
+      "articles": [{"number": "6", "expected": {"nature": "procedural", "procedure_for": "habilitacion"}}]
+    },
+    {
+      "id": "APR-027-b",
+      "group": "APR-027",
+      "law": "21.815",
+      "alerted": false,
+      "write_reason": false,
+      "note": "Los antecedentes que acompañan la solicitud del permiso de uso en ferias libres: el ejemplo del cliente de información procedimental. Ninguna alerta lo sugirió.",
+      "articles": [{"number": "19", "expected": {"nature": "procedural", "procedure_for": "permiso"}}]
+    },
+    {
+      "id": "APR-027-c",
+      "group": "APR-027",
+      "law": "21.815",
+      "write_reason": false,
+      "note": "Cómo evalúa el municipio la solicitud del permiso: procedimental, aunque solo obligue al municipio.",
+      "articles": [{"number": "20", "expected": {"nature": "procedural", "procedure_for": "permiso"}}]
+    }
+  ]
+}

@@ -6,15 +6,18 @@ from ia_cumplify.domain.applicability import (
     ApplicabilityArticleContext,
     ApplicabilityArticleInput,
     ApplicabilityReasons,
+    ArticleAnalysis,
     ArticleApplicabilityReason,
     MAX_REASON_CHARS,
+    close_analysis,
 )
 from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.exceptions import LegalBodyNotFoundError
 
 
 class ExplainApplicabilityUseCase:
-    """Loads the legal body and only the requested articles, then asks for one reason each.
+    """Loads the legal body and only the requested articles, then asks what each one asks of the
+    company and, unless the caller keeps its own text, one reason for the match.
 
     Articles that are not on the legal body are omitted: the backend keeps the template for those.
     The company profile text is not an input and is never sent to the model.
@@ -45,6 +48,7 @@ class ExplainApplicabilityUseCase:
                 article=by_id[item.article_id],
                 matched_values=item.matched_values,
                 actions=item.actions,
+                write_reason=item.write_reason,
             )
             for item in articles
             if item.article_id in by_id
@@ -58,11 +62,11 @@ class ExplainApplicabilityUseCase:
             )
 
         output = self._reasoner.explain(legal_body, found)
-        allowed = {item.article.id for item in found}
+        with_reason = {item.article.id for item in found if item.write_reason}
         seen: set[str] = set()
         reasons: list[ArticleApplicabilityReason] = []
         for item in output.reasons:
-            reason = _usable(item, allowed, self._max_reason_chars)
+            reason = _usable(item, with_reason, self._max_reason_chars)
             if reason is None or reason.article_id in seen:
                 continue
             seen.add(reason.article_id)
@@ -72,6 +76,7 @@ class ExplainApplicabilityUseCase:
             reasons=tuple(reasons),
             reason_version=self._reasoner.version,
             usage=output.usage,
+            analyses=_usable_analyses(output.analyses, {item.article.id for item in found}),
         )
 
 
@@ -86,3 +91,18 @@ def _usable(
     if not reason or len(reason) > max_chars:
         return None
     return ArticleApplicabilityReason(article_id=item.article_id, reason=reason)
+
+
+def _usable_analyses(analyses: Sequence[ArticleAnalysis], allowed: set[str]) -> tuple[ArticleAnalysis, ...]:
+    """The first usable analysis per requested article, closed again with the C9 rules whatever the port."""
+    seen: set[str] = set()
+    kept: list[ArticleAnalysis] = []
+    for item in analyses:
+        if item.article_id not in allowed or item.article_id in seen:
+            continue
+        analysis = close_analysis(item)
+        if analysis is None:
+            continue
+        seen.add(analysis.article_id)
+        kept.append(analysis)
+    return tuple(kept)

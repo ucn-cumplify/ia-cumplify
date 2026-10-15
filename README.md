@@ -306,13 +306,42 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
   opciones están en «Evaluación del perfil embebido» de `docs/Embeddings/requirements.md`. `--self-test` comprueba la
   receta, esos casos y las métricas con datos inventados, sin servicio ni base.
 
+### Evaluación de los motivos y el análisis (`applicability-v2`)
+
+`scripts/applicability_eval.py` es el paso 0.17 del plan del sprint 3 y cubre APR-023 a APR-027 de
+`docs/ApplicabilityReasons/test.csv`. Pide el análisis de los artículos de `scripts/applicability_eval_set.json`
+(remisiones, informativos, obligaciones explícitas, autorizaciones e información procedimental) y revisa en cada uno
+la naturaleza, las obligaciones con su respaldo, la norma a la que remite, la autorización a la que sirve y si trajo
+motivo.
+
+> **Gasta tokens reales**, en 15 pedidos: alrededor de US$0,01. La ejecución del 2026-10-14, con 9 pedidos y las
+> reglas anteriores al criterio del cliente, costó US$0,0050. El script informa el gasto de cada ejecución.
+
+```bash
+export SERVICE_API_KEY=...        # la misma del servicio
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cumplify_db
+uv run python scripts/applicability_eval.py --dry-run
+uv run python scripts/applicability_eval.py --base-url http://127.0.0.1:8000
+```
+
+- **El servicio tiene que responder con `applicability-v2`.** Si responde con otra versión, el informe lo avisa.
+- **Artículos:** los busca en las alertas de la IA de la base local, con una conexión propia de solo lectura. Como
+  acciones les manda las frases que guardó la alerta, igual que el backend. Los casos con motivo traen en el set sus
+  valores coincidentes, porque esas sugerencias no los guardaron. Un caso con `"alerted": false` lee su artículo de
+  la norma, sin acciones, porque ninguna alerta lo sugirió.
+- **Consola:** por artículo, la naturaleza esperada y la obtenida, las obligaciones y si trajo motivo. Al final, la
+  latencia del pedido más lento contra el plazo de 25 s, los tokens y el costo estimado. Los textos de las obligaciones,
+  de sus respaldos y de los motivos van a `--out`.
+- **`--dry-run`:** solo busca los casos en la base y muestra cuántas acciones y valores lleva cada artículo. No llama al
+  servicio ni pide `SERVICE_API_KEY`.
+
 ## Endpoints
 
 | Método | Ruta | Uso |
 |---|---|---|
 | GET | `/health` | Responde `{"status": "ok"}`. No exige `X-API-Key` |
 | POST | `/api/v1/legal-bodies/classify` | Clasifica los artículos de un cuerpo legal ya hidratado |
-| POST | `/api/v1/applicability-reasons` | Un motivo en español por artículo sugerido. Lee la norma y solo esos artículos, nunca el texto del perfil |
+| POST | `/api/v1/applicability-reasons` | Un motivo en español por artículo sugerido y, desde `applicability-v2`, su naturaleza, sus obligaciones explícitas con el respaldo que acredita cada una y, si es procedimental, la autorización a la que sirve (C9). Lee la norma y solo esos artículos, nunca el texto del perfil |
 | POST | `/api/v1/company-profiles/classify` | Clasifica en las mismas seis dimensiones el texto con que una empresa se describe; no usa la base |
 | POST | `/api/v1/embeddings` | Devuelve un vector por cada texto, en el mismo orden |
 | POST | `/api/v1/chat` | Responde una pregunta del chat en streaming (Server-Sent Events), solo con los pasajes del pedido y citando cada afirmación; no usa la base |
@@ -332,7 +361,7 @@ ia-cumplify/
 │   ├── config/
 │   └── cli.py                   # ia-cumplify (desarrollo) e ia-cumplify-serve (contenedor)
 ├── tests/                       # pytest, con un OpenAI simulado en 127.0.0.1
-├── scripts/                     # Evaluaciones manuales del chat, de la recuperación y del perfil embebido
+├── scripts/                     # Evaluaciones manuales del chat, de la recuperación, del perfil embebido y de los motivos
 ├── docs/                        # Contratos, requisitos y casos de prueba por módulo
 ├── Dockerfile                   # Imagen del perfil ia del Compose del backend
 ├── pyproject.toml
