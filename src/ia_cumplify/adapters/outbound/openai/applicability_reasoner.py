@@ -17,6 +17,7 @@ from ia_cumplify.domain.applicability import (
     ArticleObligation,
     MAX_REASON_CHARS,
     close_analysis,
+    has_foreign_letters,
 )
 from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.exceptions import ApplicabilityError
@@ -97,7 +98,8 @@ def map_parsed_reasons(
     allowed: set[str],
     max_reason_chars: int,
 ) -> tuple[ArticleApplicabilityReason, ...]:
-    """Keeps the first usable reason per allowed article_id. Extra or empty ids are dropped."""
+    """Keeps the first usable reason per allowed article_id. Extra or empty ids are dropped, and so is a
+    reason with letters of a foreign script."""
     seen: set[str] = set()
     reasons: list[ArticleApplicabilityReason] = []
     for item in parsed.reasons:
@@ -105,7 +107,7 @@ def map_parsed_reasons(
         reason = item.reason.strip()
         if article_id not in allowed or article_id in seen:
             continue
-        if not reason or len(reason) > max_reason_chars:
+        if not reason or len(reason) > max_reason_chars or has_foreign_letters(reason):
             continue
         seen.add(article_id)
         reasons.append(ArticleApplicabilityReason(article_id=article_id, reason=reason))

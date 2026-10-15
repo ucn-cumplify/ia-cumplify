@@ -24,6 +24,7 @@ from ia_cumplify.domain.applicability import (
     ArticleApplicabilityReason,
     ArticleObligation,
     close_analysis,
+    has_foreign_letters,
 )
 from ia_cumplify.domain.article import Article
 from ia_cumplify.domain.classification import TokenUsage
@@ -416,3 +417,41 @@ def test_map_parsed_analyses_reads_the_respaldo_and_the_procedure() -> None:
         explicit(A1),
         ArticleAnalysis(A2, "procedural", (), None, "Permiso de edificación"),
     )
+
+
+def test_foreign_letters_are_those_of_scripts_absent_from_chilean_legal_spanish() -> None:
+    for text in ("desalиниzación", "Ley 中文", "قانون", "חוק", "법률", "ひらがな"):
+        assert has_foreign_letters(text), text
+    # Spanish letters, guillemets, the degree and micro signs, and Greek letters of technical norms stay.
+    for text in ("Año, pingüino y «Minería»", "Artículo 4° y 6º", "MP10 en µg/m³ y μg/m³", "Resistencia de 5 Ω"):
+        assert not has_foreign_letters(text), text
+
+
+def test_an_analysis_text_with_foreign_letters_is_dropped() -> None:
+    # A reason came back with "desalиниzación" on 2026-10-15. The same slip in an obligation, in the law a
+    # referral names or in the authorization a procedural article serves keeps it from the alert.
+    slipped = ArticleObligation("Informar", "El titular informa la desalиниzación.", "Comunicación a la autoridad")
+    assert close_analysis(ArticleAnalysis(A1, "explicit_obligations", (slipped,), None)) is None
+    assert close_analysis(ArticleAnalysis(A1, "explicit_obligations", (slipped, OBLIGATION), None)) == explicit(A1)
+    assert close_analysis(ArticleAnalysis(A1, "referral", (), "Ley N° 20.78о")) == ArticleAnalysis(
+        A1, "referral", (), None
+    )
+    assert close_analysis(ArticleAnalysis(A1, "procedural", (), None, "Permiso de usо")) == ArticleAnalysis(
+        A1, "procedural", (), None, None
+    )
+    greek = ArticleObligation("Medir el MP10", "El titular mide el MP10 en μg/m³.", "Informe de monitoreo")
+    assert close_analysis(ArticleAnalysis(A1, "explicit_obligations", (greek,), None)) == explicit(A1, greek)
+
+
+def test_a_reason_with_foreign_letters_is_dropped() -> None:
+    slipped = "Coincide con «Energía» y con la desalиниzación de agua de mar."
+    reasoner = FakeReasoner(
+        output=ApplicabilityReasonerOutput(
+            reasons=(ArticleApplicabilityReason(A1, slipped), ArticleApplicabilityReason(A2, "Motivo usable.")),
+            usage=TokenUsage(llm_calls=1),
+        )
+    )
+    result, _ = run([item(A1), item(A2)], reasoner=reasoner)
+    assert [entry.article_id for entry in result.reasons] == [A2]
+    parsed = LlmApplicabilityReasons(reasons=[llm_item(A1, slipped), llm_item(A2, "Motivo usable.")])
+    assert map_parsed_reasons(parsed, {A1, A2}, MAX_REASON_CHARS) == (ArticleApplicabilityReason(A2, "Motivo usable."),)

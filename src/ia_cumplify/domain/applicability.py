@@ -1,3 +1,4 @@
+import unicodedata
 from dataclasses import dataclass
 from typing import Literal, get_args
 
@@ -13,8 +14,8 @@ MAX_MATCHED_VALUES = 10
 MAX_ACTIONS = 20
 # A reason longer than this is dropped; the backend keeps the template (MaxApplicabilityReasonLength).
 MAX_REASON_CHARS = 2000
-# The analysis of applicability-v2. Past these caps an obligation, the name of the law a referral points
-# to, or the authorization a procedural article serves is dropped instead of reaching the alert.
+# The analysis of applicability-v2. Past these caps an obligation, the name of the law a referral amends,
+# or the authorization a procedural article serves is dropped instead of reaching the alert.
 MAX_OBLIGATIONS = 10
 MAX_OBLIGATION_TITLE_CHARS = 200
 MAX_OBLIGATION_SUMMARY_CHARS = 1000
@@ -27,6 +28,23 @@ MAX_PROCEDURE_FOR_CHARS = 300
 # ArticleNature, still without procedural: the two differ until it adopts decision 21.
 ApplicabilityNature = Literal["explicit_obligations", "informative", "referral", "procedural"]
 APPLICABILITY_NATURES: frozenset[str] = frozenset(get_args(ApplicabilityNature))
+
+# Scripts that never appear in Chilean legal Spanish. The model sometimes slips letters of another script
+# into a word ("desalиниzación" in a reason, 2026-10-15); a text with them is dropped instead of reaching
+# the alert. Greek is not on the list: technical norms use letters such as μ or Ω.
+FOREIGN_SCRIPTS = (
+    "ARABIC",
+    "ARMENIAN",
+    "CJK",
+    "CYRILLIC",
+    "DEVANAGARI",
+    "GEORGIAN",
+    "HANGUL",
+    "HEBREW",
+    "HIRAGANA",
+    "KATAKANA",
+    "THAI",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,8 +95,8 @@ class ArticleAnalysis:
     """What one article asks of the company (C9).
 
     ``explicit_obligations`` carries at least one obligation; ``informative``, ``referral`` and
-    ``procedural`` carry none. ``referred_legal_body`` is the law a referral amends or points to, as
-    the article names it, or None. ``procedure_for`` is the authorization a procedural article
+    ``procedural`` carry none. ``referred_legal_body`` is the law a referral amends, as the
+    article names it, or None. ``procedure_for`` is the authorization a procedural article
     serves, as the article or the legal body names it, or None.
     """
 
@@ -113,7 +131,7 @@ def close_analysis(analysis: ArticleAnalysis) -> ArticleAnalysis | None:
     that accredits it (decision 21). An article with explicit obligations and no usable one is
     dropped, so the backend shows it as not evaluated instead of an empty list. Only a referral
     keeps the law it names, and only a procedural article the authorization it serves. Texts come
-    back on one line.
+    back on one line, and a text with letters of a foreign script is dropped.
     """
     if analysis.nature not in APPLICABILITY_NATURES:
         return None
@@ -146,6 +164,8 @@ def _usable_obligations(obligations: tuple[ArticleObligation, ...]) -> tuple[Art
             or len(evidence) > MAX_OBLIGATION_EVIDENCE_CHARS
         ):
             continue
+        if any(has_foreign_letters(text) for text in (title, summary, evidence)):
+            continue
         key = (title.casefold(), summary.casefold())
         if key in seen:
             continue
@@ -156,10 +176,15 @@ def _usable_obligations(obligations: tuple[ArticleObligation, ...]) -> tuple[Art
     return tuple(kept)
 
 
+def has_foreign_letters(text: str) -> bool:
+    """True when the text has a letter of a script that never appears in Chilean legal Spanish."""
+    return any(char.isalpha() and unicodedata.name(char, "").startswith(FOREIGN_SCRIPTS) for char in text)
+
+
 def _short_line(text: str | None, max_chars: int) -> str | None:
-    """The text on one line, or None when it is empty or longer than max_chars."""
+    """The text on one line, or None when it is empty, longer than max_chars or has foreign letters."""
     line = _one_line(text or "")
-    if not line or len(line) > max_chars:
+    if not line or len(line) > max_chars or has_foreign_letters(line):
         return None
     return line
 

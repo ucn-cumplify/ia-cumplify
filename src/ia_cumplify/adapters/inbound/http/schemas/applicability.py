@@ -102,7 +102,7 @@ class ArticleAnalysisResponse(BaseModel):
     referred_legal_body: str | None = Field(
         ...,
         max_length=MAX_REFERRED_LEGAL_BODY_CHARS,
-        description="For a referral, the law it amends or points to, as the article names it; otherwise null",
+        description="For a referral, the law it amends, as the article names it; otherwise null",
     )
     procedure_for: str | None = Field(
         ...,

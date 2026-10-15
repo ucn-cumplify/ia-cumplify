@@ -78,6 +78,15 @@ def test_the_antecedents_for_an_application_are_procedural() -> None:
     assert "unless it regulates an application, which is procedural" in text
 
 
+def test_naming_another_law_is_not_a_referral() -> None:
+    # Ley 21.800, art. 4° (2026-10-15): it requires an authorization and says that another decree governs the
+    # navigable channels. The model took it for a referral while the field said "amends or points to".
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "does not amend it and is not a referral" in text
+    assert "decide its nature from what the article itself requires" in text
+    assert "points to" not in text
+
+
 def test_the_rule_against_dictating_is_limited_to_the_reason() -> None:
     text = APPLICABILITY_SYSTEM_PROMPT
     assert "Do not dictate in the reason" in text
