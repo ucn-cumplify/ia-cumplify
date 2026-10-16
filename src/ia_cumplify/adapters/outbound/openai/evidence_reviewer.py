@@ -72,6 +72,7 @@ def _judgment(parsed: LlmEvidenceReview, model: str, version: str, usage: object
         requirements=tuple(
             ReviewRequirement(
                 text=item.text.strip(),
+                evidence=item.evidence.strip(),
                 status=item.status,
                 citations=tuple(
                     ReviewCitation(
@@ -91,4 +92,5 @@ def _judgment(parsed: LlmEvidenceReview, model: str, version: str, usage: object
         usage=call_usage(usage),
         model=model,
         review_version=version,
+        procedure_for=parsed.procedure_for.strip() or None,
     )

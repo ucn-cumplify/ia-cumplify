@@ -258,11 +258,15 @@ class ReviewCitationResponse(BaseModel):
 
 class ReviewRequirementResponse(BaseModel):
     text: str
+    evidence: str = Field(..., description="The respaldo that accredits the exigencia. Without one, the exigencia is dropped")
     status: RequirementStatus
     citations: list[ReviewCitationResponse]
     missing: str = Field(
         ...,
-        description="What does not appear in the files. Empty when nothing is missing. It does not recommend an action",
+        description=(
+            "What does not appear in the files. Empty when nothing is missing. "
+            "It does not recommend an action. «cita no encontrada» marks a quote that was not in the file"
+        ),
     )
 
 
@@ -279,7 +283,12 @@ class EvidenceReviewResponse(BaseModel):
 
     files: list[ReviewedFileResponse]
     nature: ArticleNature | None = Field(
-        default=None, description="explicit_obligations, informative or referral. Null before the model runs"
+        default=None,
+        description="explicit_obligations, informative, referral or procedural. Null before the model runs",
+    )
+    procedure_for: str | None = Field(
+        default=None,
+        description="For a procedural article, the authorization it serves. Null for the other natures",
     )
     requirements: list[ReviewRequirementResponse]
     verdict: RequirementStatus | None = None
@@ -302,9 +311,11 @@ class EvidenceReviewResponse(BaseModel):
                 for item in result.files
             ],
             nature=result.nature,
+            procedure_for=result.procedure_for,
             requirements=[
                 ReviewRequirementResponse(
                     text=item.text,
+                    evidence=item.evidence,
                     status=item.status,
                     citations=[
                         ReviewCitationResponse(

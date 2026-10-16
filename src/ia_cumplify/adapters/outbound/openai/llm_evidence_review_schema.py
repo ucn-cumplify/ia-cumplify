@@ -14,7 +14,14 @@ class LlmReviewCitation(BaseModel):
 
 
 class LlmReviewRequirement(BaseModel):
-    text: str
+    text: str = Field(..., description="The exigencia, in Spanish, taken only from the article text.")
+    evidence: str = Field(
+        ...,
+        description=(
+            "The respaldo that accredits the exigencia: a short Spanish name of the document or record. "
+            "Without one, it is not a requirement."
+        ),
+    )
     status: RequirementStatus
     citations: list[LlmReviewCitation]
     missing: str
@@ -22,6 +29,13 @@ class LlmReviewRequirement(BaseModel):
 
 class LlmEvidenceReview(BaseModel):
     nature: ArticleNature
+    procedure_for: str = Field(
+        ...,
+        description=(
+            "For a procedural article, the authorization, permit, license or registration it serves, as the "
+            "article or the legal body names it. Empty when the article is not procedural."
+        ),
+    )
     requirements: list[LlmReviewRequirement]
     verdict: RequirementStatus
     summary: str

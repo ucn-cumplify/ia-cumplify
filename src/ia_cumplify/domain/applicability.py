@@ -24,8 +24,8 @@ MAX_REFERRED_LEGAL_BODY_CHARS = 300
 MAX_PROCEDURE_FOR_CHARS = 300
 
 # What an article asks of the company (C9, decisions 7 and 21 of the sprint 3 plan): obligaciones
-# explícitas, informativo, remisión, información procedimental. The evidence review declares its own
-# ArticleNature, still without procedural: the two differ until it adopts decision 21.
+# explícitas, informativo, remisión, información procedimental. The evidence review declares the same
+# four natures on its own ArticleNature.
 ApplicabilityNature = Literal["explicit_obligations", "informative", "referral", "procedural"]
 APPLICABILITY_NATURES: frozenset[str] = frozenset(get_args(ApplicabilityNature))
 

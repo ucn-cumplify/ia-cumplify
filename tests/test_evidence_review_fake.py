@@ -24,9 +24,11 @@ def test_the_real_adapter_sends_a_strict_schema_and_maps_the_fake_review(monkeyp
     requests: list[dict] = []
     review = {
         "nature": "explicit_obligations",
+        "procedure_for": "",
         "requirements": [
             {
                 "text": "Constituir el comité.",
+                "evidence": "Acta de constitución",
                 "status": "accredited",
                 "citations": [{"file_id": "acta", "locator": "body", "reference": "", "quote": "Ana;1-9"}],
                 "missing": "",
@@ -79,8 +81,10 @@ def test_the_real_adapter_sends_a_strict_schema_and_maps_the_fake_review(monkeyp
     body = response.json()
     assert body["nature"] == "explicit_obligations"
     assert body["verdict"] == "accredited"
+    assert body["requirements"][0]["evidence"] == "Acta de constitución"
     assert body["requirements"][0]["citations"][0]["quote"] == "Ana;1-9"
-    assert body["review_version"] == "evidence-review-v1@fake-model"
+    assert body["procedure_for"] is None
+    assert body["review_version"] == "evidence-review-v2@fake-model"
     assert body["usage"]["cached_tokens"] == 8
     assert body["usage"]["llm_calls"] == 1
     [sent] = requests
@@ -117,7 +121,7 @@ def test_the_evaluation_set_builds_twenty_cases_and_scores_a_response():
     passed = {
         "nature": "explicit_obligations",
         "verdict": "accredited",
-        "review_version": "evidence-review-v1@gpt-5.6-luna",
+        "review_version": "evidence-review-v2@gpt-5.6-luna",
         "requirements": [{"text": "Constituir.", "status": "accredited", "citations": [], "missing": ""}],
         "files": [{"filename": "acta.pdf", "status": "read", "truncated": False}],
     }
