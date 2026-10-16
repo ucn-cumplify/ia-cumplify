@@ -95,12 +95,12 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
 
 | Campo | Descripción |
 |---|---|
-| nature | `explicit_obligations`, `informative`, `referral` o `procedural`, con las reglas de C9 (decisiones 7 y 21 del plan del sprint 3). La revisión de respaldos (`docs/EvidenceReview`) todavía usa las tres primeras: se igualan cuando adopte la decisión 21 |
+| nature | `explicit_obligations`, `informative`, `referral` o `procedural`, con las reglas de C9 (decisiones 7 y 21 del plan del sprint 3). La revisión de respaldos (`docs/EvidenceReview`) usa las mismas cuatro desde `evidence-review-v2` |
 | obligations | Con `explicit_obligations`, de 1 a 10 obligaciones, cada una con `title` (hasta 200 caracteres), `summary` (hasta 1000) y `evidence`, el respaldo que la acredita (hasta 300). Con las otras naturalezas, siempre vacía |
 | referred_legal_body | Con `referral`, la norma que el artículo modifica, como la nombra el texto (hasta 300 caracteres), o `null` si no la nombra. Con las otras naturalezas, siempre `null` |
 | procedure_for | Con `procedural`, la autorización, el permiso, la licencia o el registro a los que sirve el artículo, como los nombra el texto o la norma (hasta 300 caracteres), o `null` si no los nombra. Con las otras naturalezas, siempre `null` |
 
-El backend de `capstone-2s` todavía no lee `analyses` (paso 0.18 del plan) y, como ignora los campos que no conoce, la respuesta nueva no lo afecta. `usage.cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché, o 0 si no la informa; `dev_metrics` no lo repite. Cada campo del `usage` del proveedor se lee por separado, como en la clasificación de cuerpos legales: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta.
+El backend lee `analyses` desde ucn-cumplify/backend-cumplify#193 (pasos 0.18 y 0.19 del plan): guarda en la alerta la naturaleza, las obligaciones con su respaldo, la norma de una remisión y la autorización de un artículo procedimental. Un backend anterior ignora los campos que no conoce, así que la respuesta nueva no lo afecta. `usage.cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché, o 0 si no la informa; `dev_metrics` no lo repite. Cada campo del `usage` del proveedor se lee por separado, como en la clasificación de cuerpos legales: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta.
 
 `dev_metrics` solo trae datos cuando `INCLUDE_DEV_METRICS` es verdadero.
 
