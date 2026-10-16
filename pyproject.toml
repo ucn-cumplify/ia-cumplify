@@ -39,6 +39,9 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# scripts/ no es un paquete instalado: sus pruebas lo importan desde la raíz del repositorio, que
+# `uv run pytest` no agrega a la ruta.
+pythonpath = ["."]
 markers = [
     "disconnect: uvicorn and a fake OpenAI as real servers on 127.0.0.1 (CHT-011); they run by default, deselect them with -m 'not disconnect'",
 ]
