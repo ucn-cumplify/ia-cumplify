@@ -1,4 +1,4 @@
-"""Manual evaluation set of the chat prompt: CHT-041 to CHT-046 of docs/Chat/test.csv.
+"""Manual evaluation set of the chat prompt: CHT-041 to CHT-047 of docs/Chat/test.csv.
 
 It spends real tokens. It sends each case of chat_eval_set.json to an ia-cumplify that is already
 running, and that service calls OpenAI. It is not part of pytest, which collects only tests/.
