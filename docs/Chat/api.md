@@ -146,7 +146,7 @@ El `: ping` del principio aparece solo si pasan 15 s sin que ia emita un evento,
 | chat_version | string | `<CHAT_PROMPT_VERSION>@<modelo>`, por ejemplo `chat-v4@gpt-5.6-luna`; `fake-v1@fake` con el respondedor falso. Ver "Versión del prompt" |
 | dev_metrics | objeto o `null` | Con `INCLUDE_DEV_METRICS` en verdadero (el valor por defecto): `elapsed_ms` (hasta el evento final) y `first_delta_ms` (hasta el primer `delta`), en milisegundos. A diferencia de clasificación y perfil, no repite los tokens de `usage`. Con `INCLUDE_DEV_METRICS=false`, `null`. Es un campo de desarrollo: el backend no debe depender de él |
 
-Con un `finish_reason` distinto de `stop`, el texto está incompleto, pero sus citas son válidas. Cómo se muestra está en "Pendiente de acordar".
+Con un `finish_reason` distinto de `stop`, el texto está incompleto, pero sus citas son válidas. Cómo se muestra está en "Acordado".
 
 **Evento `error`:**
 
@@ -198,7 +198,7 @@ Con un `finish_reason` distinto de `stop`, el texto está incompleto, pero sus c
   - Si el stream termina a mitad de la marca, en cualquier posición, ia descarta lo retenido; si así no queda texto visible, el resultado es `error` con `empty_output`.
   - La marca nunca llega al texto, ni completa ni partida.
 - Si después de la marca no viene texto, ia manda uno fijo: "Las fuentes disponibles no alcanzan para responder esta pregunta." Si los pasajes cubren solo una parte, el modelo responde esa parte con citas y dice qué falta; eso es `answered`.
-- `uncited` es una falla del modelo frente a la regla de citar: texto sin ninguna cita válida y sin la marca al comienzo. Cómo se muestra está en "Pendiente de acordar".
+- `uncited` es una falla del modelo frente a la regla de citar: texto sin ninguna cita válida y sin la marca al comienzo. Cómo se muestra está en "Acordado".
 - Si aplica más de un valor, gana el primero de este orden: `refused`, `not_covered`, `answered`, `uncited`. `no_passages` se decide antes de llamar al modelo.
 - `refused` se decide solo por el campo `refusal` de los fragmentos del proveedor, nunca leyendo el texto. Una negativa que el modelo escriba en `content` se trata como cualquier otra respuesta: por ejemplo, sale como `uncited` y se reenvía. El texto de `refusal` no se reenvía ni se registra, porque podría repetir el contenido. Desde el primer fragmento con `refusal`:
   - Si ia todavía no emitió texto, descarta lo que tenga retenido, manda el texto fijo como único `delta` y, al final, `done` con `coverage: refused` y `citations` vacía.
@@ -391,7 +391,7 @@ Lo que necesita el backend (4.7 y 4.8) para consumir este endpoint. El cliente a
 
 ## Acordado
 
-Temas cerrados el 2026-10-14, comprobados en `capstone-2s` de backend-cumplify (767d149a) y de frontend-cumplify (4c73a7a).
+Temas cerrados el 2026-10-14, comprobados en `capstone-2s` de backend-cumplify (767d149a) y de frontend-cumplify (4c73a7a). Los avisos de las respuestas `uncited` y de las recortadas se cerraron el 2026-10-19, comprobados en `capstone-2s` de backend-cumplify (1cd83f53) y de frontend-cumplify (234fae2).
 
 | Tema | Acuerdo | Dónde se cumple |
 |---|---|---|
@@ -401,14 +401,14 @@ Temas cerrados el 2026-10-14, comprobados en `capstone-2s` de backend-cumplify (
 | Campos extra | Se rechazan con 422, que detecta errores de nombre en los campos opcionales (`histroy` en vez de `history`, o `appName` en vez de `app_name`). El backend manda solo los campos de la tabla del pedido, y `context` solo si hay nombre de app. Agregar un campo exige desplegar ia primero | Backend: `IaCumplifyChatAnswerSource` |
 | Marcadores `[n]` en pantalla | Se muestran como superíndices que abren la fuente de `done.citations`. El backend conserva `n` al convertir las citas, el frontend une cada marcador con su cita por `n`, y un marcador sin cita se muestra como texto, sin enlace (punto 6 de "Consumo desde el backend") | Backend: `ChatCitationDto`. Frontend: `cited-text.tsx` |
 | `context.app_name` | El backend lo manda en cada pedido, con el nombre de la app abierta. En el esquema sigue siendo opcional | Backend: `IaCumplifyChatAnswerSource` (backend-cumplify #182) |
+| Respuestas `uncited` | Se muestran con su texto y con el aviso «Esta respuesta no cita ninguna fuente. Revísala antes de usarla.». El backend entrega `coverage` en `done` y en el historial de mensajes | Backend: `ChatMessageDto.Coverage` (backend-cumplify #182). Frontend: `AnswerNotices`, en `chat-message.tsx` (frontend-cumplify #118) |
+| Respuestas recortadas | Con `finish_reason` distinto de `stop`, se muestran el texto y sus citas, que son válidas, con el aviso «La respuesta quedó incompleta. Prueba con una pregunta más acotada.». El backend entrega `truncated`, verdadero con `length` o `content_filter`, en `done` y en el historial de mensajes | Backend: `ChatMessageDto.Truncated` (backend-cumplify #182). Frontend: `AnswerNotices`, en `chat-message.tsx` (frontend-cumplify #118) |
 
 ## Pendiente de acordar
 
 | Tema | Propuesta | Con quién |
 |---|---|---|
 | Textos fijos y aviso legal | Los textos de `no_passages`, `refused` y `not_covered`, y si se agrega un aviso de que el chat no reemplaza la asesoría legal, en el texto o en el widget | Equipo |
-| Respuestas `uncited` | Mostrarlas con un aviso o tratarlas como sin respaldo. El backend ya entrega `coverage` al frontend, en `done` y en el historial de mensajes (backend-cumplify #182). El aviso en el widget está en frontend-cumplify #118 (paso 0.15 del plan del sprint 3): la respuesta se muestra con «Esta respuesta no cita ninguna fuente. Revísala antes de usarla.». Pasa a «Acordado» cuando se integre | Backend y frontend |
-| Respuestas recortadas | Con `finish_reason` distinto de `stop`, mostrar el texto con un aviso de "respuesta recortada" y con sus citas, que son válidas. El backend ya entrega `truncated`, verdadero con `length` o `content_filter`, en `done` y en el historial de mensajes (backend-cumplify #182). El aviso en el widget está en frontend-cumplify #118 (paso 0.15 del plan del sprint 3), con el texto y las citas: «La respuesta quedó incompleta. Prueba con una pregunta más acotada.». Pasa a «Acordado» cuando se integre | Backend y frontend |
 | Keepalive hacia el navegador | Nombre y forma del evento propio del backend (por ejemplo `event: ping` con `data: {}`), que el frontend ignora | Backend (4.7) y frontend (4.9) |
 | Caché de prompts | Elegir una de tres opciones: (a) modo implícito, aceptando y documentando como riesgo que OpenAI retenga el comienzo del prompt con los pasajes (vida mínima de 30 minutos, hasta 24 horas); (b) modo explícito con un único punto de corte al final de las instrucciones fijas, que conserva el ahorro en las instrucciones (desde `chat-v2` superan el mínimo que OpenAI cachea: unos 1.150 tokens en caché por llamada con `chat-v3` y 1.340 con `chat-v4`) y deja fuera los datos del pedido; (c) modo explícito sin puntos de corte, que no usa el caché. (b) y (c) valen desde gpt-5.6 según el SDK y no se comprobaron con OpenAI (ver "Privacidad"). Afecta también al endpoint de perfil, que hoy aprovecha ese caché: para (b) hay que partir su mensaje de usuario, que une etiquetas y descripción en una sola cadena, y poner el corte después de EXISTING LABELS, o al final del prompt de sistema si no hay etiquetas. El modo se fija en cada llamada, así que el chat y el perfil pueden elegir distinto. Medido el 2026-10-05 con el set de evaluación, en el modo implícito: un pedido idéntico repetido sacó del caché 1.570 de sus 1.573 tokens de entrada, pasajes incluidos, así que el riesgo de (a) ocurre en la práctica; y desde `chat-v2`, preguntas distintas comparten las instrucciones en caché (con `chat-v2`, 1.039 o 1.060 tokens en cada llamada salvo la primera, unos 25.000 por ejecución de 26 casos con pedidos nuevos; las ejecuciones que repetían los pedidos de la anterior sacaron hasta 44.011, pasajes incluidos) | Equipo |
 | Correlación de logs | Header opcional `X-Request-Id`, que ia repite en su log | Backend |
