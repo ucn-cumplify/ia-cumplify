@@ -113,6 +113,7 @@ Cada afirmación de la respuesta cita el pasaje que la respalda (plan del equipo
 - `done.citations` trae `{n, id}` por cada número del texto. Cada `id` es uno de los del pedido y aparece una sola vez. El mapeo viaja solo en `done`.
 - Los marcadores `[n]` de los mensajes del asistente se quitan del historial antes de mandarlo al modelo.
 - Fuera de ese caso, un `[Pn]` o un `[n]` que llega escrito en la entrada no se convierte en cita: pasa a paréntesis antes de armar el prompt (CHT-007).
+- Desde `chat-v4`, el prompt pide que una lista de artículos cite cada uno con su propio pasaje (el artículo o su requisito en la app), justo después de su número y nunca con una sola clave para toda la lista; un pasaje que solo lista artículos, como el inventario de la app, respalda solo los que no tienen uno. También pide que cada norma de una lista se nombre con su tipo, número y título como los escribe un pasaje (CHT-047 de `test.csv`).
 
 ---
 
@@ -223,7 +224,7 @@ Cada respuesta informa qué versión del prompt y qué modelo la produjeron, y c
 
 **Validaciones:**
 
-- `chat_version` es `<CHAT_PROMPT_VERSION>@<modelo efectivo>`, por ejemplo `chat-v3@gpt-5.6-luna`, y viaja en `done` y en `error`. Con el respondedor falso vale `fake-v1@fake` (CHT-014).
+- `chat_version` es `<CHAT_PROMPT_VERSION>@<modelo efectivo>`, por ejemplo `chat-v4@gpt-5.6-luna`, y viaja en `done` y en `error`. Con el respondedor falso vale `fake-v1@fake` (CHT-014).
 - Todo cambio del prompt, del bloque de pasajes, de los textos fijos o de las reglas de marcadores y de cobertura sube `CHAT_PROMPT_VERSION`, una constante del código y no una variable de entorno.
 - `usage` trae `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens`, `reasoning_tokens` y `llm_calls`.
 - `usage` vale `null` cuando el proveedor no llegó a informarlo: si el stream se cortó, o si terminó sin mandar el fragmento de uso.
@@ -354,7 +355,7 @@ Con `CHAT_FAKE_RESPONDER=true`, el endpoint no llama a OpenAI: devuelve un strea
 ## Dentro de alcance
 
 - `POST /api/v1/chat` en streaming, con validación, citas, cobertura y negativa sin pasajes.
-- El prompt `chat-v3`, ajustado con el set de evaluación, con las reglas de 4.2: solo los pasajes del pedido, citar cada afirmación, decir cuándo no alcanzan, los pasajes y el nombre de la app como datos, solo lectura y texto plano.
+- El prompt `chat-v3`, ajustado con el set de evaluación, con las reglas de 4.2: solo los pasajes del pedido, citar cada afirmación, decir cuándo no alcanzan, los pasajes y el nombre de la app como datos, solo lectura y texto plano. Desde `chat-v4` (C2 del plan del sprint 3 del backend), al listar normas las nombra con su tipo, número y título, y cita cada artículo con su propio pasaje (CHT-047 de `test.csv`).
 - `AsyncOpenAI` con `include_usage`, `store=False` y el modo de caché que se acuerde (CHT-012), y modelo, esfuerzo, tope de salida, timeout y reintentos propios del chat.
 - El manejador global del 422 sin `input` ni `ctx`. Cambia el cuerpo del 422 de todos los endpoints, pero no cuándo se responde 422.
 - `fastapi>=0.140.13` en `pyproject.toml` y `uv.lock`: `fastapi.sse` existe desde 0.135.0, y 0.140.12 y 0.140.13 corrigen el formato de los eventos y el código de estado del stream. El lock ya trae 0.141.1.
@@ -381,7 +382,7 @@ Con `CHAT_FAKE_RESPONDER=true`, el endpoint no llama a OpenAI: devuelve un strea
     - el cuerpo que recibe el OpenAI simulado: `store=False`, `include_usage` y el modo de caché acordado (CHT-012).
   - **Fallas del proveedor:** las fallas al abrir y a mitad, el error dentro del stream, la falla después de `finish_reason`, el stream sin `finish_reason` y el uso ausente.
   - **Desconexión:** en ráfaga, en cadencia lenta y antes de las cabeceras, con uvicorn en 127.0.0.1.
-- Un script manual con el set fijo de evaluación del prompt (plan del equipo, 5.1), con tokens reales: 26 preguntas con pasajes sacados por SQL de la base local. Cubre normas presentes y ausentes, cobertura parcial, seguimientos y los casos de CHT-007. Informa tokens, `cached_tokens`, latencia, cobertura y citas descartadas. Si se acuerda un modo explícito de caché, repite además un pedido idéntico dentro de los 30 minutos y compara el `cached_tokens` de la repetición con el límite de "Privacidad" en `api.md`. Una ejecución completa costó de 50.000 a 53.000 tokens con `chat-v2` y `chat-v3` (ver "Costo por pregunta" en la deuda técnica); si cada pregunta llegara a todos los topes, serían unos 543.000 (26 × 20.900). El gasto real se informa.
+- Un script manual con el set fijo de evaluación del prompt (plan del equipo, 5.1), con tokens reales: 26 preguntas con pasajes sacados por SQL de la base local y, desde `chat-v4`, tres preguntas por lo que sigue la app (F01 a F03), con pasajes sintéticos. Cubre normas presentes y ausentes, cobertura parcial, seguimientos, los casos de CHT-007 y lo que sigue la app (CHT-047 de `test.csv`). Informa tokens, `cached_tokens`, latencia, cobertura y citas descartadas. Si se acuerda un modo explícito de caché, repite además un pedido idéntico dentro de los 30 minutos y compara el `cached_tokens` de la repetición con el límite de "Privacidad" en `api.md`. Una ejecución completa costó de 50.000 a 53.000 tokens con `chat-v2` y `chat-v3` (ver "Costo por pregunta" en la deuda técnica); si cada pregunta llegara a todos los topes, serían unos 612.000 con los 29 casos y `chat-v4` (29 × 21.100). El gasto real se informa.
 - La documentación:
   - `docs/Chat/` (`api.md`, `requirements.md` y `test.csv` desde CHT-001) y `docs/README.md`;
   - en `README.md`, la descripción del servicio (el párrafo inicial y la fila de ia-cumplify en "Relación con los otros repositorios"), la tabla de endpoints, la sección "Configuración" con cada variable `CHAT_*` y, para los topes, su espejo en el backend (CHT-013), y la nota de `INCLUDE_DEV_METRICS`, que hoy solo nombra `classifier_version` y dice que `usage` viaja siempre (en el chat, la versión va en `chat_version` y `usage` puede ser `null`);

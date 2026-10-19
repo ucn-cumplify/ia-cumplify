@@ -1,8 +1,9 @@
 {
   "about": [
-    "Set fijo de evaluación del prompt del chat (CHT-041 a CHT-046 de docs/Chat/test.csv). Lo ejecuta scripts/chat_eval.py.",
+    "Set fijo de evaluación del prompt del chat (CHT-041 a CHT-047 de docs/Chat/test.csv). Lo ejecuta scripts/chat_eval.py.",
     "Cada pasaje es una consulta de solo lectura a la base local (query, con law, article o position) o un pasaje sintético escrito aquí. Este archivo guarda solo preguntas y consultas: nunca textos sacados de la base, que pueden ser datos de la empresa (CHT-012).",
     "Las normas presentes (Ley 21.800, 21.813, 21.815 y 21.833) y las ausentes (Ley 16.744, DS 594) son las que tenía la base local al escribir el set. La base no tenía obligaciones: las obligaciones del set son sintéticas y ficticias.",
+    "F01 a F03 (lo que sigue la app, C2 del plan del sprint 3 del backend) usan pasajes sintéticos con el formato que manda el backend desde C2: un requisito de la app por artículo seguido, con su norma y su título, y el inventario de la app. Las normas son ficticias.",
     "expected.coverage es la cobertura esperada (null: no se compara) y expected.review, lo que revisa una persona en la respuesta.",
     "Los casos se ejecutan en el orden de este archivo: un mensaje del historial con from_case usa la respuesta de un caso anterior de la misma ejecución, o fallback si ese caso no se ejecutó.",
     "Cada pedido lleva context.app_name, como lo manda el backend: el chat vive solo dentro de las apps de Requisitos Legales (decisión del 2026-10-06). Es el app_name del caso, si lo trae (E05 y C07); si no, el nombre de la app cuyos datos usa el caso, o el de la primera app."
@@ -682,6 +683,204 @@
       "expected": {
         "coverage": "not_covered",
         "review": "No afirma los siete miembros ni el comité de ética si los pasajes no lo dicen: lo que solo está en el historial no se afirma (CHT-001). Lo esperable es not_covered."
+      }
+    },
+    {
+      "id": "F01",
+      "category": "lo que sigue la app",
+      "checks": [
+        "CHT-041",
+        "CHT-044",
+        "CHT-045",
+        "CHT-047"
+      ],
+      "question": "¿Qué artículos se siguen en esta aplicación?",
+      "app_name": "Planta de evaluación (ficticia)",
+      "passages": [
+        {
+          "synthetic": {
+            "id": "eval-sigue-90001-1",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 1 — Ley N 90001 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. 1 — Ley N 90001 · Planta Norte · (sin obligaciones)\nNorma: Ley N 90001 (ESTABLECE NORMAS FICTICIAS SOBRE EL TRANSPORTE DE CARGA POR CARRETERA)\nArtículo: 1\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-90001-2",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 2 — Ley N 90001 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. 2 — Ley N 90001 · Planta Norte · (sin obligaciones)\nNorma: Ley N 90001 (ESTABLECE NORMAS FICTICIAS SOBRE EL TRANSPORTE DE CARGA POR CARRETERA)\nArtículo: 2\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-90001-primero",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. Primero — Ley N 90001 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. Primero — Ley N 90001 · Planta Norte · (sin obligaciones)\nNorma: Ley N 90001 (ESTABLECE NORMAS FICTICIAS SOBRE EL TRANSPORTE DE CARGA POR CARRETERA)\nArtículo: Primero\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-90002-1",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 1 — Ley N 90002 · Planta Norte · Mantener el registro de inspecciones (ficticia)",
+            "text": "Requisito de la app: Art. 1 — Ley N 90002 · Planta Norte · Mantener el registro de inspecciones (ficticia)\nNorma: Ley N 90002 (REGULA DE FORMA FICTICIA EL ALMACENAMIENTO DE COMBUSTIBLES LÍQUIDOS)\nArtículo: 1\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-app-sigue",
+            "kind": "legal_requirement",
+            "reference": "App: Planta de evaluación (ficticia)",
+            "text": "App de Requisitos Legales: Planta de evaluación (ficticia)\nRequisitos vinculados: 6\nPor estado: por gestionar: 6\nPor criticidad: media: 6\nNormas y artículos que sigue:\n- Ley N 90001 (ESTABLECE NORMAS FICTICIAS SOBRE EL TRANSPORTE DE CARGA POR CARRETERA): artículos 1, 2 y Primero\n- Ley N 90002 (REGULA DE FORMA FICTICIA EL ALMACENAMIENTO DE COMBUSTIBLES LÍQUIDOS): artículos 1, 4 y 5"
+          }
+        }
+      ],
+      "expected": {
+        "coverage": "answered",
+        "review": "Nombra cada norma con su tipo, número y título, como los traen los pasajes («Ley N 90001 (ESTABLECE NORMAS FICTICIAS…)»), nunca solo con el número. Cita cada artículo con su requisito: 1 [P1], 2 [P2] y Primero [P3] de la Ley N 90001, y 1 [P4] de la Ley N 90002. Los artículos 4 y 5 de la Ley N 90002, que no tienen un pasaje propio, se citan con el de la app [P5]. Texto plano, con «•» para la lista."
+      }
+    },
+    {
+      "id": "F02",
+      "category": "lo que sigue la app",
+      "checks": [
+        "CHT-041",
+        "CHT-044",
+        "CHT-045",
+        "CHT-047"
+      ],
+      "question": "¿Qué normas seguimos y de qué tratan?",
+      "app_name": "Planta de evaluación (ficticia)",
+      "passages": [
+        {
+          "synthetic": {
+            "id": "eval-sigue-90001-1",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 1 — Ley N 90001 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. 1 — Ley N 90001 · Planta Norte · (sin obligaciones)\nNorma: Ley N 90001 (ESTABLECE NORMAS FICTICIAS SOBRE EL TRANSPORTE DE CARGA POR CARRETERA)\nArtículo: 1\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-90001-2",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 2 — Ley N 90001 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. 2 — Ley N 90001 · Planta Norte · (sin obligaciones)\nNorma: Ley N 90001 (ESTABLECE NORMAS FICTICIAS SOBRE EL TRANSPORTE DE CARGA POR CARRETERA)\nArtículo: 2\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-90001-primero",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. Primero — Ley N 90001 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. Primero — Ley N 90001 · Planta Norte · (sin obligaciones)\nNorma: Ley N 90001 (ESTABLECE NORMAS FICTICIAS SOBRE EL TRANSPORTE DE CARGA POR CARRETERA)\nArtículo: Primero\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-90002-1",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 1 — Ley N 90002 · Planta Norte · Mantener el registro de inspecciones (ficticia)",
+            "text": "Requisito de la app: Art. 1 — Ley N 90002 · Planta Norte · Mantener el registro de inspecciones (ficticia)\nNorma: Ley N 90002 (REGULA DE FORMA FICTICIA EL ALMACENAMIENTO DE COMBUSTIBLES LÍQUIDOS)\nArtículo: 1\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-app-sigue",
+            "kind": "legal_requirement",
+            "reference": "App: Planta de evaluación (ficticia)",
+            "text": "App de Requisitos Legales: Planta de evaluación (ficticia)\nRequisitos vinculados: 6\nPor estado: por gestionar: 6\nPor criticidad: media: 6\nNormas y artículos que sigue:\n- Ley N 90001 (ESTABLECE NORMAS FICTICIAS SOBRE EL TRANSPORTE DE CARGA POR CARRETERA): artículos 1, 2 y Primero\n- Ley N 90002 (REGULA DE FORMA FICTICIA EL ALMACENAMIENTO DE COMBUSTIBLES LÍQUIDOS): artículos 1, 4 y 5"
+          }
+        }
+      ],
+      "expected": {
+        "coverage": "answered",
+        "review": "Nombra las dos normas con su tipo, número y título, como los traen los pasajes, y dice de qué tratan solo con lo que escriben esos títulos, citado. Si además lista artículos, cada uno lleva la clave de su requisito, y los artículos 4 y 5 de la Ley N 90002, la de la app [P5]. No agrega propósitos que los pasajes no escriben."
+      }
+    },
+    {
+      "id": "F03",
+      "category": "lo que sigue la app",
+      "checks": [
+        "CHT-041",
+        "CHT-044",
+        "CHT-045",
+        "CHT-047"
+      ],
+      "question": "¿Qué artículos se siguen en esta aplicación?",
+      "app_name": "Planta de evaluación (ficticia)",
+      "passages": [
+        {
+          "synthetic": {
+            "id": "eval-sigue-9004-1",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 1 — Decreto N 9004 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. 1 — Decreto N 9004 · Planta Norte · (sin obligaciones)\nNorma: Decreto N 9004 (APRUEBA EL REGLAMENTO FICTICIO DE BODEGAS)\nArtículo: 1\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-9004-3",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 3 — Decreto N 9004 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. 3 — Decreto N 9004 · Planta Norte · (sin obligaciones)\nNorma: Decreto N 9004 (APRUEBA EL REGLAMENTO FICTICIO DE BODEGAS)\nArtículo: 3\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-9004-4",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 4 — Decreto N 9004 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. 4 — Decreto N 9004 · Planta Norte · (sin obligaciones)\nNorma: Decreto N 9004 (APRUEBA EL REGLAMENTO FICTICIO DE BODEGAS)\nArtículo: 4\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-90003-2",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 2 — Ley N 90003 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. 2 — Ley N 90003 · Planta Norte · (sin obligaciones)\nNorma: Ley N 90003 (ESTABLECE NORMAS FICTICIAS DE SEGURIDAD EN FAENAS)\nArtículo: 2\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-90003-5",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 5 — Ley N 90003 · Planta Norte · Mantener el registro de capacitaciones (ficticia)",
+            "text": "Requisito de la app: Art. 5 — Ley N 90003 · Planta Norte · Mantener el registro de capacitaciones (ficticia)\nNorma: Ley N 90003 (ESTABLECE NORMAS FICTICIAS DE SEGURIDAD EN FAENAS)\nArtículo: 5\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-90005-unico",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. único — Ley N 90005 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. único — Ley N 90005 · Planta Norte · (sin obligaciones)\nNorma: Ley N 90005 (MODIFICA DE FORMA FICTICIA LA LEY DE TRÁNSITO)\nArtículo: único\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-sigue-90005-8",
+            "kind": "vinculation",
+            "reference": "Requisito: Art. 8 — Ley N 90005 · Planta Norte · (sin obligaciones)",
+            "text": "Requisito de la app: Art. 8 — Ley N 90005 · Planta Norte · (sin obligaciones)\nNorma: Ley N 90005 (MODIFICA DE FORMA FICTICIA LA LEY DE TRÁNSITO)\nArtículo: 8\nEstado: por gestionar\nCriticidad: media\nAtributo: legal\nUnidad de control: Planta Norte"
+          }
+        },
+        {
+          "synthetic": {
+            "id": "eval-app-sigue-grande",
+            "kind": "legal_requirement",
+            "reference": "App: Planta de evaluación (ficticia)",
+            "text": "App de Requisitos Legales: Planta de evaluación (ficticia)\nRequisitos vinculados: 10\nPor estado: por gestionar: 10\nPor criticidad: media: 10\nNormas y artículos que sigue:\n- Decreto N 9004 (APRUEBA EL REGLAMENTO FICTICIO DE BODEGAS): artículos 1, 3, 4 y 10\n- Ley N 90003 (ESTABLECE NORMAS FICTICIAS DE SEGURIDAD EN FAENAS): artículos 2, 5 y 7\n- Ley N 90005 (MODIFICA DE FORMA FICTICIA LA LEY DE TRÁNSITO): artículos único, 8 y 9"
+          }
+        }
+      ],
+      "expected": {
+        "coverage": "answered",
+        "review": "Nombra las tres normas con su tipo, número y título. Cada artículo lleva la clave de su requisito, justo después de su número: 1 [P1], 3 [P2] y 4 [P3] del Decreto N 9004; 2 [P4] y 5 [P5] de la Ley N 90003; único [P6] y 8 [P7] de la Ley N 90005. Los que solo están en el inventario (el 10 del 9004, el 7 de la 90003 y el 9 de la 90005) llevan la de la app [P8]. Ninguna lista lleva una sola clave para todos sus artículos."
       }
     }
   ]
