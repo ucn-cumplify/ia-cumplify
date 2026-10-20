@@ -6,6 +6,7 @@ from ia_cumplify.adapters.outbound.openai.evidence_review_prompts import (
     render_evidence_review_user_content,
 )
 from ia_cumplify.adapters.outbound.openai.llm_evidence_review_schema import LlmEvidenceReview
+from ia_cumplify.adapters.outbound.openai.prompt_cache import PROMPT_CACHE_OPTIONS, cached_prefix
 from ia_cumplify.adapters.outbound.openai.usage import call_usage
 from ia_cumplify.domain.evidence_review import (
     EvidenceReviewSubject,
@@ -44,12 +45,15 @@ class OpenAIEvidenceReviewerAdapter:
         try:
             completion = self._client.chat.completions.parse(
                 model=self._model,
-                messages=[
-                    {"role": "system", "content": EVIDENCE_REVIEW_SYSTEM_PROMPT},
+                # Only the instructions can be cached (prompt_cache.py): the article and the text of the
+                # evidence files come after the breakpoint.
+                messages=[  # type: ignore[arg-type]
+                    {"role": "system", "content": [cached_prefix(EVIDENCE_REVIEW_SYSTEM_PROMPT)]},
                     {"role": "user", "content": render_evidence_review_user_content(subject)},
                 ],
                 response_format=LlmEvidenceReview,
                 reasoning_effort=self._reasoning_effort,
+                prompt_cache_options=PROMPT_CACHE_OPTIONS,  # type: ignore[arg-type]
             )
         except OpenAIError as exc:
             status = getattr(exc, "status_code", None)
