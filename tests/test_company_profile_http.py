@@ -27,6 +27,7 @@ from ia_cumplify.adapters.outbound.openai import (
 from ia_cumplify.adapters.outbound.openai.profile_classifier import (
     OpenAICompanyProfileClassifierAdapter,
 )
+from ia_cumplify.adapters.outbound.openai.profile_prompts import PROFILE_SYSTEM_PROMPT
 from ia_cumplify.domain.exceptions import ClassificationError
 
 PATH = "/api/v1/company-profiles/classify"
@@ -98,7 +99,8 @@ class ProfileScript:
 
     @property
     def prompts(self) -> list[str]:
-        return [body["messages"][1]["content"] for body in self.bodies]
+        """The user message as the model reads it: its text parts, if any, joined in order."""
+        return [_text(body["messages"][1]["content"]) for body in self.bodies]
 
     def handler(self, request: httpx2.Request) -> httpx2.Response:
         self.bodies.append(json.loads(request.content))
@@ -147,6 +149,10 @@ def profile_api(monkeypatch):
         return script, post
 
     return start
+
+
+def _text(content: str | list[dict]) -> str:
+    return content if isinstance(content, str) else "".join(part["text"] for part in content)
 
 
 def description(prompt: str) -> str:
@@ -307,6 +313,33 @@ def test_the_existing_labels_go_before_the_description_and_only_with_candidates(
     assert all(
         prompt.startswith("--- COMPANY DESCRIPTION ---\n") for prompt in without_labels
     )
+
+
+def test_only_the_system_prompt_and_the_labels_are_cacheable(profile_api) -> None:
+    # Option (b) of "Caché de prompts" (docs/Chat/api.md): the explicit mode with a single breakpoint,
+    # after EXISTING LABELS or, without labels, after the system prompt. The description is never cached.
+    script, post = profile_api("ok", "ok")
+    text = "Empresa de transporte de carga."
+    post(json={"text": text, "candidate_values": {"scope": ["Laboral"]}})
+    post(json={"text": text})
+
+    with_labels, without_labels = script.bodies
+    for body in (with_labels, without_labels):
+        assert body["prompt_cache_options"] == {"mode": "explicit"}
+        assert json.dumps(body["messages"]).count("prompt_cache_breakpoint") == 1
+
+    system, user = with_labels["messages"]
+    assert system["content"] == PROFILE_SYSTEM_PROMPT
+    labels, described = user["content"]
+    assert labels["prompt_cache_breakpoint"] == {"mode": "explicit"}
+    assert labels["text"].startswith("--- EXISTING LABELS") and text not in labels["text"]
+    assert "prompt_cache_breakpoint" not in described and text in described["text"]
+
+    system, user = without_labels["messages"]
+    assert system["content"] == [
+        {"type": "text", "text": PROFILE_SYSTEM_PROMPT, "prompt_cache_breakpoint": {"mode": "explicit"}}
+    ]
+    assert user["content"].startswith("--- COMPANY DESCRIPTION ---\n")
 
 
 def test_images_and_attachments_are_removed_from_the_description(profile_api) -> None:

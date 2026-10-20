@@ -197,6 +197,7 @@ La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilo
 - Sin `SERVICE_API_KEY` la respuesta es 503. Con la clave ausente o incorrecta en el header, 401. En los dos casos no se lee el cuerpo.
 - Con `OPENAI_MAX_RETRIES` en 2, la revisión sigue con 0 reintentos, salvo que se configure `EVIDENCE_REVIEW_MAX_RETRIES`.
 - El revisor se llama fuera del bucle de eventos.
+- La llamada usa el modo explícito de caché con un único punto de corte al final de las instrucciones: el artículo, la obligación y los respaldos nunca quedan en el caché del proveedor ("Caché de prompts" en `docs/Chat/api.md`).
 
 ---
 

@@ -113,6 +113,8 @@ Campos extra se rechazan. Un campo opcional en blanco queda en `null`. Un sustit
 
 Una respuesta 200 trae `nature`, `verdict`, `summary`, `model` y `review_version`. `usage` viaja siempre. `usage.cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché, o 0 si no la informa. Cada campo del `usage` del proveedor se lee por separado: uno que falta o no es un entero positivo cuenta 0. No hay `dev_metrics`.
 
+**Caché de prompts.** La llamada usa el modo explícito de OpenAI (`prompt_cache_options={"mode": "explicit"}`) con un único punto de corte al final de las instrucciones. El artículo, la obligación y el texto de los respaldos van después del corte y nunca quedan en el caché del proveedor; hasta el 2026-10-19 regía el modo implícito, que podía guardar el comienzo del pedido con los respaldos. Es la opción (b) de "Caché de prompts" de `docs/Chat/api.md`, decidida ese día (paso 0.44 del plan del sprint 3 de backend-cumplify). Comprobado con OpenAI (EVR-033): la repetición de una revisión idéntica sacó del caché 1.436 de sus 1.647 tokens de entrada, las instrucciones, y nada del artículo ni del respaldo. `usage.cached_tokens` no supera los tokens de las instrucciones.
+
 **Archivos:**
 
 | status | Cuándo |
@@ -145,7 +147,7 @@ El incumplimiento, la fecha, las instrucciones y lo que falta son reglas del pro
 
 | Variable | Defecto | Uso |
 |---|---|---|
-| EVIDENCE_REVIEW_MODEL | vacía | Modelo de esta llamada. Vacía: `OPENAI_MODEL` |
+| EVIDENCE_REVIEW_MODEL | vacía | Modelo de esta llamada. Vacía: `OPENAI_MODEL`. Tiene que admitir `prompt_cache_options` (gpt-5.6 en adelante): uno anterior puede rechazar el pedido |
 | EVIDENCE_REVIEW_REASONING_EFFORT | vacía | Esfuerzo. Vacío: `OPENAI_REASONING_EFFORT` |
 | EVIDENCE_REVIEW_TIMEOUT_SECONDS | 80 | Plazo de la llamada. No usa `OPENAI_TIMEOUT_SECONDS` |
 | EVIDENCE_REVIEW_MAX_RETRIES | 0 | Reintentos del SDK, que también reintenta un plazo vencido. No usa `OPENAI_MAX_RETRIES`: con un reintento, la revisión podría pasar los 90 s que espera el backend |

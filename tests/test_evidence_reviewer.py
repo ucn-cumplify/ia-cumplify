@@ -8,6 +8,7 @@ from chat_http import SECRET, configure
 from openai import OpenAIError
 
 from ia_cumplify.adapters.inbound.http.dependencies import get_evidence_reviewer, reset_wiring_cache
+from ia_cumplify.adapters.outbound.openai.evidence_review_prompts import EVIDENCE_REVIEW_SYSTEM_PROMPT
 from ia_cumplify.adapters.outbound.openai.evidence_reviewer import OpenAIEvidenceReviewerAdapter
 from ia_cumplify.adapters.outbound.openai.llm_evidence_review_schema import LlmEvidenceReview, LlmReviewRequirement
 from ia_cumplify.domain.evidence_review import EvidenceReviewSubject, ReviewArticle, ReviewLegalBody
@@ -49,6 +50,13 @@ def test_the_adapter_sends_the_subject_and_maps_the_review():
     assert completions.kwargs["reasoning_effort"] == "low"
     assert completions.kwargs["response_format"] is LlmEvidenceReview
     assert completions.kwargs["messages"][0]["role"] == "system"
+    # Option (b) of "Caché de prompts": the explicit mode, with the only breakpoint at the end of the
+    # instructions, so the article and the files never enter the cache.
+    assert completions.kwargs["prompt_cache_options"] == {"mode": "explicit"}
+    assert completions.kwargs["messages"][0]["content"] == [
+        {"type": "text", "text": EVIDENCE_REVIEW_SYSTEM_PROMPT, "prompt_cache_breakpoint": {"mode": "explicit"}}
+    ]
+    assert isinstance(completions.kwargs["messages"][1]["content"], str)
     assert subject.article.text in completions.kwargs["messages"][1]["content"]
     assert "data:image" not in completions.kwargs["messages"][1]["content"]
     assert judgment.nature == "explicit_obligations"

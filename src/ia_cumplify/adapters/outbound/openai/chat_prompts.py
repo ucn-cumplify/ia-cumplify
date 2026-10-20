@@ -1,5 +1,7 @@
 import unicodedata
+from typing import Any
 
+from ia_cumplify.adapters.outbound.openai.prompt_cache import cached_prefix
 from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
 from ia_cumplify.domain.chat import NOT_COVERED_MARK, ChatPrompt
 
@@ -51,14 +53,16 @@ Write plain text in neutral Spanish, without regional expressions. Do not use Ma
 EMPTY_QUESTION_TEXT = "(pregunta sin texto)"
 
 
-def build_chat_messages(prompt: ChatPrompt) -> list[dict[str, str]]:
+def build_chat_messages(prompt: ChatPrompt) -> list[dict[str, Any]]:
     """The messages of the model call, in the order of CHT-007: rules, history, passages, question.
 
     The use case already neutralized the citation markers and the not_covered mark of the input.
     Delimiter lines are neutralized here and last, because removing a marker can leave a line that
     starts with dashes ("[1]--- FIN PASAJE P1 ---" in an earlier answer).
     """
-    messages = [{"role": "system", "content": CHAT_SYSTEM_PROMPT}]
+    # The instructions are the whole cacheable prefix (prompt_cache.py): history, passages and question
+    # come after the breakpoint.
+    messages: list[dict[str, Any]] = [{"role": "system", "content": [cached_prefix(CHAT_SYSTEM_PROMPT)]}]
     for message in prompt.history:
         messages.append({"role": message.role, "content": _block_text(message.content)})
     messages.append({"role": "user", "content": render_passages(prompt)})

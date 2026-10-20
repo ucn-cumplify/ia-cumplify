@@ -9,6 +9,7 @@ from ia_cumplify.adapters.outbound.openai.profile_prompts import (
     PROFILE_SYSTEM_PROMPT,
     render_profile_candidate_labels,
 )
+from ia_cumplify.adapters.outbound.openai.prompt_cache import PROMPT_CACHE_OPTIONS, cached_prefix
 from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
 from ia_cumplify.adapters.outbound.openai.usage import call_usage
 from ia_cumplify.domain.classification import ArticleClassification, CandidateLabels
@@ -47,22 +48,13 @@ class OpenAICompanyProfileClassifierAdapter:
         return f"{PROFILE_PROMPT_VERSION}@{self._model}"
 
     def classify(self, text: str, candidates: CandidateLabels | None = None) -> ProfileClassifierOutput:
-        # The labels go first and the description last: the system prompt plus the labels are the
-        # same for every company at a given time, so that shared prefix stays cacheable.
-        blocks = []
-        if candidates is not None and not candidates.is_empty():
-            blocks.append(render_profile_candidate_labels(candidates))
-        blocks.append(_render_description(text))
-
         try:
             completion = self._client.chat.completions.parse(
                 model=self._model,
-                messages=[
-                    {"role": "system", "content": PROFILE_SYSTEM_PROMPT},
-                    {"role": "user", "content": "\n\n".join(blocks)},
-                ],
+                messages=_messages(text, candidates),  # type: ignore[arg-type]
                 response_format=LlmCompanyProfileClassification,
                 reasoning_effort=self._reasoning_effort,
+                prompt_cache_options=PROMPT_CACHE_OPTIONS,  # type: ignore[arg-type]
             )
         except OpenAIError as exc:
             status = getattr(exc, "status_code", None)
@@ -86,6 +78,29 @@ class OpenAICompanyProfileClassifierAdapter:
             classification=_to_domain(message.parsed),
             usage=call_usage(getattr(completion, "usage", None)),
         )
+
+
+def _messages(text: str, candidates: CandidateLabels | None) -> list[dict[str, object]]:
+    """The labels go first and the description last. The system prompt plus the labels are the same for
+    every company at a given time, so the cacheable prefix ends after the labels or, without them, after
+    the system prompt (prompt_cache.py): the description is never cached."""
+    description = _render_description(text)
+    if candidates is None or candidates.is_empty():
+        return [
+            {"role": "system", "content": [cached_prefix(PROFILE_SYSTEM_PROMPT)]},
+            {"role": "user", "content": description},
+        ]
+    # The two parts keep the text of a single string: the separator goes at the end of the labels.
+    return [
+        {"role": "system", "content": PROFILE_SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": [
+                cached_prefix(render_profile_candidate_labels(candidates) + "\n\n"),
+                {"type": "text", "text": description},
+            ],
+        },
+    ]
 
 
 def _render_description(text: str) -> str:

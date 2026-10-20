@@ -12,6 +12,7 @@ from ia_cumplify.adapters.outbound.openai.chat_prompts import (
     build_chat_messages,
     neutralize_delimiter_lines,
 )
+from ia_cumplify.adapters.outbound.openai.prompt_cache import cached_prefix
 from ia_cumplify.application.use_cases.answer_chat import AnswerChatUseCase
 from ia_cumplify.domain.chat import NOT_COVERED_MARK, PASSAGE_KINDS, ChatMessage, ChatPassage, ChatRequest
 
@@ -64,7 +65,7 @@ def test_messages_follow_the_order_of_the_contract() -> None:
     )
     messages = messages_for(request)
     assert [message["role"] for message in messages] == ["system", "user", "assistant", "user", "user"]
-    assert messages[0]["content"] == CHAT_SYSTEM_PROMPT
+    assert messages[0]["content"] == [cached_prefix(CHAT_SYSTEM_PROMPT)]
     assert messages[1]["content"] == "¿Qué exige el DS 594?"
     assert messages[2]["content"] == "Exige ventilación."
     assert messages[3]["content"].startswith("App: Planta Quilicura\n\n--- PASAJE P1 ---\n")
