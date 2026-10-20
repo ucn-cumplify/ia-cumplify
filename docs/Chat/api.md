@@ -411,7 +411,7 @@ Temas cerrados el 2026-10-14, comprobados en `capstone-2s` de backend-cumplify (
 
 | Tema | Propuesta | Con quién |
 |---|---|---|
-| Textos fijos y aviso legal | Los textos de `no_passages`, `refused` y `not_covered`, y si se agrega un aviso de que el chat no reemplaza la asesoría legal, en el texto o en el widget | Equipo |
+| Textos fijos y aviso legal | Los textos de `no_passages`, `refused` y `not_covered`, y el del aviso de que el chat no reemplaza la asesoría legal. El equipo decidió el 2026-10-19 que el aviso va en el widget y no en el texto de la respuesta (frontend-cumplify #125): ia no agrega nada y el prompt no cambia. Falta que el cliente revise los textos, con los demás del chat (decisión 4 del plan del sprint 3 de backend-cumplify) | Cliente |
 | Keepalive hacia el navegador | Nombre y forma del evento propio del backend (por ejemplo `event: ping` con `data: {}`), que el frontend ignora | Backend (4.7) y frontend (4.9) |
 | Correlación de logs | Header opcional `X-Request-Id`, que ia repite en su log | Backend |
 | Proxies | Confirmar que ningún proxy, entre el backend e ia o hacia el navegador, acumula el stream ni lo corta por inactividad. Con los `: ping` de ia y el keepalive del backend (punto 6), ningún tramo pasa más de 15 s sin bytes. Basta con que el tope de inactividad de cada proxy supere ese intervalo con margen: el `proxy_read_timeout` de nginx (60 s por defecto) alcanza | Equipo |
