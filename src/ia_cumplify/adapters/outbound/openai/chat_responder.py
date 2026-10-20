@@ -115,6 +115,12 @@ class OpenAIChatStream:
                 return
             except APIError as exc:
                 raise ChatProviderError(_streaming_error_code(exc)) from None
+            except ValueError as exc:
+                # A chunk the SDK cannot read (a data line that is not JSON, or bytes that are not UTF-8) is a
+                # failure of the provider, like an error inside the stream: provider_error, retryable. Only
+                # the type is logged: the message and the document can quote the answer.
+                logger.warning("The chat provider sent an unreadable chunk: %s.", type(exc).__name__)
+                raise ChatProviderError("provider_error") from None
             for event in _chunk_events(chunk):
                 yield event
 
