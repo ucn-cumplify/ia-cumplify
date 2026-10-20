@@ -308,10 +308,13 @@ class TestProviderFailures:
         reply = ask("cut_after_finish")
         assert (reply.done["coverage"], reply.done["finish_reason"], reply.done["usage"]) == ("answered", "stop", None)
 
-    def test_a_chunk_the_sdk_cannot_decode_is_internal(self, fake: FakeOpenAI) -> None:
-        # CHT-010: any exception other than the SDK's errors is internal. The httpx2 errors the SDK lets
-        # escape when opening are mapped as its own stream maps them (test above).
-        assert ask("malformed").error["code"] == "internal"
+    def test_an_unreadable_chunk_is_a_retryable_provider_error(self, fake: FakeOpenAI, caplog) -> None:
+        # CHT-010: a chunk the SDK cannot decode is a failure of the provider, not of ia (agreed on
+        # 2026-10-19). The log names the exception type only, never the chunk.
+        caplog.set_level(logging.DEBUG)
+        reply = ask("malformed")
+        assert (reply.error["code"], reply.error["retryable"]) == ("provider_error", True)
+        assert "JSONDecodeError" in caplog.text and "no es JSON" not in caplog.text
 
     def test_retries_happen_only_before_the_provider_answers(self, fake: FakeOpenAI, monkeypatch) -> None:
         configure(monkeypatch, chat_max_retries="1")
@@ -425,6 +428,26 @@ class TestErrorCodes:
             return caught.value.code
 
         assert asyncio.run(scenario()) == "provider_error"
+
+    @pytest.mark.parametrize(
+        "error",
+        [json.JSONDecodeError(SECRET, SECRET, 0), UnicodeDecodeError("utf-8", SECRET.encode(), 0, 1, SECRET)],
+        ids=["not_json", "not_utf8"],
+    )
+    def test_an_unreadable_chunk_is_a_provider_error(self, error: ValueError) -> None:
+        class UnreadableSdkStream:
+            async def __anext__(self):
+                raise error
+
+        async def scenario() -> ChatProviderError:
+            with pytest.raises(ChatProviderError) as caught:
+                async for _ in OpenAIChatStream(UnreadableSdkStream()):  # type: ignore[arg-type]
+                    pass
+            return caught.value
+
+        caught = asyncio.run(scenario())
+        assert caught.code == "provider_error"
+        assert SECRET not in str(caught) and caught.__cause__ is None
 
     def test_the_error_carries_no_provider_message(self) -> None:
         error = ChatProviderError(_opening_error_code(_status_error(400)))
