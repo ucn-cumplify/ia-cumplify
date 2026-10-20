@@ -152,7 +152,7 @@ def test_the_response_reports_each_file_and_the_judgment(monkeypatch):
     assert body["summary"] == ""
     assert body["usage"] == _zero_usage()
     assert body["model"] == "gpt-5.6-luna"
-    assert body["review_version"] == "evidence-review-v2@gpt-5.6-luna"
+    assert body["review_version"] == "evidence-review-v3@gpt-5.6-luna"
     assert reviewer.subjects[0].files[0].fragments[0].text.startswith("Nombre")
     assert SECRET not in response.text
     assert "Nombre;RUT" not in response.text
@@ -173,7 +173,7 @@ def test_a_judgment_is_returned_with_its_citations(monkeypatch):
     assert body["verdict"] == "partial"
     assert body["summary"] == "El acta acredita la constitución y falta la nómina completa."
     assert body["model"] == "gpt-5.6-luna"
-    assert body["review_version"] == "evidence-review-v2@gpt-5.6-luna"
+    assert body["review_version"] == "evidence-review-v3@gpt-5.6-luna"
     assert body["usage"] == {
         "prompt_tokens": 20,
         "completion_tokens": 8,
@@ -243,7 +243,7 @@ def test_the_review_works_without_a_database(monkeypatch):
         assert app.state.db_pool is None
         response = client.post(REVIEW, headers=HEADERS, data={"review": json.dumps(_review(text=SECRET))})
     assert response.status_code == 200
-    assert response.json()["review_version"] == "evidence-review-v2@gpt-5.6-luna"
+    assert response.json()["review_version"] == "evidence-review-v3@gpt-5.6-luna"
     assert response.json()["files"] == []
     assert SECRET not in response.text
     included, route = _evidence_route(app)
@@ -407,7 +407,7 @@ def _judgment() -> ReviewJudgment:
         summary="El acta acredita la constitución y falta la nómina completa.",
         usage=TokenUsage(prompt_tokens=20, completion_tokens=8, total_tokens=28, llm_calls=1),
         model="gpt-5.6-luna",
-        review_version="evidence-review-v2@gpt-5.6-luna",
+        review_version="evidence-review-v3@gpt-5.6-luna",
     )
 
 
@@ -441,7 +441,7 @@ class LoopProbeReviewer(ScriptedReviewer):
 
 
 class _BrokenReviewer:
-    version = "evidence-review-v2@gpt-5.6-luna"
+    version = "evidence-review-v3@gpt-5.6-luna"
 
     def review(self, subject) -> ReviewJudgment:
         raise EvidenceReviewError("OpenAI error while reviewing evidence: APIError (HTTP 500)")
@@ -455,7 +455,7 @@ def _plain_judgment() -> ReviewJudgment:
         summary="",
         usage=TokenUsage(),
         model="gpt-5.6-luna",
-        review_version="evidence-review-v2@gpt-5.6-luna",
+        review_version="evidence-review-v3@gpt-5.6-luna",
     )
 
 

@@ -48,6 +48,8 @@
         "nature": "explicit_obligations",
         "verdict": "partial",
         "has_status": "partial",
+        "missing_names": ["enero", "septiembre"],
+        "missing_not_listed": ["octubre"],
         "files": [{"filename": "marzo.docx", "status": "read", "truncated": false}]
       }
     },
@@ -508,6 +510,63 @@
         "verdict": "not_accredited",
         "all_status": "not_accredited",
         "files": [{"filename": "acta.pdf", "status": "read", "truncated": false}]
+      }
+    },
+    {
+      "id": "EVR-034",
+      "title": "Sesiones mensuales con solo el acta de marzo",
+      "reference_date": "2026-10-20",
+      "article": {
+        "number": "2",
+        "title": "Sesiones mensuales",
+        "text": "El Comité Paritario debe sesionar al menos una vez al mes. Cada sesión se acredita con un acta que indica la fecha, los asistentes y los acuerdos. El año en curso queda acreditado solo si están las actas de todos los meses ya transcurridos."
+      },
+      "legal_body": {"title": "Reglamento de demostración del Comité Paritario", "type": "Reglamento"},
+      "files": [
+        {
+          "id": "marzo",
+          "filename": "acta-sesion-marzo-2026.docx",
+          "docx": ["Acta de sesión del Comité Paritario de Higiene y Seguridad", "Faena Calama.", "Fecha: 3 de marzo de 2026.", "Asistentes: Representante de la empresa 1, en representación de la empresa, y Representante de los trabajadores 1, en representación de los trabajadores.", "Acuerdos: se revisó el estado de los extintores del taller y se encargó su recarga antes del 20 de marzo de 2026.", "No hay actas de otros meses de 2026 en este respaldo."]
+        }
+      ],
+      "expected": {
+        "nature": "explicit_obligations",
+        "verdict": "partial",
+        "has_status": "partial",
+        "missing_names": ["enero", "septiembre"],
+        "missing_not_listed": ["octubre"],
+        "files": [{"filename": "acta-sesion-marzo-2026.docx", "status": "read", "truncated": false}]
+      }
+    },
+    {
+      "id": "EVR-035",
+      "title": "Sesiones mensuales con las actas de marzo y abril",
+      "reference_date": "2026-10-20",
+      "article": {
+        "number": "2",
+        "title": "Sesiones mensuales",
+        "text": "El Comité Paritario debe sesionar al menos una vez al mes. Cada sesión se acredita con un acta que indica la fecha, los asistentes y los acuerdos. El año en curso queda acreditado solo si están las actas de todos los meses ya transcurridos."
+      },
+      "legal_body": {"title": "Reglamento de demostración del Comité Paritario", "type": "Reglamento"},
+      "files": [
+        {
+          "id": "marzo",
+          "filename": "acta-sesion-marzo-2026.docx",
+          "docx": ["Acta de sesión del Comité Paritario de Higiene y Seguridad", "Faena Calama.", "Fecha: 3 de marzo de 2026.", "Asistentes: Representante de la empresa 1, en representación de la empresa, y Representante de los trabajadores 1, en representación de los trabajadores.", "Acuerdos: se revisó el estado de los extintores del taller y se encargó su recarga antes del 20 de marzo de 2026.", "No hay actas de otros meses de 2026 en este respaldo."]
+        },
+        {
+          "id": "abril",
+          "filename": "acta-sesion-abril-2026.docx",
+          "docx": ["Acta de sesión del Comité Paritario de Higiene y Seguridad", "Faena Calama.", "Fecha: 7 de abril de 2026.", "Asistentes: Representante de la empresa 2, en representación de la empresa, y Representante de los trabajadores 2, en representación de los trabajadores.", "Acuerdos: se revisó la señalización de las vías de evacuación del taller y se encargó reponer dos letreros antes del 30 de abril de 2026."]
+        }
+      ],
+      "expected": {
+        "nature": "explicit_obligations",
+        "verdict": "partial",
+        "has_status": "partial",
+        "missing_names": ["enero", "septiembre"],
+        "missing_not_listed": ["octubre"],
+        "files": [{"filename": "acta-sesion-marzo-2026.docx", "status": "read", "truncated": false}, {"filename": "acta-sesion-abril-2026.docx", "status": "read", "truncated": false}]
       }
     }
   ]
