@@ -14,6 +14,7 @@ from openai._httpx2 import request_exceptions, timeout_exceptions
 from openai.types.chat import ChatCompletionChunk
 
 from ia_cumplify.adapters.outbound.openai.chat_prompts import CHAT_PROMPT_VERSION, build_chat_messages
+from ia_cumplify.adapters.outbound.openai.prompt_cache import PROMPT_CACHE_OPTIONS
 from ia_cumplify.domain.chat import (
     ChatPrompt,
     ChatUsage,
@@ -72,9 +73,10 @@ class OpenAIChatResponderAdapter:
                 messages=build_chat_messages(prompt),  # type: ignore[arg-type]
                 stream=True,
                 stream_options={"include_usage": True},
-                # No copy for OpenAI's distillation and evals. The prompt cache mode is still to be
-                # agreed (api.md), so prompt_cache_options is not sent: the implicit mode rules.
+                # No copy for OpenAI's distillation and evals, and only the instructions in the prompt
+                # cache (prompt_cache.py).
                 store=False,
+                prompt_cache_options=PROMPT_CACHE_OPTIONS,  # type: ignore[arg-type]
                 reasoning_effort=self._reasoning_effort,  # type: ignore[arg-type]
                 max_completion_tokens=self._max_completion_tokens,
             )

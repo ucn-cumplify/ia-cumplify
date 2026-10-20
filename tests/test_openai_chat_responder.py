@@ -113,16 +113,24 @@ class TestTheCall:
         assert (request["method"], request["path"]) == ("POST", "/v1/chat/completions")
         assert request["headers"]["authorization"] == f"Bearer {OPENAI_KEY}"
         body = request["body"]
-        # Exactly these: no prompt_cache_options (the cache mode is still to be agreed), no user and
-        # no safety_identifier.
+        # Exactly these: no user and no safety_identifier.
         assert sorted(body) == sorted(
-            ["model", "messages", "stream", "stream_options", "store", "reasoning_effort", "max_completion_tokens"]
+            [
+                "model", "messages", "stream", "stream_options", "store", "prompt_cache_options",
+                "reasoning_effort", "max_completion_tokens",
+            ]
         )
         assert (body["model"], body["reasoning_effort"], body["max_completion_tokens"]) == ("gpt-5.6-luna", "low", 4000)
         assert (body["stream"], body["stream_options"], body["store"]) == (True, {"include_usage": True}, False)
+        # Option (b) of "Caché de prompts": the explicit mode, with a single breakpoint at the end of the
+        # instructions, so nothing of the request enters the cache.
+        assert body["prompt_cache_options"] == {"mode": "explicit"}
+        assert json.dumps(body["messages"]).count("prompt_cache_breakpoint") == 1
         messages = body["messages"]
         assert [message["role"] for message in messages] == ["system", "user", "user", "user"]
-        assert messages[0]["content"] == CHAT_SYSTEM_PROMPT
+        assert messages[0]["content"] == [
+            {"type": "text", "text": CHAT_SYSTEM_PROMPT, "prompt_cache_breakpoint": {"mode": "explicit"}}
+        ]
         assert messages[1]["content"] == "¿Y el comité?"
         assert messages[2]["content"].startswith("App: Planta\n\n--- PASAJE P1 ---\n")
         assert messages[3]["content"] == "answer"

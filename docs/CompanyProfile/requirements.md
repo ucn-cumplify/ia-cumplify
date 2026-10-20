@@ -48,6 +48,7 @@ El llamador puede enviar etiquetas ya usadas en los artículos para `scope`, `pr
 
 - Mismas reglas que en la clasificación de cuerpos legales: como máximo 60 etiquetas por dimensión, cada una de 1 a 100 caracteres, sin `|` ni saltos de línea, sin campos extra; los duplicados se colapsan conservando el orden.
 - Si `candidate_values` se omite, o las tres listas quedan vacías, el prompt no incluye el bloque de etiquetas existentes.
+- El prompt de sistema y las etiquetas son el único prefijo que puede quedar en el caché del proveedor: la llamada usa el modo explícito con un único punto de corte, después de las etiquetas o, sin ellas, al final del prompt de sistema. El texto de la empresa nunca queda en el caché ("Caché de prompts" en `docs/Chat/api.md`).
 
 ---
 
@@ -119,6 +120,7 @@ El texto es información de la empresa. No se registra en el log ni aparece en e
 - Clasificar un texto con el modelo y el esfuerzo de razonamiento configurados (`OPENAI_MODEL`, `OPENAI_REASONING_EFFORT`).
 - Reutilizar las etiquetas existentes que envía el llamador.
 - Usar timeout y reintentos explícitos del cliente OpenAI (`OPENAI_TIMEOUT_SECONDS`, `OPENAI_MAX_RETRIES`).
+- Llamar al modelo con el modo explícito de caché, con el punto de corte antes del texto de la empresa.
 - Quitar del texto que se envía al modelo las imágenes y los demás archivos embebidos como data URI.
 - Informar siempre la versión del clasificador y el uso de tokens.
 
@@ -134,4 +136,4 @@ El texto es información de la empresa. No se registra en el log ni aparece en e
 - `PROFILE_TEXT_MAX_CHARS` tiene que coincidir con `AI_PROFILE_TEXT_MAX_CHARS` del backend: si el backend sube su tope y este no, un texto válido para el backend recibe `422`.
 - `PROFILE_PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue los perfiles nuevos de los anteriores. `tests/test_profile_prompts.py` falla si el prompt o su bloque de etiquetas cambian sin subirla, y también si las reglas de etiqueta o el formato del bloque se separan de los del prompt de artículos.
 - Las reglas de longitud de etiqueta viven en el prompt. El esquema solo exige listas no vacías, así que una etiqueta más larga igual puede volver en la respuesta.
-- El prompt (PRF-001 a PRF-007) se probó a mano con OpenAI y no tiene prueba automática, porque necesita el modelo real. El contrato sí la tiene: PRF-008 a PRF-012, PRF-014 y PRF-015 se ejecutan con pytest en `tests/test_company_profile_http.py`, con el adaptador real sobre un transporte falso de OpenAI, junto con dónde va el bloque de etiquetas existentes y que se quiten las imágenes y los adjuntos; PRF-013, en `tests/test_validation_errors.py`.
+- El prompt (PRF-001 a PRF-007) se probó a mano con OpenAI y no tiene prueba automática, porque necesita el modelo real. El contrato sí la tiene: PRF-008 a PRF-012 y PRF-014 a PRF-016 se ejecutan con pytest en `tests/test_company_profile_http.py`, con el adaptador real sobre un transporte falso de OpenAI, junto con dónde va el bloque de etiquetas existentes y que se quiten las imágenes y los adjuntos; PRF-013, en `tests/test_validation_errors.py`.
