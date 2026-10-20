@@ -149,7 +149,7 @@ contrato (`docs/Chat/api.md`).
 | Variable | Defecto | Uso | Constante equivalente en el backend |
 |---|---|---|---|
 | `CHAT_MODEL` | vacía (usa `OPENAI_MODEL`) | Modelo del chat | |
-| `CHAT_REASONING_EFFORT` | vacía (usa `OPENAI_REASONING_EFFORT`) | Esfuerzo de razonamiento del chat | |
+| `CHAT_REASONING_EFFORT` | vacía (usa `OPENAI_REASONING_EFFORT`) | Esfuerzo de razonamiento del chat. `medium` no mejoró la fidelidad frente a `low` (CHT-041, 2026-10-19) | |
 | `CHAT_MAX_COMPLETION_TOKENS` | 4.000 | Tope de salida por respuesta, razonamiento incluido | |
 | `CHAT_TIMEOUT_SECONDS` | 60 | Lectura, por intento: lo máximo que se esperan las cabeceras de OpenAI o su siguiente fragmento. La conexión tiene 5 s | |
 | `CHAT_MAX_RETRIES` | 0 | Reintentos del SDK, solo antes de que OpenAI responda 2xx. Con 0, el backend decide si reintenta | |
