@@ -94,7 +94,7 @@ La respuesta trae la naturaleza, las exigencias con su estado, sus citas y lo qu
 
 **Validaciones:**
 
-- `review_version` es `evidence-review-v2@<modelo usado>`.
+- `review_version` es `evidence-review-v3@<modelo usado>`.
 - Cada exigencia trae `evidence`, el respaldo que la acredita. Sin ese nombre, no sale.
 - `procedure_for` nombra la autorización de un artículo `procedural` y es `null` en las otras naturalezas.
 - Una cita se busca en el texto leído de su archivo, sin distinguir mayúsculas ni espacios. Una cita a otro archivo, en blanco o que no aparece, no sale. Una exigencia `accredited` o `partial` sin citas que queden baja a `not_accredited`, con la marca `cita no encontrada` en `missing`. El veredicto se recalcula a partir de las exigencias.
@@ -143,6 +143,8 @@ Un archivo que prueba que la empresa no la cumple no la acredita, por mucho que 
 
 Las vigencias y los plazos se juzgan con `reference_date`, no con el día de hoy. Una exigencia que no está vigente ese día no tiene nada que verificar y queda `not_evaluable`. Un plazo posterior a ese día no llegó: no se trata como incumplimiento y queda `not_evaluable`. Un plazo en ese día o antes ya llegó: un archivo fechado después no muestra que se cumplió a tiempo. Un archivo cuya vigencia no cubre la fecha de referencia no acredita.
 
+Una exigencia que se repite cada período, como cada mes, trimestre o año, cubre cada período terminado en la fecha de referencia o antes. El período que contiene esa fecha no terminó: no falta, aunque el artículo lo cuente.
+
 Esta regla está en el prompt: el servicio no la vuelve a aplicar sobre la respuesta.
 
 ---
@@ -171,7 +173,7 @@ Esta regla está en el prompt: el servicio no la vuelve a aplicar sobre la respu
 
 **Descripción:**
 
-`missing` describe solo lo que no aparece en los archivos. Si no falta nada, queda vacío. No recomienda una acción, una tarea ni lo que la empresa debería hacer. Esas acciones salen de la base de conocimientos (fase 2B del plan).
+`missing` describe solo lo que no aparece en los archivos. Si no falta nada, queda vacío. Nombra en concreto cada documento, dato o período que falta: en una exigencia periódica, cada período terminado sin respaldo, como «enero y de mayo a agosto de 2026», nunca «los demás meses». La fase 2A parte de ese texto para proponer el hallazgo. No recomienda una acción, una tarea ni lo que la empresa debería hacer. Esas acciones salen de la base de conocimientos (fase 2B del plan).
 
 Esta regla está en el prompt: el servicio no la vuelve a aplicar sobre la respuesta.
 
@@ -205,13 +207,13 @@ La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilo
 
 - Recibir el pedido en partes y leer PDF, Word, Excel, CSV y PowerPoint.
 - Aplicar los topes de archivos, de tamaño, de páginas, de filas, de ZIP y de caracteres.
-- Pedir al modelo una revisión con el prompt `evidence-review-v2`.
+- Pedir al modelo una revisión con el prompt `evidence-review-v3`.
 - Cerrar en código el artículo informativo, de remisión o procedimental: sin exigencias y con veredicto `not_evaluable`. Solo el procedimental conserva `procedure_for`.
 - Descartar una exigencia que no nombra su respaldo.
 - Buscar cada cita en el texto de su archivo, sin distinguir mayúsculas ni espacios, y descartar las que no aparecen. Una exigencia sin citas verificadas no puede quedar acreditada ni parcial: baja a `not_accredited`, con la marca `cita no encontrada`. El veredicto se recalcula a partir de las exigencias.
 - Informar el estado de cada archivo, la revisión, el consumo, el modelo y `review_version`.
 - Probar el adaptador real contra un cliente falso de OpenAI, sin salir de la máquina.
-- El set manual `scripts/evidence_review_eval.py` (EVR-012 a EVR-031), para comparar el esfuerzo `low` con `medium`. Lo ejecuta el usuario.
+- El set manual `scripts/evidence_review_eval.py` (EVR-012 a EVR-031, EVR-034 y EVR-035), para comparar el esfuerzo `low` con `medium` y una versión del prompt con la anterior. Lo ejecuta el usuario.
 
 ## Fuera de alcance
 
@@ -221,8 +223,8 @@ La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilo
 
 ## Deuda técnica conocida
 
-- `evidence-review-v2` no se sube al cambiar una redacción del prompt. Quien llama distingue el modelo (`review_version` termina en `@<modelo>`), no cada edición de las reglas. El salto desde `evidence-review-v1` es el de la decisión 21 y la verificación de la cita.
+- `evidence-review-v3` no se sube al cambiar una redacción del prompt. Quien llama distingue el modelo (`review_version` termina en `@<modelo>`), no cada edición de las reglas. El salto desde `evidence-review-v1` es el de la decisión 21 y la verificación de la cita. El de `evidence-review-v2` es la regla de las exigencias periódicas: cambia lo que falta y puede cambiar el veredicto, así que backend-cumplify tiene que subir la versión con la que calcula la huella, y las revisiones guardadas quedan desactualizadas.
 - El incumplimiento, la fecha de referencia, las instrucciones dentro del archivo y la forma de `missing` dependen de que el modelo siga el prompt. Las pruebas automáticas fijan el texto del prompt; no llaman a OpenAI.
 - El set no trae un artículo procedimental. La naturaleza `procedural` y `procedure_for` se cubren en las pruebas del caso de uso, no en EVR-012 a EVR-031.
 - Los topes de 10 archivos, 25 MB y 200 000 caracteres están en este servicio. El backend tiene que aplicar los mismos antes de enviar el pedido.
-- Las pruebas automáticas cubren el contrato, el prompt y el adaptador real contra un cliente falso de OpenAI (`tests/test_evidence_review_fake.py`). El set real se volvió a correr el 2026-10-15 con `evidence-review-v2` y `gpt-5.6-luna`: `low` acertó 17 de 20 y `medium` también 17 de 20, con el mismo veredicto en los 17. Costo de unos US$0,017 y US$0,019. No justifica subir el esfuerzo. Los tres fallos son EVR-012, EVR-019 y EVR-021 de `test.csv`: el modelo responde `partial` donde el archivo muestra la exigencia cumplida.
+- Las pruebas automáticas cubren el contrato, el prompt y el adaptador real contra un cliente falso de OpenAI (`tests/test_evidence_review_fake.py`). El set real se volvió a correr el 2026-10-15 con `evidence-review-v2` y `gpt-5.6-luna`: `low` acertó 17 de 20 y `medium` también 17 de 20, con el mismo veredicto en los 17. Costo de unos US$0,017 y US$0,019. No justifica subir el esfuerzo. Los tres fallos son EVR-012, EVR-019 y EVR-021 de `test.csv`: el modelo responde `partial` donde el archivo muestra la exigencia cumplida. Con `evidence-review-v3`, el 2026-10-20, `low` acertó 19 de 22, con los mismos tres fallos. Los casos periódicos EVR-013, EVR-034 y EVR-035 pasaron 15 de 15 en cinco repeticiones, y con `evidence-review-v2`, 0 de 15: la v2 no nombraba los meses o contaba como transcurrido el mes de la fecha de referencia. Costo total de unos US$0,045.

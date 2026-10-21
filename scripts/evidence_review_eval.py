@@ -1,4 +1,4 @@
-"""Manual evaluation set of evidence-review-v2: EVR-012 to EVR-031 of docs/EvidenceReview/test.csv.
+"""Manual evaluation set of evidence-review-v3: EVR-012 to EVR-031, EVR-034 and EVR-035 of docs/EvidenceReview/test.csv.
 
 It spends real tokens. It builds each case's files and posts them to an ia-cumplify that is already
 running, and that service calls OpenAI. It is not part of pytest, which collects only tests/.
@@ -34,10 +34,10 @@ from urllib.parse import urlsplit
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 DEFAULT_SET = HERE / "evidence_review_eval_set.json"
-NATURES = ("explicit_obligations", "informative", "referral")
+NATURES = ("explicit_obligations", "informative", "referral", "procedural")
 STATUSES = ("accredited", "partial", "not_accredited", "not_evaluable")
 FILE_STATUSES = ("read", "unreadable", "unsupported", "error")
-VERSION_PREFIX = "evidence-review-v2@"
+VERSION_PREFIX = "evidence-review-v3@"
 # US$ per million tokens, the rates of the sprint 3 plan.
 INPUT_PRICE = 0.20
 OUTPUT_PRICE = 1.20
@@ -46,6 +46,11 @@ ACTION = re.compile(
     r"se recomienda|recomendamos|hay que|conviene|plan de acci[oó]n|la empresa debe|tienen que",
     re.IGNORECASE,
 )
+# A heuristic for "the missing text lists this period as missing": the word comes after a comma, «y», «e», «ni», «a»
+# or «hasta», maybe followed by «de», as in «septiembre ni octubre» or «de abril a octubre», and not before words
+# that say it is still running. «al 20 de octubre», the reference date, is not a listing.
+LISTED_BEFORE = re.compile(r"(?:,\s*|\b(?:y|e|ni|a|hasta)\s+)(?:de\s+)?$", re.IGNORECASE)
+RUNNING_AFTER = re.compile(r"^\s*(?:de\s+\d{4}\s+)?(?:aún|todavía|no\b|está|sigue|en curso)", re.IGNORECASE)
 
 
 class SetError(ValueError):
@@ -74,6 +79,10 @@ def load_set(path: Path) -> list[dict]:
                 raise SetError(f"case {case['id']}: {key} must be one of {', '.join(STATUSES)}")
         if expected.get("requirements") not in (None, "empty"):
             raise SetError(f"case {case['id']}: requirements must be empty or omitted")
+        for key in ("missing_names", "missing_not_listed"):
+            terms = expected.get(key, [])
+            if not isinstance(terms, list) or not all(isinstance(term, str) and term.strip() for term in terms):
+                raise SetError(f"case {case['id']}: {key} must be a list of words")
     return cases
 
 
@@ -227,6 +236,13 @@ def checks(case: dict, body: dict) -> list[str]:
         if ACTION.search(item.get("missing") or ""):
             found.append("missing recommends an action")
             break
+    missing = " ".join(item.get("missing") or "" for item in requirements)
+    for term in expected.get("missing_names", []):
+        if not re.search(rf"\b{re.escape(term)}\b", missing, re.IGNORECASE):
+            found.append(f"missing does not name {term}")
+    for term in expected.get("missing_not_listed", []):
+        if listed(term, missing):
+            found.append(f"missing lists {term}")
     known = {item["id"] for item in case["files"]}
     for item in requirements:
         for citation in item.get("citations") or []:
@@ -245,6 +261,14 @@ def checks(case: dict, body: dict) -> list[str]:
                 f"expected {wanted['status']} truncated={wanted['truncated']}"
             )
     return found
+
+
+def listed(term: str, text: str) -> bool:
+    """Whether text lists term among what is missing, by LISTED_BEFORE and RUNNING_AFTER."""
+    for match in re.finditer(rf"\b{re.escape(term)}\b", text, re.IGNORECASE):
+        if LISTED_BEFORE.search(text[: match.start()]) and not RUNNING_AFTER.match(text[match.end() :]):
+            return True
+    return False
 
 
 def encode_multipart(review: str, files: list[tuple[str, bytes]]) -> tuple[bytes, str]:

@@ -84,7 +84,7 @@ def test_the_real_adapter_sends_a_strict_schema_and_maps_the_fake_review(monkeyp
     assert body["requirements"][0]["evidence"] == "Acta de constitución"
     assert body["requirements"][0]["citations"][0]["quote"] == "Ana;1-9"
     assert body["procedure_for"] is None
-    assert body["review_version"] == "evidence-review-v2@fake-model"
+    assert body["review_version"] == "evidence-review-v3@fake-model"
     assert body["usage"]["cached_tokens"] == 8
     assert body["usage"]["llm_calls"] == 1
     [sent] = requests
@@ -113,21 +113,70 @@ def test_the_real_adapter_sends_a_strict_schema_and_maps_the_fake_review(monkeyp
         assert node["additionalProperties"] is False
 
 
-def test_the_evaluation_set_builds_twenty_cases_and_scores_a_response():
+def test_the_evaluation_set_builds_its_cases_and_scores_a_response():
     assert main(["--check-set"]) == 0
     cases = load_set(__import__("pathlib").Path("scripts/evidence_review_eval_set.json"))
-    assert [case["id"] for case in cases] == [f"EVR-{number:03d}" for number in range(12, 32)]
+    assert [case["id"] for case in cases] == [f"EVR-{number:03d}" for number in range(12, 32)] + [
+        "EVR-034",
+        "EVR-035",
+    ]
     acta = cases[0]
     passed = {
         "nature": "explicit_obligations",
         "verdict": "accredited",
-        "review_version": "evidence-review-v2@gpt-5.6-luna",
+        "review_version": "evidence-review-v3@gpt-5.6-luna",
         "requirements": [{"text": "Constituir.", "status": "accredited", "citations": [], "missing": ""}],
         "files": [{"filename": "acta.pdf", "status": "read", "truncated": False}],
     }
     assert checks(acta, passed) == []
     passed["nature"] = "informative"
     assert checks(acta, passed)
+
+
+def test_a_periodic_case_needs_each_missing_month_and_not_the_current_one():
+    cases = {case["id"]: case for case in load_set(__import__("pathlib").Path("scripts/evidence_review_eval_set.json"))}
+    response = {
+        "nature": "explicit_obligations",
+        "verdict": "partial",
+        "review_version": "evidence-review-v3@gpt-5.6-luna",
+        "requirements": [{"text": "Sesionar cada mes.", "status": "partial", "citations": [], "missing": ""}],
+        "files": [{"filename": "acta-sesion-marzo-2026.docx", "status": "read", "truncated": False}],
+    }
+
+    def with_missing(case_id, text):
+        response["requirements"][0]["missing"] = text
+        response["files"] = [
+            {"filename": item["filename"], "status": "read", "truncated": False} for item in cases[case_id]["files"]
+        ]
+        return checks(cases[case_id], response)
+
+    # What the three evidence-review-v2 reviews of that row said in the second end-to-end run: marzo, marzo and
+    # abril, marzo again.
+    assert with_missing(
+        "EVR-034",
+        "No aparecen actas de las sesiones correspondientes a enero, febrero, abril, mayo, junio, julio, agosto, "
+        "septiembre y octubre de 2026. Por ello, no aparecen las actas de todos los meses transcurridos del año en "
+        "curso.",
+    ) == ["missing lists octubre"]
+    assert with_missing(
+        "EVR-035",
+        "No aparecen actas de enero, febrero, mayo, junio, julio, agosto ni septiembre de 2026. Octubre aún no es un "
+        "mes transcurrido a la fecha de referencia del 20 de octubre de 2026.",
+    ) == []
+    assert with_missing(
+        "EVR-034",
+        "No aparecen actas de los demás meses transcurridos de 2026. Solo consta el acta correspondiente a marzo de 2026.",
+    ) == ["missing does not name enero", "missing does not name septiembre"]
+    # What evidence-review-v2 wrote in the baseline of the evaluation set: «ni» lists the month too.
+    assert with_missing(
+        "EVR-034",
+        "No aparecen actas de enero, febrero, abril, mayo, junio, julio, agosto, septiembre ni octubre de 2026.",
+    ) == ["missing lists octubre"]
+    # A range that ends in the current month leaves out the last month that ended.
+    assert with_missing("EVR-034", "No aparecen actas de enero, febrero y de abril a octubre de 2026.") == [
+        "missing does not name septiembre",
+        "missing lists octubre",
+    ]
 
 
 def test_compare_reports_two_runs(tmp_path):
