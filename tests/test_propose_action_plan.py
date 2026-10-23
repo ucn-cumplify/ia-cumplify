@@ -4,8 +4,12 @@ Every task needs a citation to a fragment of its own finding, quoted from its te
 knowledge base of the client is not part of the tests.
 """
 
-import pytest
+import json
 
+import pytest
+from action_plan_backend import read_like_backend
+
+from ia_cumplify.adapters.inbound.http.schemas.action_plan import ActionPlanBody, ActionPlanResponse
 from ia_cumplify.application.use_cases.propose_action_plan import ProposeActionPlanUseCase, quote_in_fragment
 from ia_cumplify.domain.action_plan import (
     MAX_TASKS_PER_FINDING,
@@ -21,6 +25,7 @@ from ia_cumplify.domain.classification import TokenUsage
 
 FINDING_A = "3f1c6b0e-8a6d-4b8e-9d2a-0c7e5b1a2f01"
 FINDING_B = "3f1c6b0e-8a6d-4b8e-9d2a-0c7e5b1a2f02"
+FINDING_C = "3f1c6b0e-8a6d-4b8e-9d2a-0c7e5b1a2f03"
 MANUAL = "9b2d7c4a-1e3f-4a5b-8c6d-7e8f9a0b1c01"
 GUIDE = "9b2d7c4a-1e3f-4a5b-8c6d-7e8f9a0b1c02"
 
@@ -204,3 +209,62 @@ def test_only_the_first_tasks_of_a_finding_are_kept():
     result = run(ScriptedPlanner(FindingTasks(FINDING_A, tasks)), finding(FINDING_A, manual()))
 
     assert [kept.name for kept in result.findings[0].tasks] == [f"Tarea {n}" for n in range(MAX_TASKS_PER_FINDING)]
+
+
+def test_sufficient_insufficient_and_missing_support_survive_the_backend_reader():
+    """Three findings, as the backend would send them: one the base supports, one whose fragments do not
+    support a task (the model cites them wrong), and one with no fragments at all. The 200 is read the way
+    ActionPlanResponseReader reads it."""
+    sent = [
+        {
+            "id": FINDING_A,
+            "description": "No hay procedimiento de trabajo seguro.",
+            "requirement": "Contar con un procedimiento de trabajo seguro.",
+            "missing": "Falta el procedimiento firmado.",
+            "fragments": [
+                {"document_id": MANUAL, "chunk_index": 0, "locator": "Manual (parte 1 de 2)", "text": PROCEDURE},
+                {"document_id": MANUAL, "chunk_index": 1, "locator": "Manual (parte 2 de 2)", "text": COMMITTEE},
+            ],
+        },
+        {
+            "id": FINDING_B,
+            "description": "No hay registro de entrega de EPP.",
+            "requirement": None,
+            "missing": None,
+            "fragments": [{"document_id": GUIDE, "chunk_index": 3, "locator": None, "text": COMMITTEE}],
+        },
+        {"id": FINDING_C, "description": "Falta el plan de emergencia.", "requirement": None, "missing": None, "fragments": []},
+    ]
+    planner = ScriptedPlanner(
+        FindingTasks(
+            FINDING_A,
+            (
+                task(priority="media"),
+                task(name="Archivar el acta", chunk_index=1, quote="carpeta de prevención", priority=None),
+            ),
+        ),
+        FindingTasks(FINDING_B, (task(name="Registrar la entrega de EPP", document_id=GUIDE, chunk_index=3, quote="registro de EPP"),)),
+    )
+    request = ActionPlanBody.model_validate({"prompt_version": "action-plan-v1", "findings": sent}).to_request(30)
+
+    response = ActionPlanResponse.from_domain(ProposeActionPlanUseCase(planner).execute(request))
+    reading = read_like_backend(response.model_dump_json(), sent)
+
+    assert reading.can_store
+    assert (reading.proposal_version, reading.model) == ("action-plan-v1@gpt-5.6-luna", "gpt-5.6-luna")
+    assert (reading.prompt_tokens, reading.completion_tokens, reading.total_tokens, reading.cached_tokens) == (
+        900,
+        150,
+        1050,
+        640,
+    )
+    assert reading.llm_calls == 1
+    assert [(item.unsupported, len(item.tasks)) for item in reading.findings] == [(False, 2), (True, 0), (True, 0)]
+    # Every task this service returned is one the backend keeps, with the same fields.
+    returned = json.loads(response.model_dump_json())["findings"][0]["tasks"]
+    stored = reading.findings[0].tasks
+    assert [(t.name, t.description, t.priority, t.chunk_index, t.citation) for t in stored] == [
+        (t["name"], t["description"], t["priority"], t["citation"]["chunk_index"], t["citation"]["quote"])
+        for t in returned
+    ]
+    assert [t.locator for t in stored] == ["Manual (parte 1 de 2)", "Manual (parte 2 de 2)"]
