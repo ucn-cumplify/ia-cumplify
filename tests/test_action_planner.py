@@ -1,12 +1,21 @@
-"""The OpenAI action planner: one structured call, mapped onto the draft the use case verifies."""
+"""The OpenAI action planner: one structured call, mapped onto the draft the use case verifies.
 
+The real SDK runs over a fake transport (httpx2.MockTransport), so nothing leaves the machine.
+"""
+
+import json
 from types import SimpleNamespace
 
+import httpx2
 import pytest
-from chat_http import SECRET, configure
-from openai import OpenAIError
+from action_plan_backend import backend_body, finding, fragment, read_like_backend
+from chat_http import HEADERS, SECRET, configure
+from fastapi.testclient import TestClient
+from openai import OpenAI, OpenAIError
 
+from ia_cumplify.adapters.inbound.http.app import create_app
 from ia_cumplify.adapters.inbound.http.dependencies import get_action_planner, reset_wiring_cache
+from ia_cumplify.adapters.outbound.openai import action_planner as action_planner_module
 from ia_cumplify.adapters.outbound.openai.action_plan_prompts import (
     ACTION_PLAN_SYSTEM_PROMPT,
     render_action_plan_user_content,
@@ -21,12 +30,16 @@ from ia_cumplify.adapters.outbound.openai.llm_action_plan_schema import (
 from ia_cumplify.domain.action_plan import ActionPlanFinding, KnowledgeFragment
 from ia_cumplify.domain.exceptions import ActionPlanError
 
+ACTION_PLANS = "/api/v1/action-plans"
 FINDING_A = "3f1c6b0e-8a6d-4b8e-9d2a-0c7e5b1a2f01"
+FINDING_B = "3f1c6b0e-8a6d-4b8e-9d2a-0c7e5b1a2f02"
+FINDING_C = "3f1c6b0e-8a6d-4b8e-9d2a-0c7e5b1a2f03"
 MANUAL = "9b2d7c4a-1e3f-4a5b-8c6d-7e8f9a0b1c01"
 PROCEDURE = (
     "Toda faena debe contar con un procedimiento de trabajo seguro escrito, firmado por el jefe de faena "
     "y difundido a cada trabajador antes de iniciar la tarea."
 )
+UNRELATED = "Los extintores se revisan cada seis meses y se rotulan con la fecha de la revisión."
 
 
 def adapter() -> OpenAIActionPlannerAdapter:
@@ -181,6 +194,112 @@ def test_the_model_effort_timeout_and_retries_are_its_own(monkeypatch):
     assert planner.version == "action-plan-v1@modelo-plan"
     assert planner._reasoning_effort == "medium"
     assert (created["timeout"], created["max_retries"]) == (15, 1)
+
+
+def test_the_real_sdk_over_a_fake_transport_from_request_to_backend_reader(monkeypatch):
+    """Synthetic findings with sufficient, insufficient and no support, through the endpoint and the real
+    adapter. The model's answer includes a task with a paraphrased quote, which must not come out."""
+    configure(monkeypatch, openai_api_key="sk-test-fake", openai_model="fake-model")
+    reset_wiring_cache()
+    requests: list[dict] = []
+    plan = {
+        "findings": [
+            {
+                "finding_id": FINDING_A,
+                "tasks": [
+                    {
+                        "name": "Elaborar el procedimiento de trabajo seguro",
+                        "description": "Redactarlo y firmarlo por el jefe de faena.",
+                        "priority": "alta",
+                        "citation": {"document_id": MANUAL, "chunk_index": 0, "quote": "firmado por el jefe de faena"},
+                    },
+                    {
+                        "name": "Capacitar en el procedimiento",
+                        "description": "",
+                        "priority": "media",
+                        "citation": {"document_id": MANUAL, "chunk_index": 0, "quote": "capacitar a cada trabajador"},
+                    },
+                ],
+            },
+            {"finding_id": FINDING_B, "tasks": []},
+        ]
+    }
+
+    def answer(request: httpx2.Request) -> httpx2.Response:
+        requests.append(json.loads(request.content))
+        message = {"role": "assistant", "content": json.dumps(plan), "refusal": None}
+        return httpx2.Response(
+            200,
+            json={
+                "id": "chatcmpl-fake",
+                "object": "chat.completion",
+                "created": 1,
+                "model": "fake-model",
+                "choices": [{"index": 0, "finish_reason": "stop", "message": message}],
+                "usage": {
+                    "prompt_tokens": 300,
+                    "completion_tokens": 60,
+                    "total_tokens": 360,
+                    "prompt_tokens_details": {"cached_tokens": 128},
+                },
+            },
+        )
+
+    def build(**kwargs: object) -> OpenAI:
+        return OpenAI(**kwargs, http_client=httpx2.Client(transport=httpx2.MockTransport(answer)))  # type: ignore[arg-type]
+
+    monkeypatch.setattr(action_planner_module, "OpenAI", build)
+    sent = [
+        finding(FINDING_A, "No hay procedimiento de trabajo seguro.", [fragment(MANUAL, 0, PROCEDURE, "Manual")]),
+        finding(FINDING_B, "No se revisan los extintores.", [fragment(MANUAL, 1, UNRELATED)]),
+        finding(FINDING_C, "Falta el plan de emergencia.", []),
+    ]
+    with TestClient(create_app()) as client:
+        response = client.post(ACTION_PLANS, headers=HEADERS, json=backend_body(sent))
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["proposal_version"] == "action-plan-v1@fake-model"
+    assert payload["usage"] == {
+        "prompt_tokens": 300,
+        "completion_tokens": 60,
+        "total_tokens": 360,
+        "cached_tokens": 128,
+        "llm_calls": 1,
+    }
+    assert [(item["id"], [t["name"] for t in item["tasks"]]) for item in payload["findings"]] == [
+        (FINDING_A, ["Elaborar el procedimiento de trabajo seguro"]),
+        (FINDING_B, []),
+        (FINDING_C, []),
+    ]
+    [call] = requests
+    user = call["messages"][1]["content"]
+    # The finding without fragments is not sent to the model.
+    assert FINDING_C not in user
+    assert FINDING_A in user and FINDING_B in user
+    schema = call["response_format"]["json_schema"]
+    assert schema["strict"] is True
+    objects: list[dict] = []
+
+    def walk(node: object) -> None:
+        if isinstance(node, dict):
+            assert "default" not in node, node
+            if node.get("type") == "object":
+                objects.append(node)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(schema["schema"])
+    assert objects
+    for node in objects:
+        assert sorted(node["required"]) == sorted(node["properties"]), node
+        assert node["additionalProperties"] is False
+    reading = read_like_backend(response.text, sent)
+    assert reading.can_store
+    assert [(item.unsupported, len(item.tasks)) for item in reading.findings] == [(False, 1), (True, 0), (True, 0)]
 
 
 def _capture_client(monkeypatch) -> dict:
