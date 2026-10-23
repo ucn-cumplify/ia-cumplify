@@ -126,6 +126,11 @@ Todas las variables están en `.env.example`. Las principales:
 | `EVIDENCE_REVIEW_REASONING_EFFORT` | vacía (usa `OPENAI_REASONING_EFFORT`) | Esfuerzo de razonamiento de la revisión |
 | `EVIDENCE_REVIEW_TIMEOUT_SECONDS` | 80 | Plazo de la revisión de respaldos |
 | `EVIDENCE_REVIEW_MAX_RETRIES` | 0 | Reintentos de la revisión. Con uno, podría pasar los 90 s que espera el backend |
+| `ACTION_PLAN_MODEL` | vacía (usa `OPENAI_MODEL`) | Modelo de `POST /api/v1/action-plans` |
+| `ACTION_PLAN_REASONING_EFFORT` | vacía (usa `OPENAI_REASONING_EFFORT`) | Esfuerzo de razonamiento de la propuesta del plan de acción |
+| `ACTION_PLAN_TIMEOUT_SECONDS` | 80 | Plazo de la propuesta, bajo los 90 s de `AI_ACTION_PLAN_TIMEOUT_SECONDS` del backend |
+| `ACTION_PLAN_MAX_RETRIES` | 0 | Reintentos de la propuesta. Con uno, podría pasar los 90 s que espera el backend |
+| `ACTION_PLAN_MAX_FINDINGS` | 30 | Hallazgos por pedido; uno más responde 422. Valor propuesto, por acordar con el backend |
 | `INCLUDE_DEV_METRICS` | `true` | Agrega `dev_metrics` con el tiempo de respuesta |
 
 - **`SERVICE_API_KEY`:** todo `/api/v1` la exige. Sin header o con otro valor, el servicio responde 401; si la variable
