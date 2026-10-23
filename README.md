@@ -350,6 +350,7 @@ uv run python scripts/applicability_eval.py --base-url http://127.0.0.1:8000
 | POST | `/api/v1/company-profiles/classify` | Clasifica en las mismas seis dimensiones el texto con que una empresa se describe; no usa la base |
 | POST | `/api/v1/embeddings` | Devuelve un vector por cada texto, en el mismo orden |
 | POST | `/api/v1/chat` | Responde una pregunta del chat en streaming (Server-Sent Events), solo con los pasajes del pedido y citando cada afirmación; no usa la base |
+| POST | `/api/v1/action-plans` | Propone tareas para los hallazgos de una revisión, solo con los fragmentos de la base de conocimientos que envía el backend, y cada tarea cita el suyo; no usa la base |
 
 El contrato, las reglas y los casos de prueba de cada endpoint están en `docs/`.
 

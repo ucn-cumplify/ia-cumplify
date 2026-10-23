@@ -10,6 +10,7 @@ from psycopg_pool import ConnectionPool
 
 from ia_cumplify.adapters.inbound.http.dependencies import require_api_key
 from ia_cumplify.adapters.inbound.http.routers import (
+    action_plans,
     applicability,
     articles,
     chat,
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     app.include_router(company_profiles.router, prefix="/api/v1", dependencies=protected)
     app.include_router(embeddings.router, prefix="/api/v1", dependencies=protected)
     app.include_router(evidence_reviews.router, prefix="/api/v1", dependencies=protected)
+    app.include_router(action_plans.router, prefix="/api/v1", dependencies=protected)
     return app
 
 
