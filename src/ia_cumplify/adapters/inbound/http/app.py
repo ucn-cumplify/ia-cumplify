@@ -14,6 +14,7 @@ from ia_cumplify.adapters.inbound.http.routers import (
     articles,
     chat,
     company_profiles,
+    documents,
     embeddings,
     evidence_reviews,
 )
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     app.include_router(company_profiles.router, prefix="/api/v1", dependencies=protected)
     app.include_router(embeddings.router, prefix="/api/v1", dependencies=protected)
     app.include_router(evidence_reviews.router, prefix="/api/v1", dependencies=protected)
+    app.include_router(documents.router, prefix="/api/v1", dependencies=protected)
     return app
 
 
