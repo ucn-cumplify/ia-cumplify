@@ -181,12 +181,37 @@ El plan pide un set de evaluación con casos de la base del cliente. Queda pendi
 
 ## Deuda técnica conocida
 
-- **El contrato se copia del backend.** Sale de la PR #225 de backend-cumplify, fusionada en `capstone-2s` el 2026-10-23. Si el backend cambia el JSON, este módulo tiene que cambiar con él. `AI_ACTION_PLAN_ENABLED` sigue en `false` por defecto en el backend, así que la llamada no sale hasta que se active.
-- **`ACTION_PLAN_MAX_FINDINGS` (30) no está acordado.** El backend manda todos los hallazgos abiertos de la revisión sin tope, con hasta 5 fragmentos de 4.000 caracteres cada uno: 30 hallazgos son unos 600.000 caracteres de fragmentos en el peor caso. Un pedido con más responde 422, y el backend lo muestra como «No se pudo proponer el plan de acción.». Hay que acordar el valor y que el backend lo aplique antes de llamar.
-- **Los topes de entrada copian valores del backend** (`FragmentsPerFinding` = 5, kb-v1 = 4.000 caracteres, descripción del hallazgo = 2.000). Si el backend sube uno, este servicio responde 422 hasta que se suba aquí también. La exigencia y lo que falta salen de la revisión guardada, que no tiene tope: 20.000 es un valor propio.
+Cada punto lleva su estado: **Pendiente** (falta una decisión, una implementación o una validación), **Mitigado** (hay una medida temporal, pero el problema sigue) o **Resuelto** (implementado y verificado).
+
+**Pendiente**
+
+- **`ACTION_PLAN_MAX_FINDINGS` (30) es incompatible con el backend.** Documentarlo no lo resuelve.
+  - *Problema:* el backend manda todos los hallazgos abiertos de la revisión, sin tope, y no valida este límite antes de embeberlos.
+  - *Impacto:* con más de 30, este servicio responde 422 y el backend muestra «No se pudo proponer el plan de acción.» después de haber pagado los embeddings. El usuario no tiene cómo seguir.
+  - *Se necesita:* acordar el valor con el backend, medido con el caso APL-017 de `test.csv`, y que el backend lo aplique antes de embeber, con un mensaje propio. Repartir los hallazgos en varias llamadas sería un cambio aparte.
+  - *Resuelto cuando:* el backend rechace o reparta un pedido por encima del tope antes de embeber, los dos lados usen el mismo valor y una prueba de cada lado lo fije.
+- **Topes propios que el backend no aplica.** `requirement` y `missing` (20.000) y `locator` (1.000) son valores de este servicio: el backend los manda sin recortar. Un solo campo más largo rechaza el pedido entero con 422. *Se necesita:* confirmar el largo máximo que puede mandar el backend, o acordar quién recorta. *Resuelto cuando:* el tope esté acordado con el backend o el backend no pueda mandar más.
+
+**Mitigado**
+
+- **`AI_ACTION_PLAN_ENABLED` en `false` en el backend** es una medida de control: apagada, el backend responde 503 y no llama a este servicio, así que la propuesta no se activa por accidente. No resuelve la incompatibilidad del tope de hallazgos: al encenderla, el problema sigue igual.
+- **El contrato y el lector están copiados del backend.** Los topes de entrada (`FragmentsPerFinding` = 5, kb-v1 = 4.000 caracteres, descripción del hallazgo = 2.000) y `tests/action_plan_backend.py`, la copia en Python de `ActionPlanResponseReader`, coinciden hoy con la PR #225, y las pruebas leen cada respuesta con esa copia. Si el backend cambia uno, este servicio responde 422 o las pruebas siguen pasando con el lector viejo: hay que cambiarlo aquí en el mismo momento.
+
+**Resuelto**
+
+- **El contrato ya no sale de una PR abierta.** La PR #225 de backend-cumplify se fusionó en `capstone-2s` el 2026-10-23, y el pedido, la respuesta y los topes se revisaron contra su commit de merge ese mismo día.
+
+**Por confirmar** (valores fijados por el equipo o por este servicio, sin acuerdo registrado con el cliente)
+
+- **Un hallazgo sin respaldo vuelve sin tareas.** El plan del sprint 3 lo deja entre los valores por defecto a confirmar. La alternativa es proponer tareas con el conocimiento del modelo, marcadas como tales.
+- **El reparto de `priority`.** Las reglas de `alta`, `media` y `baja` son una propuesta de este servicio; el cliente no las revisó.
+- **`MAX_TASKS_PER_FINDING` (5).** El backend no tiene tope de tareas.
+
+**Limitaciones de diseño**
+
 - **Un fragmento compartido viaja una vez por hallazgo.** Si varios hallazgos reciben el mismo fragmento, el mensaje lo repite y se paga cada vez.
-- **`MAX_TASKS_PER_FINDING` (5) es propio de este servicio.** El backend no tiene tope de tareas.
-- **La pertinencia de la cita depende del modelo.** El servicio comprueba que la cita esté en el fragmento, no que respalde la tarea. Lo mide el set de APL-009.
-- **El reparto de `priority` depende del prompt.** Las reglas de `alta`, `media` y `baja` son una propuesta de este servicio y no se acordaron con el cliente.
-- **`tests/action_plan_backend.py` es una copia en Python de `ActionPlanResponseReader`.** Si el lector cambia en el backend, hay que cambiarla.
-- Las pruebas automáticas cubren el contrato, la verificación, el prompt y el adaptador real contra un cliente falso de OpenAI. No hay pruebas de punta a punta con el backend ni con OpenAI.
+- **La pertinencia de la cita depende del modelo.** El servicio comprueba que la cita esté en el fragmento, no que respalde la tarea. Lo mide el set del requisito APL-009.
+
+**Pruebas pendientes**
+
+- Las pruebas automáticas cubren el contrato, la verificación, el prompt y el adaptador real contra un cliente falso de OpenAI. Faltan la prueba de punta a punta con el backend y las que llaman a OpenAI: los casos APL-016 a APL-019 de `test.csv`, que siguen en «Pendiente». El set del requisito APL-009 espera la base del cliente.
