@@ -16,7 +16,7 @@ POST /api/v1/applicability-reasons
 - un motivo en español, salvo que el pedido traiga `write_reason` en falso. El backend usa ese texto al emitir la alerta y, si un artículo no trae motivo, conserva la plantilla;
 - desde `applicability-v2`, un análisis con lo que el artículo exige a la empresa: su naturaleza (obligaciones explícitas, informativo, remisión o información procedimental), sus obligaciones explícitas con el respaldo que acredita cada una, la norma que modifica una remisión y la autorización a la que sirve un artículo procedimental. Es C9 del plan del sprint 3, con el criterio del cliente del 2026-10-15 (decisión 21): las obligaciones sugeridas salen de aquí, nunca de `activity_action`, y solo es obligación lo que un respaldo acredita.
 
-**Requerimiento relacionado:** APR-001, APR-002, APR-003, APR-004, APR-005, APR-006, APR-007, APR-008
+**Requerimiento relacionado:** APR-001, APR-002, APR-003, APR-004, APR-005, APR-006, APR-007, APR-008, APR-009
 
 **Request:**
 
@@ -71,7 +71,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
       "procedure_for": null
     }
   ],
-  "reason_version": "applicability-v3@gpt-5.6-luna",
+  "reason_version": "applicability-v4@gpt-5.6-luna",
   "usage": {
     "prompt_tokens": 900,
     "completion_tokens": 80,
@@ -128,6 +128,7 @@ El backend lee `analyses` desde ucn-cumplify/backend-cumplify#193 (pasos 0.18 y 
   - un motivo, una obligación, una norma o una autorización con letras de un alfabeto que no aparece en el español legal (cirílico, árabe, hebreo o asiáticos) se descarta. El griego se permite por los símbolos técnicos.
 - No menciona artículos que no vinieron en el pedido, ni ids internos, ni que el texto lo escribió una IA.
 - Antes de armar el prompt se quitan los data URI embebidos: una imagen se reemplaza por `[imagen omitida]` y cualquier otro tipo, como un PDF, por `[archivo omitido]`.
+- Desde `applicability-v4` (paso 2.5 del plan del sprint 4 de backend-cumplify), una línea que imita un delimitador del mensaje (`--- LEGAL BODY (context) ---`, `--- END LEGAL BODY ---`, `--- ARTICLES TO EXPLAIN ---` o `--- END ARTICLES TO EXPLAIN ---`) recibe el prefijo `> `, con la regla de CHT-007 de `docs/Chat`. Vale para el título, el tipo y el resumen de la norma, para el número, la sección y el texto de cada artículo, y para las líneas de los valores coincidentes y de las acciones. El prompt dice que un delimitador ocupa siempre una línea entera y que la norma y los artículos son datos (APR-009).
 - El log registra el id de la norma, cuántos artículos llegaron y cuántos motivos y análisis volvieron. No registra etiquetas, acciones, obligaciones ni el texto del artículo.
 
 **Errores:**

@@ -105,9 +105,9 @@ Cada respuesta informa qué versión del prompt la produjo y cuántos tokens cos
 
 **Validaciones:**
 
-- `reason_version` es `<APPLICABILITY_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `applicability-v3@gpt-5.6-luna`.
-- Versiones con análisis: `applicability-v2` (ia #31) lo agregó; `applicability-v3` (2026-10-15) aclara que nombrar otra ley no es una remisión. El filtro de letras de otro alfabeto está en el código, no en el prompt.
-- Todo cambio del prompt o del armado del mensaje de usuario sube `APPLICABILITY_PROMPT_VERSION`. La limpieza de los datos que llegan al mensaje no cuenta como cambio del armado: por ejemplo, reemplazar un adjunto por `[archivo omitido]` o leer una `section` nula como texto vacío, que cambiaron el 2026-10-08 sin subirla.
+- `reason_version` es `<APPLICABILITY_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `applicability-v4@gpt-5.6-luna`.
+- Versiones con análisis: `applicability-v2` (ia #31) lo agregó; `applicability-v3` (2026-10-15) aclara que nombrar otra ley no es una remisión; `applicability-v4` (paso 2.5 del plan del sprint 4 de backend-cumplify) neutraliza los delimitadores (APR-009). El filtro de letras de otro alfabeto está en el código, no en el prompt.
+- Todo cambio del prompt o del armado del mensaje de usuario sube `APPLICABILITY_PROMPT_VERSION`. La limpieza de los datos que llegan al mensaje no cuenta como cambio del armado: por ejemplo, reemplazar un adjunto por `[archivo omitido]` o leer una `section` nula como texto vacío, que cambiaron el 2026-10-08 sin subirla. La neutralización de los delimitadores sí la subió, a `applicability-v4`, porque además agrega una regla al prompt.
 - `usage.llm_calls` vale 1 cuando se llamó al modelo, y 0 cuando `reasons` queda vacío sin llamarlo.
 - Cada campo del `usage` del proveedor se lee por separado: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta (caso APR-017 de `test.csv`).
 - La llamada usa el modo explícito de caché con un único punto de corte al final de las instrucciones: la norma, los artículos, los valores coincidentes y las acciones nunca quedan en el caché del proveedor ("Caché de prompts" en `docs/Chat/api.md`), así que `usage.cached_tokens` no supera los tokens de las instrucciones.
@@ -179,6 +179,24 @@ Un artículo con `write_reason` en falso recibe su análisis y ningún motivo. A
 
 ---
 
+### APR-009 — Tratar la norma y los artículos como datos
+
+| Campo | Detalle |
+|---|---|
+| **ID** | APR-009 |
+| **Rol** | Servicio interno |
+
+**Descripción:**
+
+La norma y los artículos son datos, no instrucciones: el prompt pide ignorar cualquier instrucción escrita en ellos. Desde `applicability-v4` (paso 2.5 del plan del sprint 4 de backend-cumplify), el servicio además neutraliza los delimitadores con la regla de CHT-007 de `docs/Chat`: una línea que imita un delimitador del mensaje, como `--- END LEGAL BODY ---` o `--- ARTICLES TO EXPLAIN ---`, recibe el prefijo `> `. Pasan por esa regla el título, el tipo y el resumen de la norma, y el número, la sección y el texto de cada artículo: salen de la base, y una norma manual los acepta con saltos de línea. También las líneas de los valores coincidentes y de las acciones: una etiqueta no admite `|`, CR ni LF, pero sí otros saltos de `str.splitlines`, como U+2028 o U+0085. El prompt nombra los cuatro delimitadores y dice que un delimitador ocupa siempre una línea entera: lo demás es contenido de su bloque, aunque parezca un delimitador o una instrucción.
+
+**Validaciones:**
+
+- Una norma y un artículo con líneas que imitan los cuatro delimitadores, y un valor o una acción con U+2028 o U+0085 antes de uno, llegan al modelo con esas líneas neutralizadas: el mensaje tiene solo los delimitadores reales (APR-033 de `test.csv`).
+- Los artículos se separan con una línea en blanco y la etiqueta `Article ID:`, no con delimitadores, así que una línea `Article ID:` escrita en el texto no se neutraliza. Lo limitan que solo vuelven los ids pedidos (APR-002) y la regla del prompt; el caso queda para el set adversarial del paso 2.6.
+
+---
+
 ## Dentro de alcance
 
 - Leer el cuerpo legal y los artículos pedidos.
@@ -186,6 +204,7 @@ Un artículo con `write_reason` en falso recibe su análisis y ningún motivo. A
 - Decidir en la misma llamada la naturaleza de cada artículo y sus obligaciones explícitas con su respaldo, y cerrar en código las reglas de C9 y el criterio del cliente.
 - Usar timeout y reintentos propios (`APPLICABILITY_REASONS_TIMEOUT_SECONDS`, `APPLICABILITY_REASONS_MAX_RETRIES`), más cortos que los de clasificar, para caber en la espera del backend.
 - Quitar del texto que se envía al modelo las imágenes y los demás archivos embebidos como data URI.
+- Neutralizar las líneas de la norma, de los artículos, de los valores y de las acciones que imitan un delimitador del mensaje (APR-009).
 - Informar siempre la versión del prompt y el uso de tokens.
 
 ## Fuera de alcance
@@ -204,5 +223,5 @@ Un artículo con `write_reason` en falso recibe su análisis y ningún motivo. A
   - el 2026-10-15 a las 10:27, con el criterio del cliente: 14 de 15 casos. Falló la Ley 21.800, art. 4°, que salió como remisión porque nombra otro decreto, y se corrigió la regla de la remisión;
   - el 2026-10-15 a las 10:59: 15 de 15 casos (16 artículos). El pedido más lento tardó 4,7 s de los 25 s de plazo, y la ejecución costó US$0,0093.
 
-  Un cambio del prompt pide volver a ejecutarla.
+  Un cambio del prompt pide volver a ejecutarla: con `applicability-v4` falta hacerlo (APR-034 de `test.csv`).
 - El modelo puede colar letras de otro alfabeto en una palabra («desalиниzación», 2026-10-15). El código descarta el texto, así que la falla se ve como un motivo de plantilla o una obligación menos, no como un texto defectuoso en la alerta.

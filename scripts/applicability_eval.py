@@ -1,8 +1,8 @@
-"""Manual evaluation set of the applicability analysis (applicability-v3): APR-023 to APR-027 of docs/ApplicabilityReasons/test.csv
+"""Manual evaluation set of the applicability analysis (applicability-v4): APR-023 to APR-027 of docs/ApplicabilityReasons/test.csv
 (step 0.17 of the sprint 3 plan).
 
 It spends real tokens. It sends each case of applicability_eval_set.json to an ia-cumplify that is
-already running with applicability-v3, and that service calls OpenAI. It is not part of pytest, which
+already running with applicability-v4, and that service calls OpenAI. It is not part of pytest, which
 collects only tests/.
 
     uv run python scripts/applicability_eval.py [--base-url URL] [--case ID ...] [--out FILE]
@@ -40,7 +40,7 @@ NATURES = ("explicit_obligations", "informative", "referral", "procedural")
 NIL_UUID = "00000000-0000-0000-0000-000000000000"
 MAX_MATCHED_VALUES = 10
 MAX_ACTIONS = 20
-EXPECTED_VERSION_PREFIX = "applicability-v3@"
+EXPECTED_VERSION_PREFIX = "applicability-v4@"
 # ia gives the model APPLICABILITY_REASONS_TIMEOUT_SECONDS (25) and the backend waits 30: a slower request
 # leaves the alert with its template and without analysis.
 BUDGET_MS = 25_000
@@ -385,7 +385,7 @@ def summarize(results: list[Result], input_price: float, output_price: float) ->
     if wrong_version:
         print(
             f"ATENCIÓN: el servicio respondió con {', '.join(wrong_version)}. Hay que ejecutar ia-cumplify con "
-            "applicability-v3 (dev, una vez integrada, o la rama que la trae)."
+            "applicability-v4 (dev, una vez integrada, o la rama que la trae)."
         )
     if not answered:
         return False

@@ -311,7 +311,7 @@ uv run python scripts/profile_retrieval_eval.py --base-url http://127.0.0.1:8000
   opciones están en «Evaluación del perfil embebido» de `docs/Embeddings/requirements.md`. `--self-test` comprueba la
   receta, esos casos y las métricas con datos inventados, sin servicio ni base.
 
-### Evaluación de los motivos y el análisis (`applicability-v3`)
+### Evaluación de los motivos y el análisis (`applicability-v4`)
 
 `scripts/applicability_eval.py` es el paso 0.17 del plan del sprint 3 y cubre APR-023 a APR-027 de
 `docs/ApplicabilityReasons/test.csv`. Pide el análisis de los artículos de `scripts/applicability_eval_set.json`
@@ -329,7 +329,7 @@ uv run python scripts/applicability_eval.py --dry-run
 uv run python scripts/applicability_eval.py --base-url http://127.0.0.1:8000
 ```
 
-- **El servicio tiene que responder con `applicability-v3`.** Si responde con otra versión, el informe lo avisa.
+- **El servicio tiene que responder con `applicability-v4`.** Si responde con otra versión, el informe lo avisa.
 - **Artículos:** los busca en las alertas de la IA de la base local, con una conexión propia de solo lectura. Como
   acciones les manda las frases que guardó la alerta, igual que el backend. Los casos con motivo traen en el set sus
   valores coincidentes, porque esas sugerencias no los guardaron. Un caso con `"alerted": false` lee su artículo de
