@@ -9,6 +9,7 @@ from ia_cumplify.adapters.outbound.openai.llm_schema import (
     LlmArticleClassification,
     LlmLegalBodyClassification,
 )
+from ia_cumplify.adapters.outbound.openai.prompt_cache import PROMPT_CACHE_OPTIONS, cached_prefix
 from ia_cumplify.adapters.outbound.openai.prompts import (
     PROMPT_VERSION,
     SYSTEM_PROMPT,
@@ -115,7 +116,6 @@ class OpenAIArticleClassifierAdapter:
         candidates: CandidateLabels | None,
     ) -> tuple[list[ClassifiedArticle], TokenUsage, list[str]]:
         # The existing labels go right before the targets, next to where the model writes labels.
-        # They are the same for every batch of a legal body, so the shared prefix stays cacheable.
         blocks = [_render_legal_body(legal_body, all_articles)]
         if candidates is not None and not candidates.is_empty():
             blocks.append(render_candidate_labels(candidates))
@@ -126,14 +126,17 @@ class OpenAIArticleClassifierAdapter:
             # The raw response keeps the body: a 200 that is not a classification still reports its usage.
             raw = self._client.chat.completions.with_raw_response.parse(
                 model=self._model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                # Only the instructions can be cached (prompt_cache.py): the legal body, the labels and the
+                # targets come after the breakpoint, so every batch pays for its copy of the body in full.
+                messages=[  # type: ignore[arg-type]
+                    {"role": "system", "content": [cached_prefix(SYSTEM_PROMPT)]},
                     {"role": "user", "content": user_content},
                 ],
                 response_format=LlmLegalBodyClassification,
                 reasoning_effort=self._reasoning_effort,
                 # No copy for OpenAI's distillation and evals.
                 store=False,
+                prompt_cache_options=PROMPT_CACHE_OPTIONS,  # type: ignore[arg-type]
             )
         except OpenAIError as exc:
             # No answer (a connection error, a timeout or an HTTP error): only the call counts. The provider's
