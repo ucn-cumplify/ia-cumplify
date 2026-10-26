@@ -113,6 +113,8 @@ Campos extra se rechazan. Un campo opcional en blanco queda en `null`. Un sustit
 
 Una respuesta 200 trae `nature`, `verdict`, `summary`, `model` y `review_version`. `usage` viaja siempre. `usage.cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché, o 0 si no la informa. Cada campo del `usage` del proveedor se lee por separado: uno que falta o no es un entero positivo cuenta 0. No hay `dev_metrics`.
 
+**Copia en OpenAI.** La llamada pide `store=False`: OpenAI no guarda la respuesta para sus productos de destilación y evals, como en el chat. Es explícito desde el 2026-10-26 (paso 2.3 del plan del sprint 4 de backend-cumplify); antes regía el valor por defecto, que también es `false`.
+
 **Caché de prompts.** La llamada usa el modo explícito de OpenAI (`prompt_cache_options={"mode": "explicit"}`) con un único punto de corte al final de las instrucciones. El artículo, la obligación y el texto de los respaldos van después del corte y nunca quedan en el caché del proveedor; hasta el 2026-10-19 regía el modo implícito, que podía guardar el comienzo del pedido con los respaldos. Es la opción (b) de "Caché de prompts" de `docs/Chat/api.md`, decidida ese día (paso 0.44 del plan del sprint 3 de backend-cumplify). Comprobado con OpenAI (EVR-033): la repetición de una revisión idéntica sacó del caché 1.436 de sus 1.647 tokens de entrada, las instrucciones, y nada del artículo ni del respaldo. `usage.cached_tokens` no supera los tokens de las instrucciones.
 
 **Archivos:**

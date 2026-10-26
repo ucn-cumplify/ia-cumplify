@@ -54,6 +54,8 @@ class OpenAICompanyProfileClassifierAdapter:
                 messages=_messages(text, candidates),  # type: ignore[arg-type]
                 response_format=LlmCompanyProfileClassification,
                 reasoning_effort=self._reasoning_effort,
+                # No copy for OpenAI's distillation and evals.
+                store=False,
                 prompt_cache_options=PROMPT_CACHE_OPTIONS,  # type: ignore[arg-type]
             )
         except OpenAIError as exc:

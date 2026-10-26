@@ -131,6 +131,8 @@ class OpenAIArticleClassifierAdapter:
                 ],
                 response_format=LlmLegalBodyClassification,
                 reasoning_effort=self._reasoning_effort,
+                # No copy for OpenAI's distillation and evals.
+                store=False,
             )
         except OpenAIError as exc:
             # No answer (a connection error, a timeout or an HTTP error): only the call counts.

@@ -107,6 +107,7 @@ El backend lee `analyses` desde ucn-cumplify/backend-cumplify#193 (pasos 0.18 y 
 **Reglas:**
 
 - Una llamada al modelo por pedido. Timeout `APPLICABILITY_REASONS_TIMEOUT_SECONDS` (defecto 25) y `APPLICABILITY_REASONS_MAX_RETRIES` (defecto 0), para caber en los 30 s que espera el backend (`AI_APPLICABILITY_REASONS_TIMEOUT_SECONDS`).
+- La llamada pide `store=False`: OpenAI no guarda la respuesta para sus productos de destilación y evals, como en el chat. Es explícito desde el 2026-10-26 (paso 2.3 del plan del sprint 4 de backend-cumplify); antes regía el valor por defecto, que también es `false`.
 - Se lee el cuerpo legal y **solo** los artículos pedidos. El resto de la norma no viaja al modelo.
 - Un `article_id` que no está en esa norma se omite de `reasons` y de `analyses`. Si no queda ninguno, las dos listas vuelven vacías y no se llama al modelo. El cuerpo inexistente es `404`.
 - El motivo va en español, en un párrafo de dos o tres oraciones. Nombra los valores coincidentes entre comillas («…»). No dictamina aplicabilidad. No cita ni inventa la descripción de la empresa: ese texto no llega en el pedido.

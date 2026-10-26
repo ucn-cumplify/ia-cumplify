@@ -53,6 +53,8 @@ class OpenAIEvidenceReviewerAdapter:
                 ],
                 response_format=LlmEvidenceReview,
                 reasoning_effort=self._reasoning_effort,
+                # No copy for OpenAI's distillation and evals.
+                store=False,
                 prompt_cache_options=PROMPT_CACHE_OPTIONS,  # type: ignore[arg-type]
             )
         except OpenAIError as exc:
