@@ -1,6 +1,9 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from ia_cumplify.domain.action_plan import DEFAULT_MAX_FINDINGS
 
 
 class Settings(BaseSettings):
@@ -67,6 +70,17 @@ class Settings(BaseSettings):
     # 0: one attempt. The SDK also retries a timed-out call, so each retry adds up to another
     # 80 s, past the 90 s the backend plans to wait (AI_EVIDENCE_REVIEW_TIMEOUT_SECONDS).
     evidence_review_max_retries: int = 0
+
+    # POST /api/v1/action-plans. Empty ACTION_PLAN_MODEL and ACTION_PLAN_REASONING_EFFORT use OPENAI_MODEL and
+    # OPENAI_REASONING_EFFORT. One structured call, under the 90 s the backend waits (AI_ACTION_PLAN_TIMEOUT_SECONDS).
+    action_plan_model: str = ""
+    action_plan_reasoning_effort: str = ""
+    action_plan_timeout_seconds: float = 80
+    # 0: one attempt. The SDK also retries a timed-out call, which would pass the backend's 90 s.
+    action_plan_max_retries: int = 0
+    # Findings per request; one more gets 422. Not agreed with the backend yet, which sends every open finding of
+    # the review with up to 5 fragments of 4000 characters each (docs/ActionPlan/api.md).
+    action_plan_max_findings: int = Field(default=DEFAULT_MAX_FINDINGS, ge=1)
 
 
 @lru_cache
