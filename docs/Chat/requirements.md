@@ -340,7 +340,7 @@ Con `CHAT_FAKE_RESPONDER=true`, el endpoint no llama a OpenAI: devuelve un strea
 
 **Validaciones:**
 
-- Desactivado por defecto. Si arranca activo, el log lo avisa.
+- Desactivado por defecto. Solo arranca con `APP_ENV=development`: con otro valor, o sin `APP_ENV`, el servicio se detiene al arrancar con un error que nombra las dos variables y no muestra ningún valor leído. Si arranca activo, el log lo avisa.
 - No exige `OPENAI_API_KEY`: sirve para integrar sin clave de OpenAI.
 - `chat_version` vale siempre `fake-v1@fake`, también sin pasajes y en `error`, para que el backend no confunda esas respuestas con las reales.
 - Con pasajes, `done` trae `citations` con `{n: 1, id del primer pasaje}`, `coverage: answered`, `citations_dropped` 0 y `finish_reason: stop`.
@@ -421,4 +421,4 @@ Con `CHAT_FAKE_RESPONDER=true`, el endpoint no llama a OpenAI: devuelve un strea
 - Los topes y las reglas fijas del pedido tienen que coincidir con los del backend: si el backend sube un tope y ia no, un pedido válido para el backend recibe 422 (punto 11 de "Consumo desde el backend" en `api.md`).
 - Un stream cortado no se puede retomar: no hay `id:` ni `Last-Event-ID`. El usuario vuelve a preguntar.
 - El 422 tiene dos formas (la lista de FastAPI y el mensaje del caso de uso), como en los otros endpoints. El backend no debe interpretar `detail`.
-- `CHAT_FAKE_RESPONDER` activo en un entorno compartido daría respuestas falsas con apariencia de reales. Lo mitigan el aviso en el log y su `chat_version`.
+- `CHAT_FAKE_RESPONDER` activo en un entorno compartido daría respuestas falsas con apariencia de reales. Lo mitigan el aviso en el log, su `chat_version` y, desde el 2026-10-26, que el servicio no arranca con él fuera de `APP_ENV=development` (paso 2.14 del plan del sprint 4 de backend-cumplify).

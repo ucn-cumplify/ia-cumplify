@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ia_cumplify.domain.action_plan import DEFAULT_MAX_FINDINGS
@@ -11,9 +11,15 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        # An invalid setting is reported without the values read: they include OPENAI_API_KEY and
+        # SERVICE_API_KEY, and a check over several settings would print them all.
+        hide_input_in_errors=True,
     )
 
     app_name: str = "ia-cumplify"
+    # Only development lets CHAT_FAKE_RESPONDER run. Unset, it is production, so a deploy that forgets it
+    # cannot start with fake answers.
+    app_env: str = "production"
     # Shared secret the backend sends in X-API-Key. Empty rejects every /api/v1 request with 503.
     service_api_key: str = ""
     openai_api_key: str = ""
@@ -81,6 +87,16 @@ class Settings(BaseSettings):
     # Findings per request; one more gets 422. Not agreed with the backend yet, which sends every open finding of
     # the review with up to 5 fragments of 4000 characters each (docs/ActionPlan/api.md).
     action_plan_max_findings: int = Field(default=DEFAULT_MAX_FINDINGS, ge=1)
+
+    @model_validator(mode="after")
+    def _fake_responder_only_in_development(self) -> "Settings":
+        # Its fixed answers look like real ones: outside development a user could take them as advice.
+        # Raising here stops the service at startup, since building the app reads the settings.
+        if self.chat_fake_responder and self.app_env != "development":
+            raise ValueError(
+                f"CHAT_FAKE_RESPONDER=true runs only with APP_ENV=development (APP_ENV is {self.app_env!r})."
+            )
+        return self
 
 
 @lru_cache
