@@ -44,6 +44,11 @@ def create_action_plan(
     except ActionPlanError as exc:
         logger.error("Action plan failed for %d findings: %s", len(request.findings), type(exc).__name__)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        # Unhandled, uvicorn would log its traceback, and the message could quote the findings or the fragments:
+        # a 502 with the type alone, like any other failure the backend retries.
+        logger.error("Unexpected action plan failure for %d findings: %s", len(request.findings), type(exc).__name__)
+        raise HTTPException(status_code=502, detail=type(exc).__name__) from exc
     logger.info(
         "Action plan response: %d findings, %d fragments, %d with tasks, %d tasks, proposal_version %s.",
         len(result.findings),

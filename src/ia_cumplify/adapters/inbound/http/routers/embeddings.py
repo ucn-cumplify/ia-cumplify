@@ -38,13 +38,12 @@ def create_embeddings(
     except (ValueError, EmbeddingInputError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except EmbeddingError as exc:
-        logger.exception("Embedding failed")
+        # Its message names the provider's error by type and status, never by its text (embedder.py).
+        logger.error("Embedding failed for %d texts: %s", len(body.texts), exc)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception("Unexpected embedding failure")
-        raise HTTPException(
-            status_code=502,
-            detail=f"{type(exc).__name__}: {exc}",
-        ) from exc
+        # Any other message, or its traceback, could quote the texts: only the type goes on.
+        logger.error("Unexpected embedding failure for %d texts: %s", len(body.texts), type(exc).__name__)
+        raise HTTPException(status_code=502, detail=type(exc).__name__) from exc
 
     return EmbedTextsResponse.from_domain(result)

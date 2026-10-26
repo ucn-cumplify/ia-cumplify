@@ -1,4 +1,7 @@
+import json
+
 from openai import OpenAI, OpenAIError
+from pydantic import ValidationError
 
 from ia_cumplify.adapters.outbound.openai.action_plan_prompts import (
     ACTION_PLAN_SYSTEM_PROMPT,
@@ -69,6 +72,11 @@ class OpenAIActionPlannerAdapter:
                 f"{type(exc).__name__}"
                 + (f" (HTTP {status})" if status else "")
             ) from exc
+        except (ValidationError, json.JSONDecodeError):
+            # parse() reads the body as JSON (JSONDecodeError) and validates the answer against the schema
+            # (ValidationError). Their message and the chained error quote the model output, which can quote
+            # the findings and the fragments: neither goes on.
+            raise ActionPlanError("The action plan model did not return a valid proposal.") from None
 
         message = completion.choices[0].message
         if message.parsed is None:

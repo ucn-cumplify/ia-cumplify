@@ -65,8 +65,8 @@ POST /api/v1/embeddings
 | Código | Cuándo |
 |---|---|
 | 401 | Falta `X-API-Key` o no coincide con `SERVICE_API_KEY` |
-| 422 | `texts` vacío, texto en blanco, más textos que el máximo, `dimensions` fuera de 1..3072, modelo desconocido, tamaño no soportado, o texto sobre el límite de tokens |
-| 502 | Fallo del proveedor, o cantidad de vectores distinta a la de textos |
+| 422 | `texts` vacío, texto en blanco, más textos que el máximo, `dimensions` fuera de 1..3072, modelo desconocido, tamaño no soportado, o texto sobre el límite de tokens. Si lo rechaza el proveedor, el detalle dice el tipo y el estado HTTP, nunca su mensaje |
+| 502 | Fallo del proveedor, con su tipo y su estado HTTP en el detalle y nunca su mensaje; cantidad de vectores distinta a la de textos; o una falla inesperada, con solo su tipo (por ejemplo, `ValueError`). Ni los textos ni el mensaje del proveedor llegan al log (paso 2.12 del plan del sprint 4 de backend-cumplify) |
 | 503 | Falta `SERVICE_API_KEY` u `OPENAI_API_KEY` |
 
 **Limitaciones:**
