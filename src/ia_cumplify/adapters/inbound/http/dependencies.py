@@ -6,12 +6,14 @@ from fastapi.security import APIKeyHeader
 from psycopg_pool import ConnectionPool
 
 from ia_cumplify.adapters.outbound.fake.chat_responder import FakeChatResponder
+from ia_cumplify.adapters.outbound.openai.action_planner import OpenAIActionPlannerAdapter
 from ia_cumplify.adapters.outbound.openai.chat_responder import OpenAIChatResponderAdapter
 from ia_cumplify.adapters.outbound.openai.applicability_reasoner import OpenAIApplicabilityReasonerAdapter
 from ia_cumplify.adapters.outbound.openai.classifier import OpenAIArticleClassifierAdapter
 from ia_cumplify.adapters.outbound.openai.embedder import OpenAITextEmbedderAdapter
 from ia_cumplify.adapters.outbound.openai.evidence_reviewer import OpenAIEvidenceReviewerAdapter
 from ia_cumplify.adapters.outbound.openai.profile_classifier import OpenAICompanyProfileClassifierAdapter
+from ia_cumplify.application.ports.action_planner import ActionPlannerPort
 from ia_cumplify.application.ports.chat_responder import ChatResponderPort
 from ia_cumplify.application.ports.evidence_reviewer import EvidenceReviewerPort
 from ia_cumplify.config.settings import get_settings
@@ -143,6 +145,23 @@ def get_evidence_reviewer() -> EvidenceReviewerPort:
     )
 
 
+@lru_cache
+def get_action_planner() -> ActionPlannerPort:
+    settings = get_settings()
+    if not settings.openai_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="OPENAI_API_KEY is not configured.",
+        )
+    return OpenAIActionPlannerAdapter(
+        api_key=settings.openai_api_key,
+        model=settings.action_plan_model or settings.openai_model,
+        reasoning_effort=settings.action_plan_reasoning_effort or settings.openai_reasoning_effort,
+        timeout_seconds=settings.action_plan_timeout_seconds,
+        max_retries=settings.action_plan_max_retries,
+    )
+
+
 def reset_wiring_cache() -> None:
     get_classifier.cache_clear()
     get_profile_classifier.cache_clear()
@@ -150,4 +169,5 @@ def reset_wiring_cache() -> None:
     get_text_embedder.cache_clear()
     get_chat_responder.cache_clear()
     get_evidence_reviewer.cache_clear()
+    get_action_planner.cache_clear()
     get_settings.cache_clear()
