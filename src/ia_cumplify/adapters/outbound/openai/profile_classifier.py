@@ -10,7 +10,7 @@ from ia_cumplify.adapters.outbound.openai.profile_prompts import (
     render_profile_candidate_labels,
 )
 from ia_cumplify.adapters.outbound.openai.prompt_cache import PROMPT_CACHE_OPTIONS, cached_prefix
-from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
+from ia_cumplify.adapters.outbound.openai.prompt_text import block_text
 from ia_cumplify.adapters.outbound.openai.usage import call_usage
 from ia_cumplify.domain.classification import ArticleClassification, CandidateLabels
 from ia_cumplify.domain.company_profile import ProfileClassifierOutput
@@ -106,9 +106,11 @@ def _messages(text: str, candidates: CandidateLabels | None) -> list[dict[str, o
 
 
 def _render_description(text: str) -> str:
+    # A line of the description that imitates a delimiter gets "> " (step 2.5 of the sprint 4 plan). Only the data
+    # changes, so profile-v1 stays.
     return (
         "--- COMPANY DESCRIPTION ---\n"
-        f"{strip_base64_images(text)}\n"
+        f"{block_text(text)}\n"
         "--- END COMPANY DESCRIPTION ---"
     )
 
