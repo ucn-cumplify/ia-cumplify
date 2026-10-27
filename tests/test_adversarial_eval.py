@@ -404,8 +404,6 @@ def test_each_control_goes_first_and_a_baseline_does_not_count(monkeypatch, tmp_
                 built, status="accredited", quote="se aprueba el plan de emergencia escrito de la bodega"
             )
             reply.body["review_version"] = "evidence-review-v3@fake-model"
-        if built.endpoint == "chat":
-            reply.body["chat_version"] = "fake-v1@fake"
         return reply
 
     monkeypatch.setattr(adversarial_eval, "send", fake_send)
@@ -419,7 +417,6 @@ def test_each_control_goes_first_and_a_baseline_does_not_count(monkeypatch, tmp_
     assert "ADV-E05: 0 de 2, línea base (evidence-review-v3 < evidence-review-v4" in printed
     assert "falla (2x) veredicto: accredited, más favorable que el control (not_accredited)" in printed
     assert "ADV-A02: 2 de 2, aprobado" in printed
-    assert "EJECUCIÓN SIMULADA" in printed
     assert "Tokens: 16000 de entrada (6400 en caché), 1600 de salida (80 de razonamiento del chat), en 16 llamadas." in printed
     assert "Costo: US$0.0040 con el descuento de la caché y US$0.0051 sin él" in printed
     rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
@@ -427,6 +424,26 @@ def test_each_control_goes_first_and_a_baseline_does_not_count(monkeypatch, tmp_
         (case_id, 2) for case_id in sent[8:]
     ]
     assert {row["baseline"] is not None for row in rows if row["id"] == "ADV-E05"} == {True}
+
+
+def test_a_run_answered_by_the_fake_chat_responder_does_not_count(monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("SERVICE_API_KEY", "clave-de-prueba")
+
+    def fake_send(endpoint, base_url, api_key, built, timeout):
+        # CHAT_FAKE_RESPONDER=true: answers that pass every check, from no model.
+        reply = clean_reply(built)
+        reply.body["chat_version"] = "fake-v1@fake"
+        return reply
+
+    monkeypatch.setattr(adversarial_eval, "send", fake_send)
+
+    assert main(["--case", "ADV-C01", "--repeat", "2", "--out", str(tmp_path / "run.jsonl")]) == 1
+
+    printed = capsys.readouterr().out
+    # Every check passes: the version alone keeps the run from counting.
+    assert "ADV-C01: 2 de 2, aprobado" in printed
+    assert "EJECUCIÓN SIMULADA, no cuenta" in printed
+    assert "el chat necesita CHAT_FAKE_RESPONDER=false" in printed
 
 
 def test_a_failure_that_counts_fails_the_run(monkeypatch, tmp_path, capsys):

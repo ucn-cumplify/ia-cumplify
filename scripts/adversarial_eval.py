@@ -1292,9 +1292,12 @@ def summarize(calls: list[Call], prices: Prices, console: Console) -> bool:
             if prompt != local and not version.startswith(FAKE_VERSION_PREFIX):
                 console.line(f"  aviso: el servicio responde con {prompt} y el código local es {local}")
     if any((call.version or "").startswith(FAKE_VERSION_PREFIX) for call in calls if call.built.endpoint == "chat"):
+        # The fixed answer of the fake responder passes every check of the chat, so the run cannot count. Marking its
+        # calls as a baseline would not do: with --endpoint chat nothing would count, and the run would pass.
+        ok = False
         console.line(
-            "EJECUCIÓN SIMULADA: el chat respondió con el respondedor falso (CHAT_FAKE_RESPONDER). Sus casos no "
-            "evalúan el prompt ni gastan tokens."
+            "EJECUCIÓN SIMULADA, no cuenta: el chat respondió con el respondedor falso (CHAT_FAKE_RESPONDER). Sus "
+            "casos no evalúan el prompt ni gastan tokens: el chat necesita CHAT_FAKE_RESPONDER=false."
         )
 
     usages = [call.usage for call in calls if call.usage]
