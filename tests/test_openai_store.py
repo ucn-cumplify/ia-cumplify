@@ -171,14 +171,18 @@ def test_only_the_instructions_can_enter_the_prompt_cache(adapter_class, call, e
 
 def argument_at_every_call(name: str) -> dict[str, ast.expr | None]:
     """One argument of every call to chat completions in the modules of the OpenAI adapters, by file and line:
-    its value in the source, or None where the call leaves it out."""
+    its value in the source, or None where the call leaves it out.
+
+    What the search sees: a create, parse or stream call on an expression whose source contains "completions",
+    which takes in the sync and the async stream() of the SDK. It does not see a call on an alias without
+    "completions" in its name, nor a call outside this folder."""
     values: dict[str, ast.expr | None] = {}
     for path in sorted(ADAPTERS.glob("*.py")):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if (
                 isinstance(node, ast.Call)
                 and isinstance(node.func, ast.Attribute)
-                and node.func.attr in ("create", "parse")
+                and node.func.attr in ("create", "parse", "stream")
                 and "completions" in ast.unparse(node.func.value)
             ):
                 values[f"{path.name}:{node.lineno}"] = next(
@@ -197,14 +201,16 @@ def argument_at_every_call(name: str) -> dict[str, ast.expr | None]:
 
 
 def test_every_call_to_chat_completions_in_the_adapters_sets_store_false() -> None:
-    """A new call has to set it too: this reads every module of the OpenAI adapters."""
+    """A new create, parse or stream call on an expression that contains "completions" has to set it too: this
+    reads every module of the OpenAI adapters."""
     store = argument_at_every_call("store")
     explicit = {site: isinstance(value, ast.Constant) and value.value is False for site, value in store.items()}
     assert [site for site, is_false in explicit.items() if not is_false] == []
 
 
 def test_every_call_to_chat_completions_in_the_adapters_uses_the_explicit_prompt_cache() -> None:
-    """A new call has to use it too: without it, the implicit mode lets OpenAI cache the data of the request."""
+    """A new create, parse or stream call on an expression that contains "completions" has to use it too: without
+    it, the implicit mode lets OpenAI cache the data of the request."""
     options = argument_at_every_call("prompt_cache_options")
     explicit = {
         site: isinstance(value, ast.Name) and value.id == "PROMPT_CACHE_OPTIONS" for site, value in options.items()
