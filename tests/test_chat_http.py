@@ -123,7 +123,7 @@ class TestBeforeTheStream:
 class TestSchema:
     @pytest.fixture(autouse=True)
     def _fake_responder(self, monkeypatch) -> None:
-        configure(monkeypatch, chat_fake_responder="true")
+        configure(monkeypatch, chat_fake_responder="true", app_env="development")
 
     @pytest.mark.parametrize(
         ("body", "error_type", "loc"),
@@ -261,7 +261,7 @@ class TestSchema:
 
 class TestLimits:
     def test_default_limit_message_gives_only_lengths(self, monkeypatch) -> None:
-        configure(monkeypatch, chat_fake_responder="true")
+        configure(monkeypatch, chat_fake_responder="true", app_env="development")
         response = post(json=chat_body(question=SECRET * 100))
         assert response.status_code == 422
         assert response.json() == {"detail": f"The question has {len(SECRET) * 100} characters; the limit is 2000."}
@@ -298,7 +298,7 @@ class TestLimits:
         ],
     )
     def test_each_limit_comes_from_its_variable(self, monkeypatch, caplog, env: dict, body: dict, message: str) -> None:
-        configure(monkeypatch, chat_fake_responder="true", **env)
+        configure(monkeypatch, chat_fake_responder="true", app_env="development", **env)
         response = post(json=body)
         assert response.status_code == 422
         assert response.json() == {"detail": message}
@@ -522,7 +522,7 @@ class TestRequestScope:
 
 class TestFakeResponder:
     def test_cites_the_first_passage_without_an_openai_key(self, monkeypatch, caplog) -> None:
-        configure(monkeypatch, chat_fake_responder="true")
+        configure(monkeypatch, chat_fake_responder="true", app_env="development")
         caplog.set_level(logging.WARNING)
         reply = read_reply(post(json=chat_body()))
         assert len(reply.deltas) > 1
@@ -535,7 +535,7 @@ class TestFakeResponder:
         assert "CHAT_FAKE_RESPONDER is on" in caplog.text
 
     def test_without_passages_it_gives_the_no_passages_refusal(self, monkeypatch) -> None:
-        configure(monkeypatch, chat_fake_responder="true")
+        configure(monkeypatch, chat_fake_responder="true", app_env="development")
         reply = read_reply(post(json=chat_body(passages=[])))
         assert reply.deltas == [NO_PASSAGES_TEXT]
         assert (reply.done["coverage"], reply.done["usage"], reply.done["chat_version"]) == (

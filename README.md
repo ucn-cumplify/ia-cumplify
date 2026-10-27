@@ -113,6 +113,7 @@ Todas las variables están en `.env.example`. Las principales:
 | `OPENAI_MODEL` | `gpt-5.6-luna` | Modelo de la clasificación, del perfil y de los motivos; también del chat y de la revisión de respaldos si su modelo está vacío. Tiene que admitir `prompt_cache_options` (gpt-5.6 en adelante): las seis llamadas a chat completions usan el modo explícito de caché |
 | `OPENAI_REASONING_EFFORT` | `low` | Esfuerzo de razonamiento; también del chat y de la revisión si el suyo está vacío |
 | `DATABASE_URL` | — | La misma base que usa el backend |
+| `APP_ENV` | `production` | `development` es el único valor que deja arrancar el respondedor falso del chat (`CHAT_FAKE_RESPONDER`): con él encendido y cualquier otro valor, el servicio se detiene al arrancar |
 | `CLASSIFY_BATCH_SIZE` | 25 | Artículos que se clasifican por llamada al modelo; cada llamada lleva la norma completa |
 | `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-large` | Modelo de embeddings |
 | `OPENAI_EMBEDDING_DIMENSIONS` | 1024 | Tiene que coincidir con la columna `vector(1024)` del backend |
@@ -164,7 +165,7 @@ contrato (`docs/Chat/api.md`).
 | `CHAT_MAX_PASSAGES` | 12 | Pasajes máximos por pedido | `ChatPassageLimits.MaxPassages` |
 | `CHAT_PASSAGE_MAX_CHARS` | 6.000 | Largo máximo del texto de un pasaje, recortado | `ChatPassageLimits.MaxPassageChars` |
 | `CHAT_PASSAGES_MAX_TOTAL_CHARS` | 48.000 | Suma máxima de los textos de los pasajes | `ChatPassageLimits.MaxTotalChars` |
-| `CHAT_FAKE_RESPONDER` | `false` | Respondedor falso: un texto fijo que cita el primer pasaje, sin llamar a OpenAI ni exigir `OPENAI_API_KEY`, con `chat_version` `fake-v1@fake`. Solo para integrar sin gastar tokens; si arranca activo, el log lo avisa | |
+| `CHAT_FAKE_RESPONDER` | `false` | Respondedor falso: un texto fijo que cita el primer pasaje, sin llamar a OpenAI ni exigir `OPENAI_API_KEY`, con `chat_version` `fake-v1@fake`. Solo para integrar sin gastar tokens, y solo con `APP_ENV=development`: con otro valor, el servicio no arranca. Si arranca activo, el log lo avisa | |
 
 - **Topes del chat:** en el backend son constantes, no variables de entorno. Subir uno exige cambiar el backend y este
   servicio a la vez; si no, un pedido válido para el backend recibe 422.
@@ -257,9 +258,9 @@ uv run python scripts/chat_eval.py --base-url http://127.0.0.1:8000
 - **Opciones:** `--case E01` ejecuta solo ese caso y se puede repetir. `--repeat-case E01` repite ese pedido idéntico al
   final y compara su `cached_tokens` con el límite de «Privacidad» de `docs/Chat/api.md`; solo sirve si se acuerda un modo
   explícito de caché.
-- **Sin gastar tokens:** se levanta el servicio con `CHAT_FAKE_RESPONDER=true` y sin `OPENAI_API_KEY`; sin base,
-  `--without-db` usa pasajes simulados. El informe marca la ejecución como simulada (`chat_version` `fake-v1@fake`,
-  `usage` en cero).
+- **Sin gastar tokens:** se levanta el servicio con `CHAT_FAKE_RESPONDER=true`, `APP_ENV=development` y sin
+  `OPENAI_API_KEY`; sin base, `--without-db` usa pasajes simulados. El informe marca la ejecución como simulada
+  (`chat_version` `fake-v1@fake`, `usage` en cero).
 
 ### Evaluación de recuperación de los embeddings
 

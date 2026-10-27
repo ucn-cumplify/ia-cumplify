@@ -319,7 +319,7 @@ Con un `finish_reason` distinto de `stop`, el texto está incompleto, pero sus c
 | `CHAT_MAX_PASSAGES` | 12 | Pasajes máximos |
 | `CHAT_PASSAGE_MAX_CHARS` | 6.000 | Largo máximo de cada `passages[].text` |
 | `CHAT_PASSAGES_MAX_TOTAL_CHARS` | 48.000 | Suma máxima de los `passages[].text` |
-| `CHAT_FAKE_RESPONDER` | `false` | Respondedor falso, sin OpenAI (ver "Respondedor falso") |
+| `CHAT_FAKE_RESPONDER` | `false` | Respondedor falso, sin OpenAI (ver "Respondedor falso"). Solo con `APP_ENV=development` |
 
 - `SERVICE_API_KEY`, `OPENAI_API_KEY` e `INCLUDE_DEV_METRICS` (verdadero por defecto) son los mismos de los otros endpoints, aunque el `dev_metrics` del chat tiene su propia forma (ver el evento `done`). `OPENAI_TIMEOUT_SECONDS` (180) y `OPENAI_MAX_RETRIES` (2), que usan los otros endpoints, no se aplican al chat: en el peor caso suman minutos sin respuesta.
 - Los topes de largo se espejan en el backend, igual que `PROFILE_TEXT_MAX_CHARS` con `AI_PROFILE_TEXT_MAX_CHARS`: si el backend sube un tope y ia no, un pedido válido para el backend recibe 422. Las reglas fijas del pedido también se espejan (punto 11 de "Consumo desde el backend").
@@ -327,7 +327,7 @@ Con un `finish_reason` distinto de `stop`, el texto está incompleto, pero sus c
 
 **Respondedor falso:**
 
-- Con `CHAT_FAKE_RESPONDER=true` (CHT-014), ia no llama a OpenAI ni exige `OPENAI_API_KEY`. Sirve para integrar el backend (4.7) sin gastar tokens. Está desactivado por defecto y, si arranca activo, el log lo avisa.
+- Con `CHAT_FAKE_RESPONDER=true` (CHT-014), ia no llama a OpenAI ni exige `OPENAI_API_KEY`. Sirve para integrar el backend (4.7) sin gastar tokens. Está desactivado por defecto y solo arranca con `APP_ENV=development`, que no es el valor por defecto (`production`): con cualquier otro valor, el servicio se detiene al arrancar con un error que lo dice (paso 2.14 del plan del sprint 4 de backend-cumplify). Si arranca activo, el log lo avisa.
 - Con pasajes, emite un texto fijo, en uno o más `delta`, que cita el primer pasaje como `[1]`. Después viene `done` con `citations` `[{"n":1,"id":"<id del primer pasaje>"}]`, `coverage: answered`, `citations_dropped` 0, `finish_reason: stop`, `usage` en cero y `llm_calls` 0.
 - Sin pasajes, da la misma negativa fija que el respondedor real (`coverage: no_passages`).
 - `chat_version` vale siempre `fake-v1@fake`, también sin pasajes y en `error`. Con ese valor el backend reconoce las respuestas falsas y no las confunde con las reales, por ejemplo en el registro de 4.8. Como `usage` viaja en cero, no mueven el presupuesto de 4.7.
