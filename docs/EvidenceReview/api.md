@@ -154,7 +154,7 @@ El incumplimiento, la fecha, las instrucciones y lo que falta son reglas del pro
 | EVIDENCE_REVIEW_TIMEOUT_SECONDS | 80 | Plazo de la llamada. No usa `OPENAI_TIMEOUT_SECONDS` |
 | EVIDENCE_REVIEW_MAX_RETRIES | 0 | Reintentos del SDK, que también reintenta un plazo vencido. No usa `OPENAI_MAX_RETRIES`: con un reintento, la revisión podría pasar los 90 s que espera el backend |
 
-`review_version` es `evidence-review-v4@<modelo usado>`. backend-cumplify calcula la huella de cada revisión con esa versión (`EvidenceReviewFingerprint.CurrentReviewVersion`): subirla deja desactualizadas las revisiones guardadas.
+`review_version` es `evidence-review-v4@<modelo usado>`. backend-cumplify guarda la huella de cada revisión con el `review_version` que recibe y la compara con la que calcula con `EvidenceReviewFingerprint.CurrentReviewVersion` (hoy `evidence-review-v4@gpt-5.6-luna`): una revisión informada con otra versión se guarda desactualizada, no se reutiliza y no permite registrar sus hallazgos. Por eso, cambiar la versión del prompt o el modelo de la revisión (`EVIDENCE_REVIEW_MODEL`, o `OPENAI_MODEL` si está vacía) exige cambiar esa constante en la misma ventana de despliegue. Al cambiarla, quedan desactualizadas las revisiones guardadas con la versión anterior.
 
 La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilos, fuera del bucle de eventos. Mientras una revisión espera al modelo, el servicio sigue atendiendo el chat, los demás endpoints y `/health`.
 
