@@ -364,7 +364,7 @@ def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypat
             "procedure_for": None,
         }
     ]
-    assert body["reason_version"] == "applicability-v3@fake-model"
+    assert body["reason_version"] == "applicability-v4@fake-model"
     assert body["usage"] == {
         "prompt_tokens": 900,
         "completion_tokens": 80,
@@ -383,7 +383,7 @@ def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypat
 
 def test_the_schema_sent_to_openai_has_every_field_required_and_no_default(monkeypatch) -> None:
     # Structured outputs need every property required. A default left in the schema has not run against
-    # OpenAI in this service, so applicability-v3 declares none, like applicability-v1 and v2.
+    # OpenAI in this service, so applicability-v4 declares none, like the versions before it.
     article = {"id": ARTICLE_ID, "legal_body_id": NORM_ID, "number": "Artículo 1", "section": "", "text": "Texto.", "order": 1}
     usage = {"prompt_tokens": 9, "completion_tokens": 3, "total_tokens": 12}
     response, requests = post_with_the_real_adapter(monkeypatch, article, usage)

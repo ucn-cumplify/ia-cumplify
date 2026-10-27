@@ -122,6 +122,25 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 ---
 
+### CLS-007 — Neutralizar las líneas de la norma que imitan un delimitador
+
+| Campo | Detalle |
+|---|---|
+| **ID** | CLS-007 |
+| **Rol** | Servicio interno |
+
+**Descripción:**
+
+Desde el paso 2.5 del plan del sprint 4 de backend-cumplify, el título, el tipo y el resumen de la norma, y el número, la sección y el texto de cada artículo, pasan por la regla de CHT-007 de `docs/Chat`: una línea que imita un delimitador del mensaje, como `--- END FULL LEGAL BODY ---` o `--- ARTICLES TO CLASSIFY ---`, recibe el prefijo `> `. Esos textos salen de la base, y una norma manual los acepta con saltos de línea. Solo cambian los datos: `SYSTEM_PROMPT` y el bloque de etiquetas existentes quedan iguales, así que `classify-v2` no sube (CLS-006).
+
+**Validaciones:**
+
+- Una norma y un artículo con líneas que imitan los delimitadores del mensaje llegan al modelo con esas líneas neutralizadas: cada lote tiene solo los delimitadores reales (CLS-021 de `test.csv`).
+- `tests/test_profile_prompts.py` sigue fijando el hash de `SYSTEM_PROMPT` y del bloque de etiquetas de `classify-v2`.
+- Lo que falta queda para el paso 2.6, porque cambia `SYSTEM_PROMPT` o el bloque de etiquetas y sube la versión a `classify-v3`: que el prompt diga que el texto de la norma es un dato y que un delimitador ocupa una línea entera, y neutralizar las etiquetas existentes, que no admiten `|`, CR ni LF pero sí otros saltos de `str.splitlines`. Una línea `Article ID:` escrita en el texto tampoco se neutraliza: los artículos se separan con esa etiqueta, no con delimitadores.
+
+---
+
 ## Dentro de alcance
 
 - Leer `legal_bodies` (`id`, `title`, `summary`, `type`) y `articles` (`id`, `legal_body_id`, `number`, `section`, `text`, `order`) de la base del backend.
@@ -129,6 +148,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 - Usar timeout y reintentos explícitos del cliente OpenAI (`OPENAI_TIMEOUT_SECONDS`, `OPENAI_MAX_RETRIES`).
 - Exigir `X-API-Key` con el valor de `SERVICE_API_KEY`.
 - Quitar del texto que se envía al modelo las imágenes y los demás archivos embebidos como data URI.
+- Neutralizar las líneas de la norma y de los artículos que imitan un delimitador del mensaje (CLS-007).
 - Informar siempre la versión del clasificador y el uso de tokens.
 - Adjuntar `dev_metrics` (tiempo y tokens) cuando `INCLUDE_DEV_METRICS` es verdadero.
 

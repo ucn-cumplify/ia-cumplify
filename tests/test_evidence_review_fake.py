@@ -84,7 +84,7 @@ def test_the_real_adapter_sends_a_strict_schema_and_maps_the_fake_review(monkeyp
     assert body["requirements"][0]["evidence"] == "Acta de constitución"
     assert body["requirements"][0]["citations"][0]["quote"] == "Ana;1-9"
     assert body["procedure_for"] is None
-    assert body["review_version"] == "evidence-review-v3@fake-model"
+    assert body["review_version"] == "evidence-review-v4@fake-model"
     assert body["usage"]["cached_tokens"] == 8
     assert body["usage"]["llm_calls"] == 1
     [sent] = requests
@@ -124,7 +124,7 @@ def test_the_evaluation_set_builds_its_cases_and_scores_a_response():
     passed = {
         "nature": "explicit_obligations",
         "verdict": "accredited",
-        "review_version": "evidence-review-v3@gpt-5.6-luna",
+        "review_version": "evidence-review-v4@gpt-5.6-luna",
         "requirements": [{"text": "Constituir.", "status": "accredited", "citations": [], "missing": ""}],
         "files": [{"filename": "acta.pdf", "status": "read", "truncated": False}],
     }
@@ -138,7 +138,7 @@ def test_a_periodic_case_needs_each_missing_month_and_not_the_current_one():
     response = {
         "nature": "explicit_obligations",
         "verdict": "partial",
-        "review_version": "evidence-review-v3@gpt-5.6-luna",
+        "review_version": "evidence-review-v4@gpt-5.6-luna",
         "requirements": [{"text": "Sesionar cada mes.", "status": "partial", "citations": [], "missing": ""}],
         "files": [{"filename": "acta-sesion-marzo-2026.docx", "status": "read", "truncated": False}],
     }

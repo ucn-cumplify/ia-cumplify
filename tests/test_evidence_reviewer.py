@@ -65,7 +65,7 @@ def test_the_adapter_sends_the_subject_and_maps_the_review():
     assert judgment.procedure_for is None
     assert judgment.summary == "El acta acredita la constitución."
     assert judgment.model == "gpt-5.6-luna"
-    assert judgment.review_version == "evidence-review-v3@gpt-5.6-luna"
+    assert judgment.review_version == "evidence-review-v4@gpt-5.6-luna"
     assert judgment.usage.prompt_tokens == 20
     assert judgment.usage.llm_calls == 1
 

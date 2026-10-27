@@ -1,7 +1,8 @@
-import unicodedata
 from typing import Any
 
 from ia_cumplify.adapters.outbound.openai.prompt_cache import cached_prefix
+# tests/test_chat_prompts.py imports neutralize_delimiter_lines from this module.
+from ia_cumplify.adapters.outbound.openai.prompt_text import block_text, neutralize_delimiter_lines
 from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
 from ia_cumplify.domain.chat import NOT_COVERED_MARK, ChatPrompt
 
@@ -64,9 +65,9 @@ def build_chat_messages(prompt: ChatPrompt) -> list[dict[str, Any]]:
     # come after the breakpoint.
     messages: list[dict[str, Any]] = [{"role": "system", "content": [cached_prefix(CHAT_SYSTEM_PROMPT)]}]
     for message in prompt.history:
-        messages.append({"role": message.role, "content": _block_text(message.content)})
+        messages.append({"role": message.role, "content": block_text(message.content)})
     messages.append({"role": "user", "content": render_passages(prompt)})
-    messages.append({"role": "user", "content": _block_text(prompt.question) or EMPTY_QUESTION_TEXT})
+    messages.append({"role": "user", "content": block_text(prompt.question) or EMPTY_QUESTION_TEXT})
     return messages
 
 
@@ -83,50 +84,10 @@ def render_passages(prompt: ChatPrompt) -> str:
                     f"Tipo: {KIND_LABELS[passage.kind]}",
                     f"Referencia: {strip_base64_images(passage.reference)}",
                     "Texto:",
-                    _block_text(passage.text),
+                    block_text(passage.text),
                     f"--- FIN PASAJE {passage.key} ---",
                 )
             )
         )
     return "\n\n".join(blocks)
 
-
-def neutralize_delimiter_lines(text: str) -> str:
-    """Prefixes "> " to every line that could pass for a passage delimiter."""
-    lines = text.splitlines(keepends=True)
-    return "".join(f"> {line}" if _looks_like_delimiter(line) else line for line in lines)
-
-
-def _block_text(text: str) -> str:
-    return neutralize_delimiter_lines(strip_base64_images(text))
-
-
-# Invisible characters outside the C, Mn and Me categories: the Hangul fillers, which are
-# Default_Ignorable_Code_Point (a property unicodedata does not expose), and two blank symbols.
-_BLANK_CHARACTERS = frozenset("\u115f\u1160\u3164\uffa0\u2800\U0001d159")
-
-
-def _is_invisible(char: str) -> bool:
-    category = unicodedata.category(char)
-    return category[0] == "C" or category in ("Mn", "Me") or char in _BLANK_CHARACTERS
-
-
-def _looks_like_delimiter(line: str) -> bool:
-    """Three or more dashes of any kind at the start, even with spaces between them.
-
-    Invisible characters (control, format, unassigned and private-use code points, combining marks,
-    Hangul fillers and blank symbols) are removed before NFKC, so a visible prefix such as "´" keeps
-    the line as content. The probe only decides: the line is sent as written, since NFKC would also
-    turn "Nº" into "No".
-    """
-    probe = "".join(char for char in line if not _is_invisible(char))
-    probe = unicodedata.normalize("NFKC", probe).lstrip()
-    dashes = 0
-    for char in probe:
-        if char == "\u2212" or unicodedata.category(char) == "Pd":
-            dashes += 1
-            if dashes == 3:
-                return True
-        elif not char.isspace():
-            return False
-    return False

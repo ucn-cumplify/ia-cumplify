@@ -85,10 +85,12 @@ CitationLocator = Literal["page", "sheet", "slide", "body"]
 MAX_REQUIREMENT_EVIDENCE_CHARS = 300
 MAX_PROCEDURE_FOR_CHARS = 300
 
-# Prompt id. The model name is appended once a review is actually run: "evidence-review-v3@<model>".
+# Prompt id. The model name is appended once a review is actually run: "evidence-review-v4@<model>".
 # v2 adopts decision 21 (procedural nature and the respaldo of each exigencia) and checks citations.
 # v3 judges a periodic exigencia by the periods that ended and names each one that is missing.
-REVIEW_PROMPT_VERSION = "evidence-review-v3"
+# v4 neutralizes the lines of the data that imitate a delimiter, and the prompt says that a delimiter
+# takes a whole line (sprint 4 plan, step 2.5). backend-cumplify fingerprints a review with this version.
+REVIEW_PROMPT_VERSION = "evidence-review-v4"
 
 
 @dataclass(frozen=True, slots=True)

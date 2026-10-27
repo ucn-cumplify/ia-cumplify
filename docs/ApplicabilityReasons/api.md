@@ -16,7 +16,7 @@ POST /api/v1/applicability-reasons
 - un motivo en español, salvo que el pedido traiga `write_reason` en falso. El backend usa ese texto al emitir la alerta y, si un artículo no trae motivo, conserva la plantilla;
 - desde `applicability-v2`, un análisis con lo que el artículo exige a la empresa: su naturaleza (obligaciones explícitas, informativo, remisión o información procedimental), sus obligaciones explícitas con el respaldo que acredita cada una, la norma que modifica una remisión y la autorización a la que sirve un artículo procedimental. Es C9 del plan del sprint 3, con el criterio del cliente del 2026-10-15 (decisión 21): las obligaciones sugeridas salen de aquí, nunca de `activity_action`, y solo es obligación lo que un respaldo acredita.
 
-**Requerimiento relacionado:** APR-001, APR-002, APR-003, APR-004, APR-005, APR-006, APR-007, APR-008
+**Requerimiento relacionado:** APR-001, APR-002, APR-003, APR-004, APR-005, APR-006, APR-007, APR-008, APR-009
 
 **Request:**
 
@@ -71,7 +71,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
       "procedure_for": null
     }
   ],
-  "reason_version": "applicability-v3@gpt-5.6-luna",
+  "reason_version": "applicability-v4@gpt-5.6-luna",
   "usage": {
     "prompt_tokens": 900,
     "completion_tokens": 80,
@@ -108,7 +108,7 @@ El backend lee `analyses` desde ucn-cumplify/backend-cumplify#193 (pasos 0.18 y 
 
 - Una llamada al modelo por pedido. Timeout `APPLICABILITY_REASONS_TIMEOUT_SECONDS` (defecto 25) y `APPLICABILITY_REASONS_MAX_RETRIES` (defecto 0), para caber en los 30 s que espera el backend (`AI_APPLICABILITY_REASONS_TIMEOUT_SECONDS`).
 - La llamada pide `store=False`: OpenAI no guarda la respuesta para sus productos de destilación y evals, como en el chat. Es explícito desde el 2026-10-26 (paso 2.3 del plan del sprint 4 de backend-cumplify); antes regía el valor por defecto, que también es `false`.
-- **Caché de prompts.** La llamada usa el modo explícito de OpenAI (`prompt_cache_options={"mode": "explicit"}`) con un único punto de corte al final de las instrucciones (`APPLICABILITY_SYSTEM_PROMPT`). La norma y los artículos, con sus valores coincidentes y sus acciones, van después del corte y nunca quedan en el caché del proveedor. Es la opción (b) de "Caché de prompts" de `docs/Chat/api.md`, la misma del chat, el perfil, la revisión de respaldos y la propuesta del plan, y rige desde el 2026-10-26 (paso 2.4 del plan del sprint 4 de backend-cumplify); antes regía el modo implícito, en el que OpenAI elige el prefijo que guarda. Se espera que `usage.cached_tokens` ronde los tokens de las instrucciones, unos 1.737 tokens con `applicability-v3`: en la evaluación del 2026-10-15 (caso APR-023 de `test.csv`), 24.318 de los 33.033 tokens de entrada de 15 pedidos salieron del caché, 14 veces 1.737. Falta confirmarlo con OpenAI (caso APR-032 de `test.csv`). Exige un `OPENAI_MODEL` que admita `prompt_cache_options` (gpt-5.6 en adelante): con uno anterior, OpenAI puede rechazar el pedido con 400, este servicio responde 502 y el backend deja la plantilla.
+- **Caché de prompts.** La llamada usa el modo explícito de OpenAI (`prompt_cache_options={"mode": "explicit"}`) con un único punto de corte al final de las instrucciones (`APPLICABILITY_SYSTEM_PROMPT`). La norma y los artículos, con sus valores coincidentes y sus acciones, van después del corte y nunca quedan en el caché del proveedor. Es la opción (b) de "Caché de prompts" de `docs/Chat/api.md`, la misma del chat, el perfil, la revisión de respaldos y la propuesta del plan, y rige desde el 2026-10-26 (paso 2.4 del plan del sprint 4 de backend-cumplify); antes regía el modo implícito, en el que OpenAI elige el prefijo que guarda. Se espera que `usage.cached_tokens` ronde los tokens de las instrucciones, unos 1.737 tokens con `applicability-v3`: en la evaluación del 2026-10-15 (caso APR-023 de `test.csv`), 24.318 de los 33.033 tokens de entrada de 15 pedidos salieron del caché, 14 veces 1.737. Con `applicability-v4`, que agrega una regla al prompt, la cifra se mide de nuevo. Falta confirmarlo con OpenAI (caso APR-032 de `test.csv`). Exige un `OPENAI_MODEL` que admita `prompt_cache_options` (gpt-5.6 en adelante): con uno anterior, OpenAI puede rechazar el pedido con 400, este servicio responde 502 y el backend deja la plantilla.
 - Se lee el cuerpo legal y **solo** los artículos pedidos. El resto de la norma no viaja al modelo.
 - Un `article_id` que no está en esa norma se omite de `reasons` y de `analyses`. Si no queda ninguno, las dos listas vuelven vacías y no se llama al modelo. El cuerpo inexistente es `404`.
 - El motivo va en español, en un párrafo de dos o tres oraciones. Nombra los valores coincidentes entre comillas («…»). No dictamina aplicabilidad. No cita ni inventa la descripción de la empresa: ese texto no llega en el pedido.
@@ -128,6 +128,7 @@ El backend lee `analyses` desde ucn-cumplify/backend-cumplify#193 (pasos 0.18 y 
   - un motivo, una obligación, una norma o una autorización con letras de un alfabeto que no aparece en el español legal (cirílico, árabe, hebreo o asiáticos) se descarta. El griego se permite por los símbolos técnicos.
 - No menciona artículos que no vinieron en el pedido, ni ids internos, ni que el texto lo escribió una IA.
 - Antes de armar el prompt se quitan los data URI embebidos: una imagen se reemplaza por `[imagen omitida]` y cualquier otro tipo, como un PDF, por `[archivo omitido]`.
+- Desde `applicability-v4` (paso 2.5 del plan del sprint 4 de backend-cumplify), una línea que imita un delimitador del mensaje (`--- LEGAL BODY (context) ---`, `--- END LEGAL BODY ---`, `--- ARTICLES TO EXPLAIN ---` o `--- END ARTICLES TO EXPLAIN ---`) recibe el prefijo `> `, con la regla de CHT-007 de `docs/Chat`. Vale para el título, el tipo y el resumen de la norma, para el número, la sección y el texto de cada artículo, y para las líneas de los valores coincidentes y de las acciones. El prompt dice que un delimitador ocupa siempre una línea entera y que la norma y los artículos son datos (APR-009).
 - El log registra el id de la norma, cuántos artículos llegaron y cuántos motivos y análisis volvieron. No registra etiquetas, acciones, obligaciones ni el texto del artículo.
 
 **Errores:**
