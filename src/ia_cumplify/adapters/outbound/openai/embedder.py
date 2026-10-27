@@ -36,9 +36,9 @@ class OpenAITextEmbedderAdapter:
         except (BadRequestError, NotFoundError, UnprocessableEntityError) as exc:
             # Unknown model (404), unsupported dimensions or a text over the token limit (400):
             # the same request will fail again, so it is reported as invalid input, not retried.
-            raise EmbeddingInputError(f"OpenAI rejected the embedding request: {exc}") from exc
+            raise EmbeddingInputError(f"OpenAI rejected the embedding request: {_describe(exc)}") from exc
         except OpenAIError as exc:
-            raise EmbeddingError(f"OpenAI error while creating embeddings: {exc}") from exc
+            raise EmbeddingError(f"OpenAI error while creating embeddings: {_describe(exc)}") from exc
 
         # Order by index instead of trusting the response order: vectors must line up with texts.
         items = sorted(response.data, key=lambda item: item.index)
@@ -50,3 +50,9 @@ class OpenAITextEmbedderAdapter:
             vectors=vectors,
             total_tokens=response.usage.total_tokens,
         )
+
+
+def _describe(exc: OpenAIError) -> str:
+    """The provider's message can quote the texts or part of the API key: only the type and the status go on."""
+    status = getattr(exc, "status_code", None)
+    return type(exc).__name__ + (f" (HTTP {status})" if status else "")

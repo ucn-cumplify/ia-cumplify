@@ -95,7 +95,7 @@ Si el cuerpo no tiene artículos, o solo tiene piezas estructurales, la respuest
 
 **Descripción:**
 
-Los artículos clasificables se envían al modelo en lotes de `CLASSIFY_BATCH_SIZE` (defecto 25). Cada lote recibe el cuerpo legal completo como contexto (ver la deuda técnica). Los resultados se concatenan en el orden de los artículos. Si un lote falla, la petición sigue con los lotes restantes: la respuesta 200 trae lo clasificado y lista en `failed_article_ids` los artículos no clasificados. Falla el lote ante un error del proveedor, un timeout, una negativa, una respuesta cortada, una salida que no cumple el esquema o no es JSON, o cualquier otra respuesta 200 que no es una clasificación (un cuerpo que no es JSON, no es UTF-8 o anida más de lo que admite el decodificador de JSON, sin `choices` o con `message` nulo). Si ningún artículo se clasifica, la petición falla con `502`. Ni el detalle del error ni el log repiten la salida del modelo o el texto de la negativa.
+Los artículos clasificables se envían al modelo en lotes de `CLASSIFY_BATCH_SIZE` (defecto 25). Cada lote recibe el cuerpo legal completo como contexto (ver la deuda técnica). Cada llamada usa el modo explícito de caché con un único punto de corte al final de las instrucciones: el cuerpo, las etiquetas existentes y los artículos del lote nunca quedan en el caché del proveedor ("Caché de prompts" en `docs/Chat/api.md`). Los resultados se concatenan en el orden de los artículos. Si un lote falla, la petición sigue con los lotes restantes: la respuesta 200 trae lo clasificado y lista en `failed_article_ids` los artículos no clasificados. Falla el lote ante un error del proveedor, un timeout, una negativa, una respuesta cortada, una salida que no cumple el esquema o no es JSON, o cualquier otra respuesta 200 que no es una clasificación (un cuerpo que no es JSON, no es UTF-8 o anida más de lo que admite el decodificador de JSON, sin `choices` o con `message` nulo). Si ningún artículo se clasifica, la petición falla con `502`. Ni el detalle del error ni el log repiten la salida del modelo o el texto de la negativa.
 
 ---
 
@@ -115,10 +115,29 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 - `classifier_version` es `<PROMPT_VERSION>@<OPENAI_MODEL>`.
 - Todo cambio de `SYSTEM_PROMPT` o del bloque de etiquetas existentes sube `PROMPT_VERSION`.
 - `usage` suma `prompt_tokens`, `completion_tokens`, `total_tokens` y `cached_tokens` de los lotes que respondieron y de los lotes fallidos cuya respuesta 200 informa su uso (una negativa, una respuesta cortada por largo o por el filtro de contenido, o una salida que no cumple el esquema o no es JSON). `llm_calls` cuenta uno por lote, incluidos los fallidos.
-- `cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché (`usage.prompt_tokens_details.cached_tokens`, como en el chat), o 0 si no la informa.
+- `cached_tokens` es la parte de `prompt_tokens` que el proveedor sirvió desde su caché (`usage.prompt_tokens_details.cached_tokens`, como en el chat), o 0 si no la informa. En cada lote no supera los tokens de las instrucciones, lo único que puede quedar en ese caché (CLS-005).
 - Cada campo del `usage` del proveedor se lee por separado, como en el chat: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar el lote ni la petición (caso CLS-016 de `test.csv`).
 - Sin artículos clasificables, todos los campos de `usage` valen 0.
 - `dev_metrics`, cuando viaja, repite `prompt_tokens`, `completion_tokens`, `total_tokens` y `llm_calls` de `usage`. No trae `cached_tokens`.
+
+---
+
+### CLS-007 — Neutralizar las líneas de la norma que imitan un delimitador
+
+| Campo | Detalle |
+|---|---|
+| **ID** | CLS-007 |
+| **Rol** | Servicio interno |
+
+**Descripción:**
+
+Desde el paso 2.5 del plan del sprint 4 de backend-cumplify, el título, el tipo y el resumen de la norma, y el número, la sección y el texto de cada artículo, pasan por la regla de CHT-007 de `docs/Chat`: una línea que imita un delimitador del mensaje, como `--- END FULL LEGAL BODY ---` o `--- ARTICLES TO CLASSIFY ---`, recibe el prefijo `> `. Esos textos salen de la base, y una norma manual los acepta con saltos de línea. Solo cambian los datos: `SYSTEM_PROMPT` y el bloque de etiquetas existentes quedan iguales, así que `classify-v2` no sube (CLS-006).
+
+**Validaciones:**
+
+- Una norma y un artículo con líneas que imitan los delimitadores del mensaje llegan al modelo con esas líneas neutralizadas: cada lote tiene solo los delimitadores reales (CLS-021 de `test.csv`).
+- `tests/test_profile_prompts.py` sigue fijando el hash de `SYSTEM_PROMPT` y del bloque de etiquetas de `classify-v2`.
+- Lo que falta queda para el paso 2.6, porque cambia `SYSTEM_PROMPT` o el bloque de etiquetas y sube la versión a `classify-v3`: que el prompt diga que el texto de la norma es un dato y que un delimitador ocupa una línea entera, y neutralizar las etiquetas existentes, que no admiten `|`, CR ni LF pero sí otros saltos de `str.splitlines`. Una línea `Article ID:` escrita en el texto tampoco se neutraliza: los artículos se separan con esa etiqueta, no con delimitadores.
 
 ---
 
@@ -129,6 +148,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 - Usar timeout y reintentos explícitos del cliente OpenAI (`OPENAI_TIMEOUT_SECONDS`, `OPENAI_MAX_RETRIES`).
 - Exigir `X-API-Key` con el valor de `SERVICE_API_KEY`.
 - Quitar del texto que se envía al modelo las imágenes y los demás archivos embebidos como data URI.
+- Neutralizar las líneas de la norma y de los artículos que imitan un delimitador del mensaje (CLS-007).
 - Informar siempre la versión del clasificador y el uso de tokens.
 - Adjuntar `dev_metrics` (tiempo y tokens) cuando `INCLUDE_DEV_METRICS` es verdadero.
 
@@ -143,7 +163,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 - `INCLUDE_DEV_METRICS` arranca en verdadero. En un entorno compartido conviene apagarlo; el uso de tokens igual viaja en `usage`.
 - `PROMPT_VERSION` se sube a mano. Si un cambio del prompt no la sube, el backend no distingue las respuestas nuevas de las anteriores. `tests/test_profile_prompts.py` falla si cambian `SYSTEM_PROMPT` o el bloque de etiquetas existentes sin subirla.
-- **Cuerpo completo en cada lote.** Cada lote repite el cuerpo legal completo (CLS-005). En la base local, de las 46 clasificaciones vigentes del 2026-10-02, las 7 normas de varios lotes sumaron el 71 % de los tokens de entrada, con unos 469.000 tokens de cuerpo repetido (estimación). Se decidió el 2026-10-08 no acotarlo por ahora y medir con `usage.cached_tokens` cuánto de esa repetición se cobra a precio de caché; el backend guarda la respuesta cruda con su `usage`. Una norma cuyo cuerpo no cabe en la ventana de contexto del modelo falla en todos sus lotes.
+- **Cuerpo completo en cada lote.** Cada lote repite el cuerpo legal completo (CLS-005). En la base local, de las 46 clasificaciones vigentes del 2026-10-02, las 7 normas de varios lotes sumaron el 71 % de los tokens de entrada, con unos 469.000 tokens de cuerpo repetido (estimación). Se decidió el 2026-10-08 no acotarlo por ahora y medir con `usage.cached_tokens` cuánto de esa repetición se cobraba a precio de caché. La medición del 2026-10-12 respondió que casi nada: de los 45.179 tokens de entrada de una norma de 2 lotes, solo 1.439 salieron del caché, los mismos que en una norma de un lote (decisión 14 del plan del sprint 2 de backend-cumplify). Desde el 2026-10-26 (paso 2.4 del plan del sprint 4 de backend-cumplify), el cuerpo nunca entra al caché del proveedor: la repetición se paga completa en cada lote y `cached_tokens` ya no la mide. Bajar ese costo exige no enviar el cuerpo completo en cada lote, o acotarlo (punto 2 de la sección 12.1 del plan del sprint 1 de backend-cumplify). Una norma cuyo cuerpo no cabe en la ventana de contexto del modelo falla en todos sus lotes.
 - Un lote fallido no aborta el resto. `failed_article_ids` lista lo que faltó y el lote suma 1 en `llm_calls`. Si el proveedor respondió 200 y cobró sin entregar una clasificación (una negativa, una respuesta cortada por largo o por el filtro de contenido, o una salida que no cumple el esquema o no es JSON), se suman a `usage` los tokens que informa el bloque `usage` de esa respuesta. Si no hubo respuesta (error de conexión, timeout o error HTTP), o el cuerpo no se pudo leer como JSON o no trae `usage`, sus tokens no se conocen y no se cuentan, aunque el proveedor pueda haberlos cobrado; un campo de `usage` mal formado cuenta 0 (CLS-006). En los dos casos, el uso informado puede quedar por debajo del real. Los artículos que faltaron no se vuelven a pedir: recuperarlos le toca al backend.
 - El cliente OpenAI reintenta 408, 409, 429, 5xx, timeouts y errores de conexión según `OPENAI_MAX_RETRIES`. En el peor caso un lote tarda (1 + `OPENAI_MAX_RETRIES`) × `OPENAI_TIMEOUT_SECONDS`, unos 9 minutos con los valores por defecto. No se vuelve a encolar un lote ya fallido después de esos reintentos.
 - Los lotes van en serie, así que el peor caso de una norma es lotes × (1 + `OPENAI_MAX_RETRIES`) × `OPENAI_TIMEOUT_SECONDS`: con los valores por defecto, unos 9 minutos por lote, 27 con 3 lotes. El backend espera `AI_REQUEST_TIMEOUT_MINUTES` (defecto 15) por el pedido completo: desde 2 lotes, el peor caso lo supera, el backend corta, este servicio sigue llamando al modelo hasta terminar y el reintento del backend vuelve a pagar la norma completa. En condiciones normales queda lejos: el 2026-10-02, la norma de 128 artículos (6 lotes) de la base local tardó 106 s.

@@ -4,7 +4,10 @@ from datetime import date
 
 import pytest
 
-from ia_cumplify.adapters.outbound.openai.evidence_review_prompts import EVIDENCE_REVIEW_SYSTEM_PROMPT
+from ia_cumplify.adapters.outbound.openai.evidence_review_prompts import (
+    EVIDENCE_REVIEW_SYSTEM_PROMPT,
+    render_evidence_review_user_content,
+)
 from ia_cumplify.application.use_cases.review_evidence import ReviewEvidenceUseCase
 from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.evidence_review import (
@@ -208,6 +211,44 @@ def test_the_verdict_is_partial_when_one_requirement_is_accredited_and_another_i
     assert result.verdict == "partial"
 
 
+def test_a_quote_is_looked_up_in_the_text_that_was_read_not_in_the_neutralized_message():
+    # Step 2.5 of the sprint 4 plan: the model reads "> --- Anexo 1 ---" where the file says "--- Anexo 1 ---". A
+    # quote of the file keeps its exigencia; one that copies the prefix is not in the file and is dropped.
+    judgment = _explicit(
+        ReviewRequirement(
+            text="Constituir el comité.",
+            evidence="Acta de constitución",
+            status="accredited",
+            citations=(
+                ReviewCitation(
+                    file_id="acta", locator="body", reference="", quote="El comité quedó constituido en Calama."
+                ),
+            ),
+            missing="",
+        ),
+        ReviewRequirement(
+            text="Adjuntar el anexo.",
+            evidence="Anexo 1",
+            status="accredited",
+            citations=(ReviewCitation(file_id="acta", locator="body", reference="", quote="> --- Anexo 1 ---"),),
+            missing="",
+        ),
+    )
+    reviewer = _MessageReader(judgment)
+
+    result = ReviewEvidenceUseCase(reviewer).execute(
+        _request("--- Anexo 1 ---\nEl comité quedó constituido en Calama.".encode())
+    )
+
+    assert "\n> --- Anexo 1 ---\nEl comité quedó constituido en Calama.\n" in reviewer.message
+    assert result.requirements[0].status == "accredited"
+    assert result.requirements[0].citations[0].quote == "El comité quedó constituido en Calama."
+    assert result.requirements[1].status == "not_accredited"
+    assert result.requirements[1].citations == ()
+    assert result.requirements[1].missing == "cita no encontrada"
+    assert result.verdict == "partial"
+
+
 def _explicit(*requirements: ReviewRequirement) -> ReviewJudgment:
     return ReviewJudgment(
         nature="explicit_obligations",
@@ -240,4 +281,14 @@ class _Reviewer:
         return self.judgment.review_version
 
     def review(self, subject) -> ReviewJudgment:
+        return self.judgment
+
+
+class _MessageReader(_Reviewer):
+    """Keeps the user message the OpenAI adapter would send for the subject."""
+
+    message = ""
+
+    def review(self, subject) -> ReviewJudgment:
+        self.message = render_evidence_review_user_content(subject)
         return self.judgment

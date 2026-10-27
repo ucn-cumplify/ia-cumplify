@@ -118,7 +118,7 @@ class ApplicabilityReasonerOutput:
 class ApplicabilityReasons:
     legal_body: LegalBody
     reasons: tuple[ArticleApplicabilityReason, ...]
-    # "<prompt version>@<model>", e.g. "applicability-v3@gpt-5.6-luna".
+    # "<prompt version>@<model>", e.g. "applicability-v4@gpt-5.6-luna".
     reason_version: str
     usage: TokenUsage
     analyses: tuple[ArticleAnalysis, ...] = ()

@@ -9,12 +9,13 @@ from ia_cumplify.adapters.outbound.openai.llm_schema import (
     LlmArticleClassification,
     LlmLegalBodyClassification,
 )
+from ia_cumplify.adapters.outbound.openai.prompt_cache import PROMPT_CACHE_OPTIONS, cached_prefix
+from ia_cumplify.adapters.outbound.openai.prompt_text import block_text
 from ia_cumplify.adapters.outbound.openai.prompts import (
     PROMPT_VERSION,
     SYSTEM_PROMPT,
     render_candidate_labels,
 )
-from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
 from ia_cumplify.adapters.outbound.openai.usage import call_usage
 from ia_cumplify.domain.article import Article
 from ia_cumplify.domain.classification import (
@@ -78,9 +79,10 @@ class OpenAIArticleClassifierAdapter:
                 )
             except (ClassificationError, OpenAIError) as exc:
                 last_error = exc
-                logger.exception(
-                    "Batch failed for legal body %s; continuing with remaining batches",
+                logger.error(
+                    "Batch failed for legal body %s; continuing with remaining batches: %s",
                     legal_body.id,
+                    _reason(exc),
                 )
                 failed_article_ids.extend(article.id for article in chunk)
                 # A 200 the provider billed without a classification (a refusal, an answer cut by length or
@@ -94,7 +96,7 @@ class OpenAIArticleClassifierAdapter:
             usage += chunk_usage
 
         if not classified and targets:
-            detail = str(last_error) if last_error is not None else "all batches failed"
+            detail = _reason(last_error) if last_error is not None else "all batches failed"
             raise ClassificationError(
                 f"No article could be classified for legal body {legal_body.id} "
                 f"({usage.llm_calls} model calls, {usage.total_tokens} tokens counted): {detail}"
@@ -114,7 +116,6 @@ class OpenAIArticleClassifierAdapter:
         candidates: CandidateLabels | None,
     ) -> tuple[list[ClassifiedArticle], TokenUsage, list[str]]:
         # The existing labels go right before the targets, next to where the model writes labels.
-        # They are the same for every batch of a legal body, so the shared prefix stays cacheable.
         blocks = [_render_legal_body(legal_body, all_articles)]
         if candidates is not None and not candidates.is_empty():
             blocks.append(render_candidate_labels(candidates))
@@ -125,17 +126,25 @@ class OpenAIArticleClassifierAdapter:
             # The raw response keeps the body: a 200 that is not a classification still reports its usage.
             raw = self._client.chat.completions.with_raw_response.parse(
                 model=self._model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                # Only the instructions can be cached (prompt_cache.py): the legal body, the labels and the
+                # targets come after the breakpoint, so every batch pays for its copy of the body in full.
+                messages=[  # type: ignore[arg-type]
+                    {"role": "system", "content": [cached_prefix(SYSTEM_PROMPT)]},
                     {"role": "user", "content": user_content},
                 ],
                 response_format=LlmLegalBodyClassification,
                 reasoning_effort=self._reasoning_effort,
+                # No copy for OpenAI's distillation and evals.
+                store=False,
+                prompt_cache_options=PROMPT_CACHE_OPTIONS,  # type: ignore[arg-type]
             )
         except OpenAIError as exc:
-            # No answer (a connection error, a timeout or an HTTP error): only the call counts.
+            # No answer (a connection error, a timeout or an HTTP error): only the call counts. The provider's
+            # message can quote the request or part of the API key: only its type and status go on.
+            status = getattr(exc, "status_code", None)
             raise ClassificationError(
-                f"OpenAI error while classifying legal body {legal_body.id}: {exc}",
+                f"OpenAI error while classifying legal body {legal_body.id}: {type(exc).__name__}"
+                + (f" (HTTP {status})" if status else ""),
                 usage=TokenUsage(llm_calls=1),
             ) from exc
 
@@ -172,6 +181,12 @@ class OpenAIArticleClassifierAdapter:
         )
 
 
+def _reason(exc: Exception) -> str:
+    """Why a batch failed, for the log and the 502: a ClassificationError's message, which this module builds
+    without the provider's or the model's text; any other error, only its type."""
+    return str(exc) if isinstance(exc, ClassificationError) else type(exc).__name__
+
+
 def _billed_usage(response: "httpx2.Response") -> TokenUsage:
     """The usage block of a 200 body that is not a classification: the provider billed the call all the same.
 
@@ -205,15 +220,17 @@ def _chunks(items: list[Article], size: int) -> list[list[Article]]:
     return [items[index : index + size] for index in range(0, len(items), size)]
 
 
+# Every text of the law goes through block_text: a manual law can bring any line in it, and a line that imitates a
+# delimiter gets "> " (step 2.5 of the sprint 4 plan). Only the data changes, so classify-v2 stays.
 def _render_legal_body(legal_body: LegalBody, articles: Sequence[Article]) -> str:
     header_lines = [
         "--- FULL LEGAL BODY (base context) ---",
         f"ID: {legal_body.id}",
-        f"Title: {legal_body.title}",
-        f"Type: {legal_body.type}",
+        f"Title: {block_text(legal_body.title)}",
+        f"Type: {block_text(legal_body.type)}",
     ]
     if legal_body.summary:
-        header_lines.append(f"Summary:\n{strip_base64_images(legal_body.summary)}")
+        header_lines.append(f"Summary:\n{block_text(legal_body.summary)}")
 
     article_blocks = [_render_article_block(item) for item in articles]
     body = "\n\n".join(article_blocks) if article_blocks else "(no articles)"
@@ -234,10 +251,10 @@ def _render_targets(targets: Sequence[Article]) -> str:
 def _render_article_block(article: Article) -> str:
     return (
         f"Article ID: {article.id}\n"
-        f"Number: {article.number}\n"
-        f"Section: {article.section}\n"
+        f"Number: {block_text(article.number)}\n"
+        f"Section: {block_text(article.section)}\n"
         f"Order: {article.order}\n"
-        f"Text:\n{strip_base64_images(article.text)}"
+        f"Text:\n{block_text(article.text)}"
     )
 
 

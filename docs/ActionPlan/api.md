@@ -116,6 +116,8 @@ Campos extra se rechazan. Un campo opcional en blanco queda en `null`. Un sustit
 - Quedan las 5 primeras tareas válidas de cada hallazgo (`MAX_TASKS_PER_FINDING`). El backend no tiene ese tope.
 - Si el modelo responde dos veces por un hallazgo, vale la primera. Un hallazgo que no se mandó se ignora. Uno que el modelo omite queda sin tareas.
 
+**Copia en OpenAI.** La llamada pide `store=False`: OpenAI no guarda la respuesta para sus productos de destilación y evals, como en el chat. Es explícito desde el 2026-10-26 (paso 2.3 del plan del sprint 4 de backend-cumplify); antes regía el valor por defecto, que también es `false`.
+
 **Caché de prompts.** Modo explícito, con un único punto de corte al final de las instrucciones, como la revisión de respaldos y el chat (opción (b) de «Caché de prompts» en `docs/Chat/api.md`). Los hallazgos y los fragmentos van después del corte y nunca quedan en el caché del proveedor.
 
 **Configuración:**
@@ -138,7 +140,7 @@ El endpoint es una función sincrónica: FastAPI la ejecuta en el pool de hilos,
 |---|---|
 | 401 | Falta `X-API-Key` o no coincide con `SERVICE_API_KEY` |
 | 422 | El JSON no es válido, falta un campo, sobra un campo, `prompt_version` no es `action-plan-v1`, un id no es un UUID o es el nulo, se repite un hallazgo, se pasa un tope o hay más de `ACTION_PLAN_MAX_FINDINGS` hallazgos. El mensaje no repite el contenido del pedido |
-| 502 | El proveedor falló o el modelo no devolvió una propuesta válida. El detalle nombra el tipo de falla y, si hay, el estado HTTP |
+| 502 | El proveedor falló, el modelo no devolvió una propuesta válida o hubo una falla inesperada. El detalle nombra el tipo de falla y, si hay, el estado HTTP. No repite el pedido ni la salida del modelo, que tampoco llegan al log (paso 2.12 del plan del sprint 4 de backend-cumplify) |
 | 503 | Falta `SERVICE_API_KEY` u `OPENAI_API_KEY`. La clave de OpenAI se exige antes de validar los hallazgos |
 
 El backend trata cualquier respuesta que no sea 200 como un fallo: responde 502 «No se pudo proponer el plan de acción.» y no guarda el cuerpo.

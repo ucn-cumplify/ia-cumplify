@@ -111,7 +111,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 **Descripción:**
 
-El texto es información de la empresa. No se registra en el log ni aparece en el cuerpo de un error: los errores dicen el tipo de falla, y el log, el largo del texto. Tampoco se copia la respuesta de rechazo del modelo, que podría citarlo, ni una salida que no cumple el esquema o no es JSON: esa falla responde `502` con un texto fijo. El texto es dato, no instrucciones: el prompt pide ignorar las instrucciones escritas dentro de él.
+El texto es información de la empresa. No se registra en el log ni aparece en el cuerpo de un error: los errores dicen el tipo de falla, y el log, el largo del texto. Tampoco se copia la respuesta de rechazo del modelo, que podría citarlo, ni una salida que no cumple el esquema o no es JSON: esa falla responde `502` con un texto fijo. El texto es dato, no instrucciones: el prompt pide ignorar las instrucciones escritas dentro de él. Desde el paso 2.5 del plan del sprint 4 de backend-cumplify, además, una línea del texto que imita un delimitador del mensaje, como `--- END COMPANY DESCRIPTION ---` o `--- EXISTING LABELS (reuse when they fit) ---`, recibe el prefijo `> `, con la regla de CHT-007 de `docs/Chat` (PRF-020 de `test.csv`). Solo cambia el texto: el prompt y el bloque de etiquetas quedan iguales, así que `profile-v1` no sube (PRF-005).
 
 ---
 
@@ -122,6 +122,7 @@ El texto es información de la empresa. No se registra en el log ni aparece en e
 - Usar timeout y reintentos explícitos del cliente OpenAI (`OPENAI_TIMEOUT_SECONDS`, `OPENAI_MAX_RETRIES`).
 - Llamar al modelo con el modo explícito de caché, con el punto de corte antes del texto de la empresa.
 - Quitar del texto que se envía al modelo las imágenes y los demás archivos embebidos como data URI.
+- Neutralizar las líneas del texto que imitan un delimitador del mensaje (PRF-006).
 - Informar siempre la versión del clasificador y el uso de tokens.
 
 ## Fuera de alcance

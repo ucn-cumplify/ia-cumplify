@@ -1,6 +1,8 @@
+import json
 from collections.abc import Sequence
 
 from openai import OpenAI, OpenAIError
+from pydantic import ValidationError
 
 from ia_cumplify.adapters.outbound.openai.applicability_prompts import (
     APPLICABILITY_PROMPT_VERSION,
@@ -8,6 +10,7 @@ from ia_cumplify.adapters.outbound.openai.applicability_prompts import (
     render_applicability_user_content,
 )
 from ia_cumplify.adapters.outbound.openai.llm_applicability_schema import LlmApplicabilityReasons
+from ia_cumplify.adapters.outbound.openai.prompt_cache import PROMPT_CACHE_OPTIONS, cached_prefix
 from ia_cumplify.adapters.outbound.openai.usage import call_usage
 from ia_cumplify.domain.applicability import (
     ApplicabilityArticleContext,
@@ -62,12 +65,17 @@ class OpenAIApplicabilityReasonerAdapter:
         try:
             completion = self._client.chat.completions.parse(
                 model=self._model,
-                messages=[
-                    {"role": "system", "content": APPLICABILITY_SYSTEM_PROMPT},
+                # Only the instructions can be cached (prompt_cache.py): the legal body and the articles, with
+                # their matched values and actions, come after the breakpoint.
+                messages=[  # type: ignore[arg-type]
+                    {"role": "system", "content": [cached_prefix(APPLICABILITY_SYSTEM_PROMPT)]},
                     {"role": "user", "content": render_applicability_user_content(legal_body, articles)},
                 ],
                 response_format=LlmApplicabilityReasons,
                 reasoning_effort=self._reasoning_effort,
+                # No copy for OpenAI's distillation and evals.
+                store=False,
+                prompt_cache_options=PROMPT_CACHE_OPTIONS,  # type: ignore[arg-type]
             )
         except OpenAIError as exc:
             status = getattr(exc, "status_code", None)
@@ -76,6 +84,13 @@ class OpenAIApplicabilityReasonerAdapter:
                 f"{type(exc).__name__}"
                 + (f" (HTTP {status})" if status else "")
             ) from exc
+        except (ValidationError, json.JSONDecodeError):
+            # parse() reads the body as JSON (JSONDecodeError) and validates the answer against the schema
+            # (ValidationError). Their message and the chained error quote the model output, which can repeat
+            # the article or the profile values: neither goes on.
+            raise ApplicabilityError(
+                f"Model did not return valid applicability reasons for legal body {legal_body.id}."
+            ) from None
 
         message = completion.choices[0].message
         if message.parsed is None:
