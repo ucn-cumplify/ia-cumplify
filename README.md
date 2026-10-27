@@ -398,6 +398,10 @@ uv run python scripts/adversarial_eval.py --base-url http://127.0.0.1:8000 --out
     --name ia-adversarial --env-file <ia-cumplify>/.env -e SERVICE_API_KEY -e DATABASE_URL= \
     -e CHAT_FAKE_RESPONDER=false -v "$PWD/src:/app/src:ro" -v "$PWD/scripts:/repo/scripts:ro" \
     backend-cumplify-ia-cumplify
+  (for i in $(seq 60); do
+    [ "$(docker inspect -f '{{.State.Health.Status}}' ia-adversarial)" = healthy ] && exit 0
+    sleep 2
+  done; echo 'ia-adversarial no quedó healthy en 120 s' >&2; exit 1) &&
   docker exec ia-adversarial python /repo/scripts/adversarial_eval.py --out /tmp/adversarial.jsonl
   docker cp ia-adversarial:/tmp/adversarial.jsonl <carpeta fuera del repositorio>
   docker stop ia-adversarial
