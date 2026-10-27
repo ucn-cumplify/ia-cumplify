@@ -27,6 +27,7 @@ from ia_cumplify.adapters.outbound.openai import classifier as classifier_module
 from ia_cumplify.adapters.outbound.openai.classifier import (
     OpenAIArticleClassifierAdapter,
 )
+from ia_cumplify.adapters.outbound.openai.prompts import SYSTEM_PROMPT
 
 PATH = "/api/v1/legal-bodies/classify"
 BODY_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
@@ -310,13 +311,22 @@ def adapter(monkeypatch, openai_script):
     return build
 
 
-def post(pool: FakePool, classifier=None, *, headers: dict = HEADERS):
+def post(
+    pool: FakePool,
+    classifier=None,
+    *,
+    headers: dict = HEADERS,
+    candidates: dict | None = None,
+):
     app = create_app()
     app.dependency_overrides[get_db_pool] = lambda: pool
     if classifier is not None:
         app.dependency_overrides[get_classifier] = lambda: classifier
+    body: dict = {"legal_body_id": BODY_ID}
+    if candidates is not None:
+        body["candidate_values"] = candidates
     with TestClient(app) as client:
-        return client.post(PATH, headers=headers, json={"legal_body_id": BODY_ID})
+        return client.post(PATH, headers=headers, json=body)
 
 
 def classified_ids(response) -> list[str]:
@@ -584,6 +594,39 @@ def test_images_and_attachments_never_reach_the_model(adapter) -> None:
     assert prompt.count("El empleador debe informar al trabajador.") == 2
     assert prompt.count("Copia: [archivo omitido] 12 de marzo.") == 2
     assert "Resumen con [imagen omitida] al final." in prompt
+
+
+def test_only_the_instructions_are_cacheable(adapter) -> None:
+    # Option (b) of "Caché de prompts" (docs/Chat/api.md), since step 2.4 of the sprint 4
+    # plan: the explicit mode with a single breakpoint at the end of the instructions. In
+    # every batch, the legal body, the existing labels and the targets come after it.
+    classifier, script = adapter("ok", "ok")
+    response = post(
+        FakePool(legal_body(3)), classifier, candidates={"scope": ["Laboral"]}
+    )
+
+    assert response.status_code == 200, response.text
+    assert len(script.bodies) == 2
+    for body in script.bodies:
+        assert body.get("prompt_cache_options") == {"mode": "explicit"}, sorted(body)
+        assert json.dumps(body["messages"]).count("prompt_cache_breakpoint") == 1
+        system, user = body["messages"]
+        assert system["content"] == [
+            {
+                "type": "text",
+                "text": SYSTEM_PROMPT,
+                "prompt_cache_breakpoint": {"mode": "explicit"},
+            }
+        ]
+        # The same single string as before, so classify-v2 stays: the labels go right
+        # before the targets, not in the cached prefix as in the company profile.
+        prompt = user["content"]
+        assert isinstance(prompt, str)
+        assert (
+            prompt.index("--- FULL LEGAL BODY")
+            < prompt.index("--- EXISTING LABELS")
+            < prompt.index(TARGETS_MARKER)
+        )
 
 
 def test_a_null_number_or_section_is_empty_text(adapter) -> None:

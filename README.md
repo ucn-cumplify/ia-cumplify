@@ -110,7 +110,7 @@ Todas las variables están en `.env.example`. Las principales:
 |---|---|---|
 | `SERVICE_API_KEY` | — | Secreto del header `X-API-Key`; igual a `AI_SERVICE_API_KEY` del backend |
 | `OPENAI_API_KEY` | — | Clave de OpenAI |
-| `OPENAI_MODEL` | `gpt-5.6-luna` | Modelo de la clasificación, del perfil y de los motivos; también del chat y de la revisión de respaldos si su modelo está vacío |
+| `OPENAI_MODEL` | `gpt-5.6-luna` | Modelo de la clasificación, del perfil y de los motivos; también del chat y de la revisión de respaldos si su modelo está vacío. Tiene que admitir `prompt_cache_options` (gpt-5.6 en adelante): las seis llamadas a chat completions usan el modo explícito de caché |
 | `OPENAI_REASONING_EFFORT` | `low` | Esfuerzo de razonamiento; también del chat y de la revisión si el suyo está vacío |
 | `DATABASE_URL` | — | La misma base que usa el backend |
 | `CLASSIFY_BATCH_SIZE` | 25 | Artículos que se clasifican por llamada al modelo; cada llamada lleva la norma completa |

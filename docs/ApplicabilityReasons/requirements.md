@@ -110,6 +110,7 @@ Cada respuesta informa qué versión del prompt la produjo y cuántos tokens cos
 - Todo cambio del prompt o del armado del mensaje de usuario sube `APPLICABILITY_PROMPT_VERSION`. La limpieza de los datos que llegan al mensaje no cuenta como cambio del armado: por ejemplo, reemplazar un adjunto por `[archivo omitido]` o leer una `section` nula como texto vacío, que cambiaron el 2026-10-08 sin subirla.
 - `usage.llm_calls` vale 1 cuando se llamó al modelo, y 0 cuando `reasons` queda vacío sin llamarlo.
 - Cada campo del `usage` del proveedor se lee por separado: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta (caso APR-017 de `test.csv`).
+- La llamada usa el modo explícito de caché con un único punto de corte al final de las instrucciones: la norma, los artículos, los valores coincidentes y las acciones nunca quedan en el caché del proveedor ("Caché de prompts" en `docs/Chat/api.md`), así que `usage.cached_tokens` no supera los tokens de las instrucciones.
 - `dev_metrics`, cuando viaja, repite los tokens de `usage`, sin `cached_tokens`, y agrega el tiempo.
 
 ---
