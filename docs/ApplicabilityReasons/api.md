@@ -136,7 +136,7 @@ El backend lee `analyses` desde ucn-cumplify/backend-cumplify#193 (pasos 0.18 y 
 | 401 | Falta `X-API-Key` o no coincide con `SERVICE_API_KEY` |
 | 404 | No existe la fila en `legal_bodies` |
 | 422 | Falta un campo, `articles` está vacío o pasa de 10, `article_id` repetido, `matched_values` vacío en un artículo que pide motivo, o una etiqueta no cumple las reglas |
-| 502 | El proveedor falló, el modelo no devolvió un JSON válido o lo rechazó |
+| 502 | El proveedor falló, el modelo no devolvió un JSON válido o lo rechazó, o hubo una falla inesperada. El detalle nombra el tipo de falla y, si hay, el estado HTTP: nunca el mensaje del proveedor ni la salida del modelo, que tampoco llegan al log (paso 2.12 del plan del sprint 4 de backend-cumplify) |
 | 503 | Falta `SERVICE_API_KEY`, `OPENAI_API_KEY` o `DATABASE_URL` |
 
 **Limitaciones:**

@@ -1,6 +1,8 @@
+import json
 from collections.abc import Sequence
 
 from openai import OpenAI, OpenAIError
+from pydantic import ValidationError
 
 from ia_cumplify.adapters.outbound.openai.applicability_prompts import (
     APPLICABILITY_PROMPT_VERSION,
@@ -78,6 +80,13 @@ class OpenAIApplicabilityReasonerAdapter:
                 f"{type(exc).__name__}"
                 + (f" (HTTP {status})" if status else "")
             ) from exc
+        except (ValidationError, json.JSONDecodeError):
+            # parse() reads the body as JSON (JSONDecodeError) and validates the answer against the schema
+            # (ValidationError). Their message and the chained error quote the model output, which can repeat
+            # the article or the profile values: neither goes on.
+            raise ApplicabilityError(
+                f"Model did not return valid applicability reasons for legal body {legal_body.id}."
+            ) from None
 
         message = completion.choices[0].message
         if message.parsed is None:

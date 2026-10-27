@@ -1,4 +1,7 @@
+import json
+
 from openai import OpenAI, OpenAIError
+from pydantic import ValidationError
 
 from ia_cumplify.adapters.outbound.openai.evidence_review_prompts import (
     EVIDENCE_REVIEW_PROMPT_VERSION,
@@ -64,6 +67,11 @@ class OpenAIEvidenceReviewerAdapter:
                 f"{type(exc).__name__}"
                 + (f" (HTTP {status})" if status else "")
             ) from exc
+        except (ValidationError, json.JSONDecodeError):
+            # parse() reads the body as JSON (JSONDecodeError) and validates the answer against the schema
+            # (ValidationError). Their message and the chained error quote the model output, which can quote
+            # the evidence files: neither goes on.
+            raise EvidenceReviewError("The evidence review model did not return a valid review.") from None
 
         message = completion.choices[0].message
         if message.parsed is None:

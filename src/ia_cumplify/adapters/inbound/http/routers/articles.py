@@ -50,14 +50,13 @@ def classify_legal_body(
             detail=f"legal_bodies row not found: {exc}",
         ) from exc
     except ClassificationError as exc:
-        logger.exception("Classification failed")
+        # Its message names the provider's error by type and status, never by its text (classifier.py).
+        logger.error("Classification failed for legal body %s: %s", body.legal_body_id, exc)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception("Unexpected classify failure")
-        raise HTTPException(
-            status_code=502,
-            detail=f"{type(exc).__name__}: {exc}",
-        ) from exc
+        # Any other message, or its traceback, could quote the law or the provider: only the type goes on.
+        logger.error("Unexpected classify failure for legal body %s: %s", body.legal_body_id, type(exc).__name__)
+        raise HTTPException(status_code=502, detail=type(exc).__name__) from exc
 
     response = ClassifyLegalBodyResponse.from_domain(result)
     if get_settings().include_dev_metrics:  # DEV-ONLY

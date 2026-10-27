@@ -654,7 +654,8 @@ def test_an_unexpected_value_error_is_502(monkeypatch) -> None:
         response = client.post(PATH, headers=HEADERS, json={"legal_body_id": BODY_ID})
 
     assert response.status_code == 502
-    assert response.json() == {"detail": "ValueError: unexpected"}
+    # Only the type: the message of an unexpected error could quote the law or the provider (step 2.12).
+    assert response.json() == {"detail": "ValueError"}
 
 
 def test_missing_or_wrong_api_key_is_401(adapter) -> None:

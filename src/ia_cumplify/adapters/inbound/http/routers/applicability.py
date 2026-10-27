@@ -45,14 +45,18 @@ def explain_applicability(
             detail=f"legal_bodies row not found: {exc}",
         ) from exc
     except ApplicabilityError as exc:
-        logger.exception(
-            "Applicability reasons failed for legal body %s (%d articles)",
+        # Its message names the provider's error by type and status, never by its text, and a traceback would
+        # print the provider's error it chains.
+        logger.error(
+            "Applicability reasons failed for legal body %s (%d articles): %s",
             body.legal_body_id,
             len(articles),
+            exc,
         )
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception(
+        # Any other message, or its traceback, could quote the article or the profile values: only the type.
+        logger.error(
             "Unexpected applicability-reasons failure for legal body %s (%d articles): %s",
             body.legal_body_id,
             len(articles),

@@ -59,6 +59,11 @@ async def create_evidence_review(
     except EvidenceReviewError as exc:
         logger.error("Evidence review failed for %d files: %s", len(accepted.files), type(exc).__name__)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        # Unhandled, uvicorn would log its traceback, and the message could quote the files: a 502 with the type
+        # alone, like any other failure the backend retries.
+        logger.error("Unexpected evidence review failure for %d files: %s", len(accepted.files), type(exc).__name__)
+        raise HTTPException(status_code=502, detail=type(exc).__name__) from exc
     logger.info(
         "Evidence review response: %d files (%s), reference date %s, review_version %s.",
         len(result.files),

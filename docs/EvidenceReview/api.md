@@ -164,7 +164,7 @@ La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilo
 |---|---|
 | 401 | Falta `X-API-Key` o no coincide con `SERVICE_API_KEY`. No se lee el cuerpo |
 | 422 | El JSON no es válido, falta un campo, sobra un campo, un id de artículo o de norma viene en lugar del texto, hay más de 10 archivos o más de 25 MB, o un archivo del JSON no coincide con una parte subida. El mensaje no repite el contenido del pedido |
-| 502 | El proveedor falló o el modelo no devolvió la revisión. El detalle nombra el tipo de falla y, si hay, el estado HTTP. No repite el pedido |
+| 502 | El proveedor falló, el modelo no devolvió la revisión o devolvió una que no cumple el esquema, o hubo una falla inesperada. El detalle nombra el tipo de falla y, si hay, el estado HTTP. No repite el pedido ni la salida del modelo, que tampoco llegan al log (paso 2.12 del plan del sprint 4 de backend-cumplify) |
 | 503 | Falta `SERVICE_API_KEY` o `OPENAI_API_KEY`. La clave de OpenAI se exige antes de validar el cuerpo |
 
 **Limitaciones:**

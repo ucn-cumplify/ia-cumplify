@@ -78,9 +78,10 @@ class OpenAIArticleClassifierAdapter:
                 )
             except (ClassificationError, OpenAIError) as exc:
                 last_error = exc
-                logger.exception(
-                    "Batch failed for legal body %s; continuing with remaining batches",
+                logger.error(
+                    "Batch failed for legal body %s; continuing with remaining batches: %s",
                     legal_body.id,
+                    _reason(exc),
                 )
                 failed_article_ids.extend(article.id for article in chunk)
                 # A 200 the provider billed without a classification (a refusal, an answer cut by length or
@@ -94,7 +95,7 @@ class OpenAIArticleClassifierAdapter:
             usage += chunk_usage
 
         if not classified and targets:
-            detail = str(last_error) if last_error is not None else "all batches failed"
+            detail = _reason(last_error) if last_error is not None else "all batches failed"
             raise ClassificationError(
                 f"No article could be classified for legal body {legal_body.id} "
                 f"({usage.llm_calls} model calls, {usage.total_tokens} tokens counted): {detail}"
@@ -135,9 +136,12 @@ class OpenAIArticleClassifierAdapter:
                 store=False,
             )
         except OpenAIError as exc:
-            # No answer (a connection error, a timeout or an HTTP error): only the call counts.
+            # No answer (a connection error, a timeout or an HTTP error): only the call counts. The provider's
+            # message can quote the request or part of the API key: only its type and status go on.
+            status = getattr(exc, "status_code", None)
             raise ClassificationError(
-                f"OpenAI error while classifying legal body {legal_body.id}: {exc}",
+                f"OpenAI error while classifying legal body {legal_body.id}: {type(exc).__name__}"
+                + (f" (HTTP {status})" if status else ""),
                 usage=TokenUsage(llm_calls=1),
             ) from exc
 
@@ -172,6 +176,12 @@ class OpenAIArticleClassifierAdapter:
             call_usage(getattr(completion, "usage", None)),
             missing,
         )
+
+
+def _reason(exc: Exception) -> str:
+    """Why a batch failed, for the log and the 502: a ClassificationError's message, which this module builds
+    without the provider's or the model's text; any other error, only its type."""
+    return str(exc) if isinstance(exc, ClassificationError) else type(exc).__name__
 
 
 def _billed_usage(response: "httpx2.Response") -> TokenUsage:
