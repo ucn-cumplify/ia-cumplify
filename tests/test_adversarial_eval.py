@@ -465,6 +465,17 @@ def test_a_failure_that_counts_fails_the_run(monkeypatch, tmp_path, capsys):
     assert "falla (3x) etiquetas: «Minería» en productive_sector" in printed
 
 
+def test_a_selection_without_cases_is_rejected(monkeypatch, capsys):
+    monkeypatch.setattr(adversarial_eval, "send", no_request)
+
+    # ADV-E03 is a review case: with --endpoint chat nothing is left, and an empty run would pass with 0.
+    with pytest.raises(SystemExit) as stopped:
+        main(["--check-set", "--endpoint", "chat", "--case", "ADV-E03"])
+
+    assert stopped.value.code == 2
+    assert "la selección no elige ningún caso" in capsys.readouterr().err
+
+
 def test_out_inside_the_repository_is_rejected(monkeypatch, capsys):
     monkeypatch.setenv("SERVICE_API_KEY", "clave-de-prueba")
     monkeypatch.setattr(adversarial_eval, "send", no_request)

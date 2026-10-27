@@ -1396,6 +1396,8 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         cases = select(load_set(args.case_set), args.case, args.endpoint)
+        if not cases:
+            raise SetError("la selección no elige ningún caso: cada --case tiene que ser de un --endpoint pedido")
         builts = build_all(cases)
     except (OSError, json.JSONDecodeError, SetError) as exc:
         parser.error(str(exc))
