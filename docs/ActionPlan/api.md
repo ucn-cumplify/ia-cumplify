@@ -116,6 +116,8 @@ Campos extra se rechazan. Un campo opcional en blanco queda en `null`. Un sustit
 - Quedan las 5 primeras tareas válidas de cada hallazgo (`MAX_TASKS_PER_FINDING`). El backend no tiene ese tope.
 - Si el modelo responde dos veces por un hallazgo, vale la primera. Un hallazgo que no se mandó se ignora. Uno que el modelo omite queda sin tareas.
 
+**Copia en OpenAI.** La llamada pide `store=False`: OpenAI no guarda la respuesta para sus productos de destilación y evals, como en el chat. Es explícito desde el 2026-10-26 (paso 2.3 del plan del sprint 4 de backend-cumplify); antes regía el valor por defecto, que también es `false`.
+
 **Caché de prompts.** Modo explícito, con un único punto de corte al final de las instrucciones, como la revisión de respaldos y el chat (opción (b) de «Caché de prompts» en `docs/Chat/api.md`). Los hallazgos y los fragmentos van después del corte y nunca quedan en el caché del proveedor.
 
 **Configuración:**
