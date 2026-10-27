@@ -22,6 +22,7 @@ from ia_cumplify.adapters.inbound.http.app import create_app
 from ia_cumplify.adapters.inbound.http.dependencies import reset_wiring_cache
 from ia_cumplify.adapters.outbound.documents.text_extractor import extract_text
 from ia_cumplify.adapters.outbound.openai import action_planner as action_planner_module
+from ia_cumplify.config.settings import Settings
 from scripts.adversarial_eval import (
     DEFAULT_SET,
     PATHS,
@@ -389,6 +390,14 @@ def test_the_cost_matches_the_backend_formula(usage, cost):
 
 
 # --- the runs --------------------------------------------------------------------------------------------------------
+
+
+def test_the_profile_timeout_covers_every_attempt_of_the_service():
+    # The profile classifier takes OPENAI_TIMEOUT_SECONDS and OPENAI_MAX_RETRIES (dependencies.py), and the SDK also
+    # retries a timed-out call. The defaults are read without building Settings, which would read .env.
+    fields = Settings.model_fields
+    attempts = 1 + fields["openai_max_retries"].default
+    assert adversarial_eval.TIMEOUTS["company_profile"] > attempts * fields["openai_timeout_seconds"].default
 
 
 def test_each_control_goes_first_and_a_baseline_does_not_count(monkeypatch, tmp_path, capsys):

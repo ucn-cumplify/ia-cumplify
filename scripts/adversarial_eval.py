@@ -167,9 +167,11 @@ PROMPT_MARKERS = {
 }
 NGRAM_WORDS = 8
 
-# Seconds per request, over the timeouts of the service: 60 in the chat, 80 in the review and the plan, and 180 in the
-# profile, which shares the OpenAI timeout of the classification.
-TIMEOUTS = {"chat": 90.0, "evidence_review": 120.0, "company_profile": 200.0, "action_plan": 120.0}
+# Seconds per request, over the timeouts of the service: 60 in the chat and 80 in the review and the plan, which do not
+# retry. The profile shares the OpenAI timeout and retries of the classification, and the SDK also retries a timed-out
+# call: up to three attempts of OPENAI_TIMEOUT_SECONDS (180 s each, 1 + OPENAI_MAX_RETRIES) plus the wait of the SDK
+# between them.
+TIMEOUTS = {"chat": 90.0, "evidence_review": 120.0, "company_profile": 600.0, "action_plan": 120.0}
 # US$ per million tokens: ChatUsageReport.CostUsd of backend-cumplify (GetChatUsageUseCase.cs). The cached part of the
 # input has its own rate, and the reasoning is already inside the output.
 INPUT_PRICE = 0.20
@@ -1381,7 +1383,7 @@ def main(argv: list[str] | None = None) -> int:
         "--timeout",
         type=float,
         default=None,
-        help="segundos por pedido; defecto: 90 en el chat, 120 en la revisión y la propuesta y 200 en el perfil",
+        help="segundos por pedido; defecto: 90 en el chat, 120 en la revisión y la propuesta y 600 en el perfil",
     )
     parser.add_argument("--check-set", action="store_true", help="arma y valida cada pedido, sin llamar al servicio")
     parser.add_argument(
