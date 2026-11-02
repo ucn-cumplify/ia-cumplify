@@ -1,0 +1,15 @@
+{
+  "settings": {
+    "chat_question_max_chars": 2000,
+    "chat_history_max_messages": 6,
+    "chat_history_max_chars": 8000,
+    "chat_max_passages": 12,
+    "chat_passage_max_chars": 6000,
+    "chat_passages_max_total_chars": 48000
+  },
+  "fixed": {
+    "passage_id_max_chars": 100,
+    "passage_reference_max_chars": 200,
+    "app_name_max_chars": 200
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "endpoint": "POST /api/v1/applicability-reasons",
+  "request": {
+    "legal_requirement_id": "2b7e4c1a-9d3f-4e8a-b6c5-0f1e2d3c4b5a",
+    "legal_body_id": "6f1c2a3e-4b5d-4c7e-8f90-1a2b3c4d5e6f",
+    "articles": [
+      {
+        "article_id": "0a1b2c3d-1111-4a2b-9c3d-4e5f60718293",
+        "matched_values": ["Medio Ambiente", "Minería"],
+        "actions": ["Almacenamiento de residuos peligrosos en la faena"]
+      },
+      {
+        "article_id": "0a1b2c3d-2222-4a2b-9c3d-4e5f60718293",
+        "matched_values": [],
+        "actions": [],
+        "write_reason": false
+      },
+      {
+        "article_id": "0a1b2c3d-3333-4a2b-9c3d-4e5f60718293",
+        "matched_values": ["Región de Antofagasta"],
+        "actions": []
+      }
+    ]
+  },
+  "response": {
+    "reasons": [
+      {
+        "article_id": "0a1b2c3d-1111-4a2b-9c3d-4e5f60718293",
+        "reason": "La app almacena residuos peligrosos en su faena minera, y el artículo regula ese almacenamiento."
+      },
+      {
+        "article_id": "0a1b2c3d-3333-4a2b-9c3d-4e5f60718293",
+        "reason": "La app opera en la Región de Antofagasta, donde se tramita el permiso que describe el artículo."
+      }
+    ],
+    "analyses": [
+      {
+        "article_id": "0a1b2c3d-1111-4a2b-9c3d-4e5f60718293",
+        "nature": "explicit_obligations",
+        "obligations": [
+          {
+            "title": "Bodega de residuos peligrosos autorizada",
+            "summary": "Almacenar los residuos peligrosos en una bodega con piso impermeable y acceso restringido.",
+            "evidence": "Resolución sanitaria que autoriza la bodega"
+          }
+        ],
+        "referred_legal_body": null,
+        "procedure_for": null
+      },
+      {
+        "article_id": "0a1b2c3d-2222-4a2b-9c3d-4e5f60718293",
+        "nature": "referral",
+        "obligations": [],
+        "referred_legal_body": "Reglamento sintético de residuos",
+        "procedure_for": null
+      },
+      {
+        "article_id": "0a1b2c3d-3333-4a2b-9c3d-4e5f60718293",
+        "nature": "procedural",
+        "obligations": [],
+        "referred_legal_body": null,
+        "procedure_for": "Autorización sanitaria de la bodega de residuos"
+      }
+    ],
+    "reason_version": "applicability-v4@gpt-5.6-luna",
+    "usage": {
+      "prompt_tokens": 3200,
+      "completion_tokens": 900,
+      "total_tokens": 4100,
+      "cached_tokens": 2048,
+      "llm_calls": 1
+    }
+  }
+}

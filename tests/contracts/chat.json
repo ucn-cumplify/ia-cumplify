@@ -1,0 +1,102 @@
+{
+  "endpoint": "POST /api/v1/chat",
+  "request": {
+    "question": "¿Qué exige el reglamento para la bodega de residuos peligrosos?",
+    "history": [
+      {
+        "role": "user",
+        "content": "¿Qué normas sigue esta app?"
+      },
+      {
+        "role": "assistant",
+        "content": "La app sigue el reglamento sintético de gestión de residuos en faenas."
+      }
+    ],
+    "passages": [
+      {
+        "id": "article:0a1b2c3d-1111-4a2b-9c3d-4e5f60718293",
+        "kind": "article",
+        "reference": "Reglamento sintético de residuos, art. 12",
+        "text": "Los residuos peligrosos se almacenan en una bodega con piso impermeable y acceso restringido al personal capacitado."
+      },
+      {
+        "id": "legal_body:6f1c2a3e-4b5d-4c7e-8f90-1a2b3c4d5e6f",
+        "kind": "legal_body",
+        "reference": "Reglamento sintético de gestión de residuos en faenas",
+        "text": "Regula el manejo de los residuos que se generan en las faenas."
+      },
+      {
+        "id": "obligation:2b7e4c1a-9d3f-4e8a-b6c5-0f1e2d3c4b5a",
+        "kind": "obligation",
+        "reference": "Obligación: bodega de residuos peligrosos",
+        "text": "Mantener la resolución sanitaria que autoriza la bodega."
+      }
+    ],
+    "context": {
+      "app_name": "Requisitos legales de la planta sintética"
+    }
+  },
+  "response": {
+    "events": [
+      {
+        "event": "delta",
+        "data": {
+          "text": "La bodega debe tener piso impermeable y acceso restringido al personal capacitado [1]."
+        }
+      },
+      {
+        "event": "delta",
+        "data": {
+          "text": " Además, hay que mantener la resolución sanitaria que la autoriza [2]."
+        }
+      },
+      {
+        "event": "done",
+        "data": {
+          "citations": [
+            {
+              "n": 1,
+              "id": "article:0a1b2c3d-1111-4a2b-9c3d-4e5f60718293"
+            },
+            {
+              "n": 2,
+              "id": "obligation:2b7e4c1a-9d3f-4e8a-b6c5-0f1e2d3c4b5a"
+            }
+          ],
+          "coverage": "answered",
+          "citations_dropped": 0,
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 1800,
+            "completion_tokens": 240,
+            "total_tokens": 2040,
+            "cached_tokens": 1024,
+            "reasoning_tokens": 64,
+            "llm_calls": 1
+          },
+          "chat_version": "chat-v4@gpt-5.6-luna",
+          "dev_metrics": null
+        }
+      }
+    ]
+  },
+  "error_response": {
+    "events": [
+      {
+        "event": "delta",
+        "data": {
+          "text": "La bodega debe tener piso impermeable"
+        }
+      },
+      {
+        "event": "error",
+        "data": {
+          "code": "provider_error",
+          "retryable": true,
+          "usage": null,
+          "chat_version": "chat-v4@gpt-5.6-luna"
+        }
+      }
+    ]
+  }
+}
