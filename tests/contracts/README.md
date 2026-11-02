@@ -42,9 +42,13 @@ Dos endpoints no intercambian un único objeto JSON:
 - **ia-cumplify es la fuente.** backend-cumplify guarda una copia de estos archivos en
   `Cumplify.Tests/AI/Contracts/` y la pasa por los lectores de `IaCumplifyClient`.
 - **Un cambio de contrato se hace en los dos repositorios:** se actualiza el ejemplo aquí, se copia al
-  backend y se corren las pruebas de contrato de ambos.
-- **Las pruebas de cada repositorio no detectan por sí solas una copia desactualizada:** cada una valida su
-  copia contra su propio código. La comprobación de que las dos copias coinciden queda pendiente en el
-  backend.
+  backend, se actualizan en `ContractSyncTests` el commit de origen y la huella del archivo, y se corren las
+  pruebas de contrato de ambos. El procedimiento está en `Cumplify.Tests/AI/Contracts/README.md` del backend.
+- **Copias desactualizadas:** las pruebas de contrato de cada repositorio validan su copia contra su propio
+  código. La comprobación de que las dos copias coinciden es `ContractSyncTests` del backend, en la rama
+  `test/ai-contracts-ucn399` (`a4426853`), publicada y todavía sin fusionar. Compara siempre cada copia con
+  su huella SHA-256 en el commit de ia del que se copió (hoy `0ae81b8`, de esta rama) y, si encuentra estos
+  archivos (en `IA_CUMPLIFY_CONTRACTS_DIR` o en ia-cumplify clonado al lado del backend), los compara uno por
+  uno. Sin ia-cumplify disponible, como en el CI del backend, esa segunda comparación se omite.
 - **Fines de línea:** con `core.autocrlf` en Windows, una copia puede quedar con CRLF y la otra con LF. Esa
   diferencia no cambia el JSON: las copias se comparan por su contenido leído, no byte a byte.
