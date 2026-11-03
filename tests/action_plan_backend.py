@@ -56,10 +56,10 @@ class ReadTask:
     name: str
     description: str | None
     priority: str | None
-    document_id: uuid.UUID
-    chunk_index: int
+    document_id: uuid.UUID | None
+    chunk_index: int | None
     locator: str | None
-    citation: str
+    citation: str | None
 
 
 @dataclass
@@ -154,6 +154,19 @@ def _task(task: object, fragments: dict[tuple[uuid.UUID, int], dict]) -> ReadTas
     if name is None:
         return None
     citation = task.get("citation")
+    # A null citation is a task summarized from the finding. The backend stores it without a document.
+    if citation is None:
+        priority = _text(task, "priority")
+        priority = priority.lower() if priority is not None else None
+        return ReadTask(
+            name=name,
+            description=_fit(_text(task, "description"), DESCRIPTION_MAX_LENGTH),
+            priority=priority if priority in PRIORITIES else None,
+            document_id=None,
+            chunk_index=None,
+            locator=None,
+            citation=None,
+        )
     if not isinstance(citation, dict):
         return None
     document_id = _guid(citation, "document_id")

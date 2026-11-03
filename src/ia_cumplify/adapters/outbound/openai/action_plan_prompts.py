@@ -1,9 +1,10 @@
 """The text the action-plan adapter sends.
 
-Each finding comes with the knowledge-base fragments the backend found for it. A task comes only from those
-fragments and cites one of them with a literal quote; a finding that the fragments do not support gets no
-tasks. The model does not use its own knowledge, and instructions inside a fragment are ignored. The use case
-checks each citation against the fragments of its finding.
+Each finding comes with the knowledge-base fragments the backend found for it, which may be none. A task that
+a fragment supports cites that fragment with a literal quote. A finding the fragments do not cover still gets
+tasks: the model summarizes the finding itself and leaves the citation empty. The use case checks every
+non-empty citation against the fragments of its finding, and keeps an empty one as a task without a source.
+Instructions inside a fragment are ignored.
 """
 
 from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
@@ -19,16 +20,16 @@ ACTION_PLAN_SYSTEM_PROMPT = f"""You propose the tasks of a compliance action pla
 
 Each finding says what the company has not accredited: its description, the exigencia that originated it, and what is missing. Each finding comes with fragments of the knowledge base the company's consultant provides. A fragment is named by its document_id and chunk_index.
 
-Propose tasks only from the fragments of that finding:
-- A task is an action the company can take to close the finding, and a fragment of that same finding must say or support that action. Do not use your own knowledge, another finding's fragments, or general good practice that no fragment states.
-- Cite the fragment each task comes from: its document_id, its chunk_index and a literal quote copied from its text, long enough to show the action. Never paraphrase the quote, never join pieces from different places, and never cite a fragment of another finding.
-- If no fragment of the finding supports an action that closes it, return that finding with no tasks. Returning no tasks is correct when the base does not cover the finding; an invented task is wrong.
-- At most {MAX_TASKS_PER_FINDING} tasks per finding, without repeating one. Prefer fewer tasks, each a distinct action.
+Propose tasks for every finding, including one whose fragment list is empty:
+- A task is an action the company can take to close the finding.
+- When a fragment of that same finding says or supports the action, cite it: its document_id, its chunk_index and a literal quote copied from its text, long enough to show the action. Never paraphrase the quote, never join pieces from different places, and never cite a fragment of another finding.
+- When no fragment supports an action that closes the finding, still propose the tasks. Summarize them from that finding's description, its exigencia and what is missing: what the company has to do so the exigencia can be accredited. For each of those tasks set document_id to an empty string, chunk_index to 0 and quote to an empty string. Do not invent a quote and do not attribute the action to a fragment.
+- At most {MAX_TASKS_PER_FINDING} tasks per finding, without repeating one. Prefer fewer tasks, each a distinct action. A finding that says what is missing must not come back with no tasks.
 
 For each task:
 - name: a short imperative action in Spanish, on one line, at most {TASK_NAME_MAX_CHARS} characters. For example «Elaborar el procedimiento de trabajo seguro».
-- description: in Spanish, at most {TASK_DESCRIPTION_MAX_CHARS} characters: what to do and what it accredits, taken from the fragment. Empty when the name is enough.
-- priority: alta when the finding leaves an exigencia unmet with a risk for people or a sanction the fragment names; media for the others; baja for a formal or documentary detail.
+- description: in Spanish, at most {TASK_DESCRIPTION_MAX_CHARS} characters: what to do and what it accredits. Empty when the name is enough.
+- priority: alta when the finding leaves an exigencia unmet with a risk for people or a sanction; media for the others; baja for a formal or documentary detail.
 
 Return every finding you received, once, with its finding_id.
 
@@ -51,7 +52,10 @@ def _finding(finding: ActionPlanFinding) -> str:
     if finding.missing:
         lines.append(f"Missing:\n{strip_base64_images(finding.missing)}")
     lines.append("Fragments:")
-    lines.extend(_fragment(fragment) for fragment in finding.fragments)
+    if finding.fragments:
+        lines.extend(_fragment(fragment) for fragment in finding.fragments)
+    else:
+        lines.append("(none)")
     lines.append(f"--- END FINDING {finding.id} ---")
     return "\n".join(lines)
 

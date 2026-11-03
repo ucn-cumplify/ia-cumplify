@@ -142,29 +142,34 @@ def test_the_quote_is_matched_the_way_the_backend_matches_it():
     assert quote_in_fragment("a b", "A B") is True
 
 
-def test_a_finding_without_fragments_gets_no_tasks_and_does_not_reach_the_model():
+def test_a_finding_without_fragments_is_sent_and_keeps_the_task_that_summarizes_it():
     planner = ScriptedPlanner(
         FindingTasks(FINDING_A, (task(),)),
-        # The model never saw FINDING_B; whatever it says about it is ignored.
-        FindingTasks(FINDING_B, (task(),)),
+        FindingTasks(FINDING_B, (task(name="Redactar el plan de emergencia", document_id="", quote=""),)),
     )
 
     result = run(planner, finding(FINDING_A, manual()), finding(FINDING_B))
 
     [sent] = planner.calls
-    assert [item.id for item in sent] == [FINDING_A]
-    assert [(item.id, len(item.tasks)) for item in result.findings] == [(FINDING_A, 1), (FINDING_B, 0)]
+    assert [item.id for item in sent] == [FINDING_A, FINDING_B]
+    assert [(item.id, len(item.tasks)) for item in result.findings] == [(FINDING_A, 1), (FINDING_B, 1)]
+    summarized = result.findings[1].tasks[0]
+    assert summarized.name == "Redactar el plan de emergencia"
+    assert summarized.citation is None
 
 
-def test_without_any_fragment_the_model_is_not_called_and_the_response_still_names_the_model():
-    planner = ScriptedPlanner()
+def test_without_any_fragment_the_model_is_still_called():
+    planner = ScriptedPlanner(
+        FindingTasks(FINDING_A, (task(name="Acreditar lo que falta", document_id="  ", quote="  "),)),
+    )
 
     result = run(planner, finding(FINDING_A), finding(FINDING_B))
 
-    assert planner.calls == []
-    assert [item.tasks for item in result.findings] == [(), ()]
-    assert result.usage == TokenUsage()
-    # The backend stores nothing without a model and a proposal_version (ActionPlanResponseReader.CanStore).
+    [sent] = planner.calls
+    assert [item.id for item in sent] == [FINDING_A, FINDING_B]
+    assert result.findings[0].tasks[0].citation is None
+    assert result.findings[1].tasks == ()
+    assert result.usage == USAGE
     assert result.model == "gpt-5.6-luna"
     assert result.proposal_version == "action-plan-v1@gpt-5.6-luna"
 
@@ -212,9 +217,9 @@ def test_only_the_first_tasks_of_a_finding_are_kept():
 
 
 def test_sufficient_insufficient_and_missing_support_survive_the_backend_reader():
-    """Three findings, as the backend would send them: one the base supports, one whose fragments do not
-    support a task (the model cites them wrong), and one with no fragments at all. The 200 is read the way
-    ActionPlanResponseReader reads it."""
+    """Three findings, as the backend would send them: one the base supports, one whose citation is not in
+    the fragment (dropped, not turned into a summary), and one with no fragments that the model summarizes.
+    The 200 is read the way ActionPlanResponseReader reads it."""
     sent = [
         {
             "id": FINDING_A,
@@ -244,6 +249,7 @@ def test_sufficient_insufficient_and_missing_support_survive_the_backend_reader(
             ),
         ),
         FindingTasks(FINDING_B, (task(name="Registrar la entrega de EPP", document_id=GUIDE, chunk_index=3, quote="registro de EPP"),)),
+        FindingTasks(FINDING_C, (task(name="Redactar el plan de emergencia", document_id="", quote="", priority="media"),)),
     )
     request = ActionPlanBody.model_validate({"prompt_version": "action-plan-v1", "findings": sent}).to_request(30)
 
@@ -259,7 +265,14 @@ def test_sufficient_insufficient_and_missing_support_survive_the_backend_reader(
         640,
     )
     assert reading.llm_calls == 1
-    assert [(item.unsupported, len(item.tasks)) for item in reading.findings] == [(False, 2), (True, 0), (True, 0)]
+    assert [(item.unsupported, len(item.tasks)) for item in reading.findings] == [(False, 2), (True, 0), (False, 1)]
+    summarized = reading.findings[2].tasks[0]
+    assert (summarized.name, summarized.document_id, summarized.citation, summarized.priority) == (
+        "Redactar el plan de emergencia",
+        None,
+        None,
+        "media",
+    )
     # Every task this service returned is one the backend keeps, with the same fields.
     returned = json.loads(response.model_dump_json())["findings"][0]["tasks"]
     stored = reading.findings[0].tasks

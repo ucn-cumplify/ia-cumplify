@@ -174,13 +174,18 @@ class ProposedTaskResponse(BaseModel):
     name: str
     description: str | None = None
     priority: TaskPriority | None = None
-    citation: TaskCitationResponse
+    # Null when the task summarizes the finding: the knowledge base did not cover it.
+    citation: TaskCitationResponse | None = None
 
 
 class FindingTasksResponse(BaseModel):
     id: str
     tasks: list[ProposedTaskResponse] = Field(
-        ..., description="Empty when the fragments of the knowledge base do not support a task for the finding"
+        ...,
+        description=(
+            "Tasks that cite a fragment of the knowledge base, or, with a null citation, "
+            "tasks summarized from the finding when the base does not cover it"
+        ),
     )
 
 
@@ -206,10 +211,14 @@ class ActionPlanResponse(BaseModel):
                             name=task.name,
                             description=task.description,
                             priority=task.priority,
-                            citation=TaskCitationResponse(
-                                document_id=task.citation.document_id,
-                                chunk_index=task.citation.chunk_index,
-                                quote=task.citation.quote,
+                            citation=(
+                                None
+                                if task.citation is None
+                                else TaskCitationResponse(
+                                    document_id=task.citation.document_id,
+                                    chunk_index=task.citation.chunk_index,
+                                    quote=task.citation.quote,
+                                )
                             ),
                         )
                         for task in item.tasks

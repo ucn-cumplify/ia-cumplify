@@ -35,7 +35,8 @@ def create_action_plan(
 ) -> ActionPlanResponse:
     """Return tasks for each finding, each one citing a fragment of that finding.
 
-    A finding the fragments do not support comes back with no tasks. Nothing is read from the database, and
+    A finding the fragments do not cover still comes back with tasks that summarize it, and those tasks have no
+    citation. Nothing is read from the database, and
     the text of the findings and the fragments is not logged.
     """
     request = body.to_request(get_settings().action_plan_max_findings)

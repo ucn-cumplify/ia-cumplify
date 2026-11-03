@@ -83,12 +83,13 @@ class ProposedTask:
     name: str
     description: str | None
     priority: TaskPriority | None
-    citation: TaskCitation
+    # None when the knowledge base does not cover the finding: the task summarizes the finding itself.
+    citation: TaskCitation | None
 
 
 @dataclass(frozen=True, slots=True)
 class FindingTasks:
-    """The tasks for one finding. No task means the base has nothing that supports one."""
+    """The tasks for one finding. A task without a citation summarizes the finding: the base did not cover it."""
 
     id: str
     tasks: tuple[ProposedTask, ...]

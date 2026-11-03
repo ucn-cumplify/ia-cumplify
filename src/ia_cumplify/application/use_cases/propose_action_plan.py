@@ -1,7 +1,8 @@
-"""Proposes tasks for the findings of one request from the knowledge-base fragments sent with them.
+"""Proposes tasks for the findings of one request.
 
-The model call goes through ActionPlannerPort. This use case does not read the database: the backend finds
-the fragments and sends them.
+A task that cites a fragment is kept only when that fragment belongs to the finding and the quote is in it.
+A task with an empty citation is kept too: the knowledge base did not cover the finding, and the task
+summarizes it. The model call goes through ActionPlannerPort. This use case does not read the database.
 """
 
 from ia_cumplify.application.ports.action_planner import ActionPlannerPort
@@ -18,43 +19,39 @@ from ia_cumplify.domain.action_plan import (
     ProposedTask,
     TaskCitation,
 )
-from ia_cumplify.domain.classification import TokenUsage
 
 
 class ProposeActionPlanUseCase:
-    """Asks the planner once, for the findings that have fragments, and keeps only the tasks it can verify."""
+    """Asks the planner once for every finding, and keeps the tasks it can verify or that summarize the finding."""
 
     def __init__(self, planner: ActionPlannerPort) -> None:
         self._planner = planner
 
     def execute(self, request: ActionPlanRequest) -> ActionPlanProposal:
-        supported = tuple(finding for finding in request.findings if finding.fragments)
-        # A finding without fragments has nothing in the base to cite. Without any, the model is not called.
+        # Every finding is sent, also one with no fragments: the model still summarizes it into tasks.
+        draft = self._planner.propose(request.findings)
         draft_tasks: dict[str, tuple[ProposedTask, ...]] = {}
-        usage = TokenUsage()
-        if supported:
-            draft = self._planner.propose(supported)
-            usage = draft.usage
-            for item in draft.findings:
-                # The first entry of a finding wins, as in ActionPlanResponseReader.
-                draft_tasks.setdefault(item.id, item.tasks)
+        for item in draft.findings:
+            # The first entry of a finding wins, as in ActionPlanResponseReader.
+            draft_tasks.setdefault(item.id, item.tasks)
         return ActionPlanProposal(
             findings=tuple(
                 FindingTasks(id=finding.id, tasks=verified_tasks(finding, draft_tasks.get(finding.id, ())))
                 for finding in request.findings
             ),
-            usage=usage,
+            usage=draft.usage,
             model=self._planner.model,
             proposal_version=self._planner.version,
         )
 
 
 def verified_tasks(finding: ActionPlanFinding, tasks: tuple[ProposedTask, ...]) -> tuple[ProposedTask, ...]:
-    """The tasks whose citation names a fragment of this finding and quotes it, with their fields fitted.
+    """Cited tasks whose quote is in a fragment of this finding, and tasks that summarize the finding.
 
-    The rules are the ones ActionPlanResponseReader applies in the backend, so no task leaves this service that
-    the backend would drop. A name past the cap drops the task. A description past the cap, or a priority
-    outside the catalog, is cleared instead.
+    An empty citation is a summary of the finding: the base did not cover it, and the backend stores it
+    without a document. A citation that names the wrong fragment, or that the fragment does not contain, is
+    dropped. It is not turned into a summary. A name past the cap drops the task. A description past the cap,
+    or a priority outside the catalog, is cleared instead. These are the rules ActionPlanResponseReader applies.
     """
     fragments: dict[tuple[str, int], KnowledgeFragment] = {}
     for fragment in finding.fragments:
@@ -66,25 +63,39 @@ def verified_tasks(finding: ActionPlanFinding, tasks: tuple[ProposedTask, ...]) 
         name = " ".join(task.name.split())
         if not name or utf16_length(name) > TASK_NAME_MAX_CHARS:
             continue
+        description = (task.description or "").strip()
+        priority = (task.priority or "").strip().lower()
+        fitted = ProposedTask(
+            name=name,
+            description=(
+                description if description and utf16_length(description) <= TASK_DESCRIPTION_MAX_CHARS else None
+            ),
+            priority=priority if priority in TASK_PRIORITIES else None,  # type: ignore[arg-type]
+            citation=None,
+        )
         citation = task.citation
+        if citation is None or _is_summary(citation):
+            kept.append(fitted)
+            continue
         document_id = citation.document_id.strip().lower()
         fragment = fragments.get((document_id, citation.chunk_index))
         quote = citation.quote.strip()
         if fragment is None or not quote_in_fragment(quote, fragment.text):
             continue
-        description = (task.description or "").strip()
-        priority = (task.priority or "").strip().lower()
         kept.append(
             ProposedTask(
-                name=name,
-                description=(
-                    description if description and utf16_length(description) <= TASK_DESCRIPTION_MAX_CHARS else None
-                ),
-                priority=priority if priority in TASK_PRIORITIES else None,  # type: ignore[arg-type]
+                name=fitted.name,
+                description=fitted.description,
+                priority=fitted.priority,
                 citation=TaskCitation(document_id=document_id, chunk_index=citation.chunk_index, quote=quote),
             )
         )
     return tuple(kept)
+
+
+def _is_summary(citation: TaskCitation) -> bool:
+    """An empty document and an empty quote mark a task the model summarized from the finding."""
+    return not citation.document_id.strip() and not citation.quote.strip()
 
 
 def quote_in_fragment(quote: str, fragment_text: str) -> bool:
