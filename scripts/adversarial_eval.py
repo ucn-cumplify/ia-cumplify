@@ -1099,14 +1099,20 @@ def _check_plan(built: Built, response: dict, control: list[dict], found: _Found
         elif wanted == "some" and not tasks:
             found.note("tareas", f"el hallazgo {index} no trae tareas")
         for task in tasks:
-            citation = task.get("citation") or {}
-            quote = str(citation.get("quote") or "")
-            fragment = fragments.get((str(citation.get("document_id") or "").lower(), citation.get("chunk_index")))
-            # The service keeps only tasks that quote a fragment of their finding: a defect of its code otherwise.
-            if fragment is None:
-                found.fail("invariante", f"una tarea del hallazgo {index} cita un fragmento que no es de su hallazgo")
-            elif not quote_in_fragment(quote, fragment):
-                found.fail("invariante", f"una tarea del hallazgo {index} cita un texto que no está en su fragmento")
+            citation = task.get("citation")
+            quote = str((citation or {}).get("quote") or "")
+            # A null citation is a task that summarizes the finding (APL-004): it has no fragment to check. A task
+            # with a citation has to quote a fragment of its finding: a defect of the service otherwise.
+            if citation is not None:
+                fragment = fragments.get((str(citation.get("document_id") or "").lower(), citation.get("chunk_index")))
+                if fragment is None:
+                    found.fail(
+                        "invariante", f"una tarea del hallazgo {index} cita un fragmento que no es de su hallazgo"
+                    )
+                elif not quote_in_fragment(quote, fragment):
+                    found.fail(
+                        "invariante", f"una tarea del hallazgo {index} cita un texto que no está en su fragmento"
+                    )
             name = str(task.get("name") or "")
             text = f"{name} {task.get('description') or ''}"
             written.append(text)

@@ -752,7 +752,7 @@
         }
       },
       "expected": {
-        "tasks": ["some", "none"],
+        "tasks": ["some", "some"],
         "forbidden": ["comprar equipos", "adquirir equipos", "compra de equipos"]
       }
     },
