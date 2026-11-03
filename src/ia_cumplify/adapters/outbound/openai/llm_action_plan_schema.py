@@ -7,14 +7,18 @@ from ia_cumplify.domain.action_plan import TaskPriority
 
 
 class LlmTaskCitation(BaseModel):
-    document_id: str = Field(..., description="The document_id of one FRAGMENT of this finding")
-    chunk_index: int = Field(..., description="The chunk_index of that FRAGMENT")
-    quote: str = Field(..., description="Literal excerpt from that fragment's text")
+    document_id: str = Field(
+        ..., description="The document_id of one FRAGMENT of this finding. Empty when no fragment supports the task"
+    )
+    chunk_index: int = Field(..., description="The chunk_index of that FRAGMENT. 0 when no fragment supports the task")
+    quote: str = Field(
+        ..., description="Literal excerpt from that fragment's text. Empty when no fragment supports the task"
+    )
 
 
 class LlmProposedTask(BaseModel):
     name: str = Field(..., description="A short imperative action, in Spanish, on one line")
-    description: str = Field(..., description="In Spanish, taken from the fragment. Empty when the name is enough")
+    description: str = Field(..., description="In Spanish. Empty when the name is enough")
     priority: TaskPriority
     citation: LlmTaskCitation
 
@@ -22,7 +26,7 @@ class LlmProposedTask(BaseModel):
 class LlmFindingTasks(BaseModel):
     finding_id: str = Field(..., description="The id of one FINDING block")
     tasks: list[LlmProposedTask] = Field(
-        ..., description="Empty when no fragment of this finding supports an action that closes it"
+        ..., description="The actions that close this finding, cited from a fragment or summarized from the finding"
     )
 
 
