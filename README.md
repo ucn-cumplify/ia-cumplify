@@ -352,7 +352,7 @@ una instrucción escrita en los datos cambia lo que responde el servicio: LLM01,
 aplicaciones con LLM.
 
 > **Gasta tokens reales.** Una pasada son 30 llamadas, y por defecto se repite tres veces: unos US$0,07 en total,
-> estimados con lo que midieron CHT-047, EVR-031 y PRF-001 (la propuesta no tiene medición). El script informa los
+> estimados con lo que midieron CHT-047, EVR-031 y PRF-001 (y con APL-022 para la propuesta). El script informa los
 > tokens y el costo de cada ejecución, con las tarifas de `ChatUsageReport` del backend.
 
 ```bash
