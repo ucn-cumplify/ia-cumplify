@@ -1,6 +1,7 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import fields
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.encoders import jsonable_encoder
@@ -19,13 +20,28 @@ from ia_cumplify.adapters.inbound.http.routers import (
     embeddings,
     evidence_reviews,
 )
-from ia_cumplify.config.settings import get_settings
+from ia_cumplify.application.use_cases.answer_chat import ChatLimits
+from ia_cumplify.config.settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
 # What a 422 keeps of each validation error. FastAPI also sends input (the request itself: the whole
 # body when a top-level field is missing) and ctx; neither may leave the service.
 _VALIDATION_ERROR_KEYS = ("type", "loc", "msg")
+
+
+def chat_limits_below_default(settings: Settings) -> list[tuple[str, int, int]]:
+    """The CHAT_* request limits (the fields of ChatLimits) set below their default, as (variable, value,
+    default). The backend mirrors each default as a constant (sprint 4, step 1.5): below it, a request the
+    backend builds within its own limit gets 422 here. A value at or above the default is compatible."""
+    below = []
+    for limit in fields(ChatLimits):
+        name = f"chat_{limit.name}"
+        default = Settings.model_fields[name].default
+        value = getattr(settings, name)
+        if value < default:
+            below.append((name.upper(), value, default))
+    return below
 
 
 @asynccontextmanager
@@ -35,6 +51,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.warning(
             "CHAT_FAKE_RESPONDER is on: POST /api/v1/chat answers a fixed text without calling OpenAI "
             "(chat_version fake-v1@fake)."
+        )
+    # Only the variable and two integers: no other setting, so no key, reaches the log.
+    for variable, value, default in chat_limits_below_default(settings):
+        logger.warning(
+            "%s=%d is below its default %d, which the backend mirrors as a constant: a chat request the "
+            "backend builds within its own limit can get 422 here.",
+            variable,
+            value,
+            default,
         )
     pool: ConnectionPool | None = None
     if settings.database_url:
