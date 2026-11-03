@@ -324,6 +324,7 @@ El chat es interactivo: no puede heredar los 180 s por intento y los 2 reintento
 - Las variables `CHAT_*` de la tabla de configuración de `api.md`. `CHAT_MODEL` y `CHAT_REASONING_EFFORT` vacías heredan `OPENAI_MODEL` y `OPENAI_REASONING_EFFORT`.
 - El cliente se crea con `timeout=openai.Timeout(CHAT_TIMEOUT_SECONDS, connect=5.0)`. Con un número, como en los otros adaptadores, el SDK aplica `CHAT_TIMEOUT_SECONDS` también a la conexión. `openai.Timeout` es la misma clase que `httpx2.Timeout` y la exporta el SDK, así que el código del servicio no importa `httpx2`, que está solo en el grupo de desarrollo.
 - `.env.example` y el `README.md` documentan cada variable y, para los topes, su espejo en el backend.
+- Al arrancar, cada uno de los seis topes de entrada (`CHAT_QUESTION_MAX_CHARS`, `CHAT_HISTORY_MAX_MESSAGES`, `CHAT_HISTORY_MAX_CHARS`, `CHAT_MAX_PASSAGES`, `CHAT_PASSAGE_MAX_CHARS` y `CHAT_PASSAGES_MAX_TOTAL_CHARS`) configurado por debajo de su valor por defecto deja un `WARNING` con la variable, su valor y el valor por defecto, que el backend espeja como constante. El servicio arranca igual. Un valor igual o mayor no avisa, y el aviso no muestra ninguna otra configuración (paso 1.5 del plan del sprint 4 de backend-cumplify).
 
 ---
 

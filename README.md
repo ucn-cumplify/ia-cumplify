@@ -168,7 +168,9 @@ contrato (`docs/Chat/api.md`).
 | `CHAT_FAKE_RESPONDER` | `false` | Respondedor falso: un texto fijo que cita el primer pasaje, sin llamar a OpenAI ni exigir `OPENAI_API_KEY`, con `chat_version` `fake-v1@fake`. Solo para integrar sin gastar tokens, y solo con `APP_ENV=development`: con otro valor, el servicio no arranca. Si arranca activo, el log lo avisa | |
 
 - **Topes del chat:** en el backend son constantes, no variables de entorno. Subir uno exige cambiar el backend y este
-  servicio a la vez; si no, un pedido válido para el backend recibe 422.
+  servicio a la vez; si no, un pedido válido para el backend recibe 422. Bajar una de estas seis variables de su valor
+  por defecto también: al arrancar, el log lo avisa con un `WARNING` por variable, con su valor y el valor por defecto,
+  y el servicio arranca igual. Un valor igual o mayor no avisa.
 - **Sin clave de OpenAI:** con el respondedor real y sin `OPENAI_API_KEY`, el chat responde 503 antes de validar el
   esquema y los largos, aunque el pedido venga sin pasajes.
 

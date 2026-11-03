@@ -56,8 +56,8 @@ class Settings(BaseSettings):
     chat_timeout_seconds: float = 60
     # SDK retries, only before the provider answers 2xx. 0 leaves the retry to the backend.
     chat_max_retries: int = 0
-    # Request limits: a request over one gets 422. The backend should mirror them (proposed names:
-    # AI_CHAT_*; the backend does not define them yet).
+    # Request limits: a request over one gets 422. The backend mirrors each default as a constant, not a
+    # variable; below its default, the service logs a warning at startup (app.py, lifespan).
     chat_question_max_chars: int = 2000
     chat_history_max_messages: int = 6
     chat_history_max_chars: int = 8000
