@@ -1,0 +1,118 @@
+{
+  "endpoint": "POST /api/v1/evidence-reviews",
+  "request": {
+    "review": {
+      "reference_date": "2026-10-15",
+      "article": {
+        "number": "Artículo 12",
+        "text": "Los residuos peligrosos se almacenan en una bodega con piso impermeable y acceso restringido al personal capacitado.",
+        "title": "Del almacenamiento",
+        "section": null
+      },
+      "legal_body": {
+        "title": "Reglamento sintético de gestión de residuos en faenas",
+        "type": "Decreto",
+        "number": "999"
+      },
+      "obligation": {
+        "name": "Bodega de residuos peligrosos",
+        "description": null
+      },
+      "files": [
+        {
+          "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b",
+          "filename": "registro-revisiones.csv"
+        },
+        {
+          "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5c",
+          "filename": "foto-bodega.jpg"
+        },
+        {
+          "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5d",
+          "filename": "notas.txt"
+        }
+      ]
+    },
+    "files": [
+      {
+        "part": "files",
+        "filename": "registro-revisiones.csv",
+        "content_type": "application/octet-stream",
+        "text": "fecha;revisión;responsable\n2026-03-15;Piso de la bodega impermeable;Encargado de residuos\n"
+      },
+      {
+        "part": "files",
+        "filename": "foto-bodega.jpg",
+        "content_type": "application/octet-stream",
+        "text": "imagen sintética"
+      },
+      {
+        "part": "files",
+        "filename": "notas.txt",
+        "content_type": "application/octet-stream",
+        "text": "Notas sintéticas de la visita."
+      }
+    ]
+  },
+  "response": {
+    "files": [
+      {
+        "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b",
+        "filename": "registro-revisiones.csv",
+        "status": "read",
+        "truncated": false,
+        "detail": null
+      },
+      {
+        "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5c",
+        "filename": "foto-bodega.jpg",
+        "status": "unreadable",
+        "truncated": false,
+        "detail": null
+      },
+      {
+        "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5d",
+        "filename": "notas.txt",
+        "status": "unsupported",
+        "truncated": false,
+        "detail": null
+      }
+    ],
+    "nature": "explicit_obligations",
+    "procedure_for": null,
+    "requirements": [
+      {
+        "text": "Mantener el piso de la bodega impermeable.",
+        "evidence": "Registro de revisiones de la bodega",
+        "status": "accredited",
+        "citations": [
+          {
+            "file_id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b",
+            "locator": "body",
+            "reference": "",
+            "quote": "Piso de la bodega impermeable"
+          }
+        ],
+        "missing": ""
+      },
+      {
+        "text": "Restringir el acceso a la bodega al personal capacitado.",
+        "evidence": "Registro de ingreso a la bodega",
+        "status": "not_accredited",
+        "citations": [],
+        "missing": "No hay registro de ingreso a la bodega."
+      }
+    ],
+    "verdict": "partial",
+    "summary": "El piso impermeable está acreditado; falta el registro de ingreso a la bodega.",
+    "usage": {
+      "prompt_tokens": 5200,
+      "completion_tokens": 700,
+      "total_tokens": 5900,
+      "cached_tokens": 4096,
+      "llm_calls": 1
+    },
+    "model": "gpt-5.6-luna",
+    "review_version": "evidence-review-v4@gpt-5.6-luna"
+  }
+}
