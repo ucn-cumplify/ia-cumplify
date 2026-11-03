@@ -164,8 +164,20 @@ def test_a_citation_outside_the_fragment_leaves_the_finding_without_support():
     assert read_like_backend(response.text, body()["findings"]).findings[0].unsupported
 
 
-def test_findings_without_fragments_answer_without_calling_the_model():
-    planner = ScriptedPlanner()
+def test_findings_without_fragments_are_sent_and_a_summary_has_no_citation():
+    planner = ScriptedPlanner(
+        FindingTasks(
+            FINDING_A,
+            (
+                ProposedTask(
+                    name="Conseguir el acta",
+                    description="Pedirla y archivarla.",
+                    priority="media",
+                    citation=TaskCitation(document_id="", chunk_index=0, quote=""),
+                ),
+            ),
+        )
+    )
     request = backend_body(
         [finding(FINDING_A, "Falta el acta.", []), finding(FINDING_B, "Falta el registro.", None)]  # type: ignore[arg-type]
     )
@@ -173,14 +185,24 @@ def test_findings_without_fragments_answer_without_calling_the_model():
     response = post(request, planner=planner)
 
     assert response.status_code == 200
-    assert planner.calls == []
+    [sent] = planner.calls
+    assert [item.id for item in sent] == [FINDING_A, FINDING_B]
     payload = response.json()
-    assert payload["findings"] == [{"id": FINDING_A, "tasks": []}, {"id": FINDING_B, "tasks": []}]
-    assert payload["usage"]["llm_calls"] == 0
+    assert payload["findings"][0]["tasks"] == [
+        {
+            "name": "Conseguir el acta",
+            "description": "Pedirla y archivarla.",
+            "priority": "media",
+            "citation": None,
+        }
+    ]
+    assert payload["findings"][1] == {"id": FINDING_B, "tasks": []}
+    assert payload["usage"]["llm_calls"] == 1
     reading = read_like_backend(response.text, request["findings"])
-    # The backend can still store a proposal with both findings marked without support.
     assert reading.can_store
-    assert [item.unsupported for item in reading.findings] == [True, True]
+    assert [item.unsupported for item in reading.findings] == [False, True]
+    assert reading.findings[0].tasks[0].document_id is None
+    assert reading.findings[0].tasks[0].citation is None
 
 
 def test_a_repeated_fragment_is_sent_once():

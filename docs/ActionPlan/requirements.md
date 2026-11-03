@@ -71,7 +71,7 @@ Cada tarea cita un fragmento con `document_id`, `chunk_index` y un texto literal
 
 ---
 
-### APL-004 — Un hallazgo sin respaldo vuelve sin tareas
+### APL-004 — Un hallazgo que la base no cubre vuelve resumido, sin cita
 
 | Campo | Detalle |
 |---|---|
@@ -80,12 +80,12 @@ Cada tarea cita un fragmento con `document_id`, `chunk_index` y un texto literal
 
 **Descripción:**
 
-Un hallazgo sin fragmentos, uno cuyas tareas no tienen una cita válida y uno que el modelo omite vuelven con `tasks: []`. Es la marca «sin respaldo en la base de conocimientos» que el backend lee: el contrato no tiene otro campo para eso.
+Todo hallazgo se manda al modelo, también el que no tiene fragmentos. Si el modelo resume el hallazgo, la tarea vuelve con `citation` en `null`: el backend la guarda sin documento. Una cita que no está en el fragmento se descarta y no se convierte en resumen. Un hallazgo que el modelo omite, o cuyas tareas se descartan, vuelve con `tasks: []`.
 
 **Validaciones:**
 
-- Un hallazgo sin fragmentos no se manda al modelo.
-- Si ningún hallazgo tiene fragmentos, no se llama al modelo, el consumo es 0 y la respuesta igual trae `model` y `proposal_version`, sin los cuales el backend no guarda la propuesta.
+- Un hallazgo sin fragmentos se manda al modelo. Una tarea con cita vacía vuelve con `citation` en `null`.
+- Si ningún hallazgo tiene fragmentos, igual se llama al modelo.
 - La respuesta trae cada hallazgo del pedido una vez, en su orden.
 
 ---
@@ -169,7 +169,7 @@ El plan pide un set de evaluación con casos de la base del cliente. Queda pendi
 - Validar el pedido con el contrato de la PR #225 de backend-cumplify y los topes de `api.md`.
 - Pedir al modelo una propuesta estructurada con el prompt `action-plan-v1`.
 - Verificar cada cita contra los fragmentos del hallazgo y ajustar los campos a lo que guarda el backend.
-- Devolver `tasks: []` para un hallazgo sin respaldo, sin llamar al modelo si no tiene fragmentos.
+- Mandar al modelo también los hallazgos sin fragmentos, y devolver con `citation` en `null` la tarea que resume el hallazgo.
 - Probar el adaptador real contra un cliente falso de OpenAI, sin salir de la máquina.
 
 ## Fuera de alcance
@@ -209,10 +209,10 @@ Cada punto lleva su estado: **Pendiente** (falta una decisión, una implementaci
 **Resuelto**
 
 - **El contrato ya no sale de una PR abierta.** La PR #225 de backend-cumplify se fusionó en `capstone-2s` el 2026-10-23, y el pedido, la respuesta y los topes se revisaron contra su commit de merge ese mismo día.
+- **Un hallazgo que la base no cubre se resume.** El plan del sprint 3 lo dejaba por confirmar. Quedó la alternativa: el modelo propone la tarea a partir del hallazgo y la marca sin cita.
 
 **Por confirmar** (valores fijados por el equipo o por este servicio, sin acuerdo registrado con el cliente)
 
-- **Un hallazgo sin respaldo vuelve sin tareas.** El plan del sprint 3 lo deja entre los valores por defecto a confirmar. La alternativa es proponer tareas con el conocimiento del modelo, marcadas como tales.
 - **El reparto de `priority`.** Las reglas de `alta`, `media` y `baja` son una propuesta de este servicio; el cliente no las revisó.
 - **`MAX_TASKS_PER_FINDING` (5).** El backend no tiene tope de tareas.
 
