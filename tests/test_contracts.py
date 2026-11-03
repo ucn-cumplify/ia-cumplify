@@ -496,7 +496,7 @@ def tasks_of(example: dict[str, Any]) -> tuple[ProposedTask, ...]:
             name=task["name"],
             description=task["description"],
             priority=task["priority"],
-            citation=TaskCitation(**task["citation"]),
+            citation=None if task["citation"] is None else TaskCitation(**task["citation"]),
         )
         for task in example["tasks"]
     )
@@ -560,7 +560,8 @@ def test_action_plan_response_answers_every_finding_in_order(action_plan) -> Non
         assert list(finding) == list(FindingTasksResponse.model_fields)
         for task in finding["tasks"]:
             assert list(task) == list(ProposedTaskResponse.model_fields)
-            assert list(task["citation"]) == list(TaskCitationResponse.model_fields)
+            if task["citation"] is not None:
+                assert list(task["citation"]) == list(TaskCitationResponse.model_fields)
             assert task["priority"] in (*TASK_PRIORITIES, None)
     assert_usage_and_version(example, "proposal_version")
     # Coherence of the example: the planner reports "<prompt>@<model>" and the same model apart.
@@ -571,12 +572,15 @@ def test_action_plan_tasks_cite_their_fragments(action_plan) -> None:
     request = ActionPlanBody.model_validate(action_plan["request"]).to_request(Settings().action_plan_max_findings)
     returned = {finding["id"]: finding for finding in action_plan["response"]["findings"]}
 
-    # The service keeps a task only if its citation names a fragment of that finding and quotes it, the same
-    # rule as ActionPlanResponseReader: every task of the example survives it unchanged.
+    # The service keeps a cited task only if its citation names a fragment of that finding and quotes it, the
+    # same rule as ActionPlanResponseReader, and it keeps a task without a citation as a summary of the finding:
+    # every task of the example survives it unchanged.
     for finding in request.findings:
         tasks = tasks_of(returned[finding.id])
         assert verified_tasks(finding, tasks) == tasks
-    assert any(returned[finding.id]["tasks"] for finding in request.findings)
+    every_task = [task for finding in request.findings for task in tasks_of(returned[finding.id])]
+    assert any(task.citation is not None for task in every_task)
+    assert any(task.citation is None for task in every_task)
 
 
 def test_action_plan_response_is_what_the_endpoint_builds(action_plan) -> None:

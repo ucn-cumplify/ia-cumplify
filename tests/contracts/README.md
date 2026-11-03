@@ -35,7 +35,7 @@ Dos endpoints no intercambian un único objeto JSON:
 
 `chat-limits.json` no es un contrato HTTP. Guarda los nueve topes del chat que el backend repite en
 `ChatTurnRules`, `ChatHistory` y `ChatPassageLimits`: en `settings`, los valores por defecto de las variables
-`CHAT_*`; en `fixed`, las constantes de `domain/chat.py`. Lo usará el paso 1.5.
+`CHAT_*`; en `fixed`, las constantes de `domain/chat.py`. Lo usa `ChatLimitsContractTests` del backend (paso 1.5).
 
 ## Sincronización con el backend
 
@@ -45,10 +45,9 @@ Dos endpoints no intercambian un único objeto JSON:
   backend, se actualizan en `ContractSyncTests` el commit de origen y la huella del archivo, y se corren las
   pruebas de contrato de ambos. El procedimiento está en `Cumplify.Tests/AI/Contracts/README.md` del backend.
 - **Copias desactualizadas:** las pruebas de contrato de cada repositorio validan su copia contra su propio
-  código. La comprobación de que las dos copias coinciden es `ContractSyncTests` del backend, en la rama
-  `test/ai-contracts-ucn399` (`a4426853`), publicada y todavía sin fusionar. Compara siempre cada copia con
-  su huella SHA-256 en el commit de ia del que se copió (hoy `0ae81b8`, de esta rama) y, si encuentra estos
-  archivos (en `IA_CUMPLIFY_CONTRACTS_DIR` o en ia-cumplify clonado al lado del backend), los compara uno por
-  uno. Sin ia-cumplify disponible, como en el CI del backend, esa segunda comparación se omite.
+  código. La comprobación de que las dos copias coinciden es `ContractSyncTests` del backend. Compara siempre
+  cada copia con su huella SHA-256 en el commit de ia del que se copió (`SourceCommit` en esa prueba) y, si
+  encuentra estos archivos (en `IA_CUMPLIFY_CONTRACTS_DIR` o en ia-cumplify clonado al lado del backend), los
+  compara uno por uno. Sin ia-cumplify disponible, como en el CI del backend, esa segunda comparación se omite.
 - **Fines de línea:** con `core.autocrlf` en Windows, una copia puede quedar con CRLF y la otra con LF. Esa
   diferencia no cambia el JSON: las copias se comparan por su contenido leído, no byte a byte.
