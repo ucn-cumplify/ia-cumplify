@@ -137,6 +137,16 @@ def test_the_prompt_cites_a_fragment_and_still_summarizes_a_finding_the_base_doe
         assert rule in ACTION_PLAN_SYSTEM_PROMPT
 
 
+def test_the_schema_the_model_reads_does_not_contradict_the_prompt():
+    """The model also reads the field descriptions, so they say what the prompt says about a summarized task."""
+    definitions = LlmActionPlan.model_json_schema()["$defs"]
+    citation = definitions["LlmTaskCitation"]["properties"]
+    for field in ("document_id", "chunk_index", "quote"):
+        assert "when no fragment supports the task" in citation[field]["description"]
+    assert "summarized from the finding" in definitions["LlmFindingTasks"]["properties"]["tasks"]["description"]
+    assert "fragment" not in definitions["LlmProposedTask"]["properties"]["description"]["description"]
+
+
 def test_a_provider_error_does_not_repeat_the_request():
     planner = adapter()
     planner._client = SimpleNamespace(chat=SimpleNamespace(completions=_Completions(None, error=OpenAIError(SECRET))))

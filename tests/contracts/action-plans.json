@@ -88,7 +88,14 @@
       },
       {
         "id": "c4e8a2b6-1d3f-4e5a-9b7c-6d8e0f2a4b6c",
-        "tasks": []
+        "tasks": [
+          {
+            "name": "Instalar la señalética de la bodega",
+            "description": "Señalizar el acceso y dejar registro de la instalación.",
+            "priority": "media",
+            "citation": null
+          }
+        ]
       }
     ]
   }

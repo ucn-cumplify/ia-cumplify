@@ -15,7 +15,7 @@ POST /api/v1/action-plans
 Content-Type: application/json
 ```
 
-**Descripción:** Recibe los hallazgos abiertos de una revisión de respaldos, cada uno con hasta 5 fragmentos de la base de conocimientos, y pide al modelo tareas para cerrarlos. Cada tarea sale solo de los fragmentos de su hallazgo y cita uno de ellos con un texto literal. El servicio busca cada cita en su fragmento y descarta la tarea que no la tiene. Un hallazgo que la base no respalda vuelve sin tareas. Devuelve un hallazgo por cada uno del pedido, en el mismo orden, con el consumo, el modelo y `proposal_version`. No guarda la propuesta ni crea las tareas: eso lo confirma el usuario en el backend.
+**Descripción:** Recibe los hallazgos abiertos de una revisión de respaldos, cada uno con hasta 5 fragmentos de la base de conocimientos, y pide al modelo tareas para cerrarlos. Si un fragmento de su hallazgo respalda la tarea, la cita con un texto literal, y el servicio busca esa cita en su fragmento y descarta la tarea que no la tiene. Si ninguno la respalda, la tarea resume el hallazgo y vuelve con `citation` en `null`. Devuelve un hallazgo por cada uno del pedido, en el mismo orden, con el consumo, el modelo y `proposal_version`. No guarda la propuesta ni crea las tareas: eso lo confirma el usuario en el backend.
 
 **Requerimiento relacionado:** APL-001, APL-002, APL-003, APL-004, APL-005, APL-006, APL-007, APL-008
 
@@ -92,8 +92,8 @@ Campos extra se rechazan. Un campo opcional en blanco queda en `null`. Un sustit
 }
 ```
 
-- `proposal_version` y `model` vienen siempre, también cuando no se llamó al modelo: sin ellos el backend no guarda la propuesta.
-- `usage` es el de la única llamada, con el formato de la revisión de respaldos. `cached_tokens` sale de `prompt_tokens_details`. Un campo que falta o no es un entero positivo cuenta 0. Sin llamada, todo es 0, incluido `llm_calls`.
+- `proposal_version` y `model` vienen siempre: sin ellos el backend no guarda la propuesta.
+- `usage` es el de la única llamada, con el formato de la revisión de respaldos. `cached_tokens` sale de `prompt_tokens_details`. Un campo que falta o no es un entero positivo cuenta 0.
 - `findings` trae cada hallazgo del pedido una vez, en su orden. Una tarea con `citation` en `null` resume el hallazgo: la base no lo cubre. El backend la guarda sin documento. Si no queda ninguna tarea, el hallazgo queda sin respaldo.
 - `description`, `priority` y `citation` pueden ser `null`.
 
