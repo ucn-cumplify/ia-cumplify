@@ -1,0 +1,52 @@
+{
+  "endpoint": "POST /api/v1/company-profiles/documentary-situation",
+  "request": {
+    "situation": {
+      "files": [
+        {
+          "id": "a1b2c3d4-e5f6-4789-8a9b-0c1d2e3f4a5b",
+          "filename": "rca-resumen.csv"
+        },
+        {
+          "id": "a1b2c3d4-e5f6-4789-8a9b-0c1d2e3f4a5c",
+          "filename": "foto-planta.jpg"
+        }
+      ]
+    },
+    "files": [
+      {
+        "part": "files",
+        "filename": "rca-resumen.csv",
+        "content_type": "application/octet-stream",
+        "text": "documento;dato\nRCA 123/2024;30 m2 de acopio temporal\n"
+      },
+      {
+        "part": "files",
+        "filename": "foto-planta.jpg",
+        "content_type": "application/octet-stream",
+        "text": "imagen sintetica"
+      }
+    ]
+  },
+  "response": {
+    "content": "RCA 123/2024 autoriza 30 m² de acopio temporal.",
+    "prompt_version": "documentary-situation-v1@gpt-5.6-luna",
+    "usage": {
+      "prompt_tokens": 120,
+      "completion_tokens": 40,
+      "total_tokens": 160,
+      "cached_tokens": 0,
+      "llm_calls": 1
+    },
+    "files": [
+      {
+        "filename": "rca-resumen.csv",
+        "status": "read"
+      },
+      {
+        "filename": "foto-planta.jpg",
+        "status": "unreadable"
+      }
+    ]
+  }
+}

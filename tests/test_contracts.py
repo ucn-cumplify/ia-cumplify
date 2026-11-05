@@ -47,6 +47,12 @@ from ia_cumplify.adapters.inbound.http.schemas.company_profile import (
     ClassifyCompanyProfileResponse,
 )
 from ia_cumplify.adapters.inbound.http.schemas.embeddings import EmbedTextsRequest, EmbedTextsResponse
+from ia_cumplify.adapters.inbound.http.schemas.documentary_situation import (
+    DocumentarySituationBody,
+    DocumentarySituationResponse,
+    ReviewedDocumentaryFileResponse,
+    parse_documentary_situation,
+)
 from ia_cumplify.adapters.inbound.http.schemas.evidence_review import (
     EvidenceReviewBody,
     EvidenceReviewResponse,
@@ -55,6 +61,7 @@ from ia_cumplify.adapters.inbound.http.schemas.evidence_review import (
     ReviewRequirementResponse,
     parse_evidence_review,
 )
+from ia_cumplify.application.use_cases.extract_documentary_situation import ExtractDocumentarySituationUseCase
 from ia_cumplify.application.use_cases.propose_action_plan import verified_tasks
 from ia_cumplify.application.use_cases.review_evidence import ReviewEvidenceUseCase
 from ia_cumplify.config.settings import Settings
@@ -98,6 +105,7 @@ from ia_cumplify.domain.classification import (
 )
 from ia_cumplify.domain.company_profile import ClassifiedCompanyProfile
 from ia_cumplify.domain.embedding import TextEmbeddings
+from ia_cumplify.domain.documentary_situation import DocumentarySituationJudgment, DocumentarySituationSubject
 from ia_cumplify.domain.evidence_review import (
     EvidenceReviewSubject,
     ReviewCitation,
@@ -761,6 +769,95 @@ def test_evidence_review_response_is_what_the_endpoint_builds(evidence_review) -
     result = ReviewEvidenceUseCase(ExampleReviewer(example)).execute(request)
 
     assert EvidenceReviewResponse.from_domain(result).model_dump(mode="json", exclude_unset=True) == example
+
+
+# --- POST /api/v1/company-profiles/documentary-situation (multipart) --------------------------------------
+
+
+@pytest.fixture
+def documentary_situation() -> dict[str, Any]:
+    return load_contract("documentary-situation")
+
+
+class ExampleDocumentaryExtractor:
+    def __init__(self, example: dict[str, Any]) -> None:
+        self._example = example
+
+    @property
+    def version(self) -> str:
+        return self._example["prompt_version"]
+
+    def extract(self, subject: DocumentarySituationSubject) -> DocumentarySituationJudgment:
+        example = self._example
+        return DocumentarySituationJudgment(
+            content=example["content"],
+            usage=TokenUsage(**example["usage"]),
+            model=example["prompt_version"].split("@", 1)[1],
+            prompt_version=example["prompt_version"],
+        )
+
+
+def test_documentary_situation_is_served_as_multipart(documentary_situation) -> None:
+    operation = operation_of(documentary_situation["endpoint"])
+    schema = operation["requestBody"]["content"]["multipart/form-data"]["schema"]["$ref"]
+    form = create_app().openapi()["components"]["schemas"][schema.removeprefix("#/components/schemas/")]
+
+    assert form["required"] == ["situation"]
+    assert form["properties"]["situation"]["type"] == "string"
+    assert {"type": "array", "items": {"type": "string", "contentMediaType": "application/octet-stream"}} in (
+        form["properties"]["files"]["anyOf"]
+    )
+    assert schema_name(operation["responses"]["200"]["content"]) == DocumentarySituationResponse.__name__
+
+
+def test_documentary_situation_request_is_what_the_backend_sends(documentary_situation) -> None:
+    situation = documentary_situation["request"]["situation"]
+    body = round_trip(DocumentarySituationBody, situation)
+    parts = documentary_situation["request"]["files"]
+
+    assert list(documentary_situation["request"]) == ["situation", "files"]
+    assert list(situation) == ["files"]
+    assert [list(item) for item in situation["files"]] == [["id", "filename"]] * len(situation["files"])
+    assert [part["filename"] for part in parts] == [item.filename for item in body.files]
+    for part in parts:
+        assert list(part) == ["part", "filename", "content_type", "text"]
+        assert part["part"] == "files"
+        assert part["content_type"] == "application/octet-stream"
+
+
+def test_documentary_situation_parts_pair(documentary_situation) -> None:
+    situation = documentary_situation["request"]["situation"]
+    request = parse_documentary_situation(json.dumps(situation), uploads_of(documentary_situation))
+
+    assert [(item.id, item.filename) for item in request.files] == [
+        (item["id"], item["filename"]) for item in situation["files"]
+    ]
+    assert [item.content for item in request.files] == [content for _, content in uploads_of(documentary_situation)]
+
+
+def test_documentary_situation_response_matches_its_request(documentary_situation) -> None:
+    response = round_trip(DocumentarySituationResponse, documentary_situation["response"])
+    example = documentary_situation["response"]
+    declared = documentary_situation["request"]["situation"]["files"]
+
+    assert list(example) == list(DocumentarySituationResponse.model_fields)
+    assert [item.filename for item in response.files] == [item["filename"] for item in declared]
+    for item in example["files"]:
+        assert list(item) == list(ReviewedDocumentaryFileResponse.model_fields)
+        assert item["status"] in get_args(FileReadStatus)
+    assert_usage_and_version(example, "prompt_version")
+    assert example["prompt_version"].split("@")[1] == "gpt-5.6-luna"
+
+
+def test_documentary_situation_response_is_what_the_endpoint_builds(documentary_situation) -> None:
+    example = documentary_situation["response"]
+    request = parse_documentary_situation(
+        json.dumps(documentary_situation["request"]["situation"]), uploads_of(documentary_situation)
+    )
+
+    result = ExtractDocumentarySituationUseCase(ExampleDocumentaryExtractor(example)).execute(request)
+
+    assert DocumentarySituationResponse.from_domain(result).model_dump(mode="json", exclude_unset=True) == example
 
 
 # --- POST /api/v1/chat (server-sent events) ---------------------------------------------------------------
