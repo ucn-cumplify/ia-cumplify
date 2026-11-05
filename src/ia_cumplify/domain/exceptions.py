@@ -37,6 +37,10 @@ class EvidenceReviewError(DomainError):
     """The evidence review could not be produced. The message does not repeat the request."""
 
 
+class DocumentarySituationError(DomainError):
+    """The documentary situation could not be produced. The message does not repeat the request."""
+
+
 class ActionPlanError(DomainError):
     """The action plan proposal could not be produced. The message does not repeat the request."""
 

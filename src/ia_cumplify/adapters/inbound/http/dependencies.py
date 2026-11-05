@@ -11,10 +11,14 @@ from ia_cumplify.adapters.outbound.openai.chat_responder import OpenAIChatRespon
 from ia_cumplify.adapters.outbound.openai.applicability_reasoner import OpenAIApplicabilityReasonerAdapter
 from ia_cumplify.adapters.outbound.openai.classifier import OpenAIArticleClassifierAdapter
 from ia_cumplify.adapters.outbound.openai.embedder import OpenAITextEmbedderAdapter
+from ia_cumplify.adapters.outbound.openai.documentary_situation_extractor import (
+    OpenAIDocumentarySituationExtractorAdapter,
+)
 from ia_cumplify.adapters.outbound.openai.evidence_reviewer import OpenAIEvidenceReviewerAdapter
 from ia_cumplify.adapters.outbound.openai.profile_classifier import OpenAICompanyProfileClassifierAdapter
 from ia_cumplify.application.ports.action_planner import ActionPlannerPort
 from ia_cumplify.application.ports.chat_responder import ChatResponderPort
+from ia_cumplify.application.ports.documentary_situation_extractor import DocumentarySituationExtractorPort
 from ia_cumplify.application.ports.evidence_reviewer import EvidenceReviewerPort
 from ia_cumplify.config.settings import get_settings
 
@@ -146,6 +150,23 @@ def get_evidence_reviewer() -> EvidenceReviewerPort:
 
 
 @lru_cache
+def get_documentary_situation_extractor() -> DocumentarySituationExtractorPort:
+    settings = get_settings()
+    if not settings.openai_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="OPENAI_API_KEY is not configured.",
+        )
+    return OpenAIDocumentarySituationExtractorAdapter(
+        api_key=settings.openai_api_key,
+        model=settings.evidence_review_model or settings.openai_model,
+        reasoning_effort=settings.evidence_review_reasoning_effort or settings.openai_reasoning_effort,
+        timeout_seconds=settings.evidence_review_timeout_seconds,
+        max_retries=settings.evidence_review_max_retries,
+    )
+
+
+@lru_cache
 def get_action_planner() -> ActionPlannerPort:
     settings = get_settings()
     if not settings.openai_api_key:
@@ -169,5 +190,6 @@ def reset_wiring_cache() -> None:
     get_text_embedder.cache_clear()
     get_chat_responder.cache_clear()
     get_evidence_reviewer.cache_clear()
+    get_documentary_situation_extractor.cache_clear()
     get_action_planner.cache_clear()
     get_settings.cache_clear()

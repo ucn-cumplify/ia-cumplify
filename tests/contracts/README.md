@@ -17,6 +17,7 @@ respuesta. Corre con `uv run pytest tests/test_contracts.py`, sin red, base de d
 | `applicability-reasons.json` | `POST /api/v1/applicability-reasons` |
 | `action-plans.json` | `POST /api/v1/action-plans` |
 | `evidence-reviews.json` | `POST /api/v1/evidence-reviews` |
+| `documentary-situation.json` | `POST /api/v1/company-profiles/documentary-situation` |
 | `chat.json` | `POST /api/v1/chat` |
 
 ## Formato
@@ -29,6 +30,7 @@ Dos endpoints no intercambian un único objeto JSON:
 - **`evidence-reviews.json`** (`multipart/form-data`): `request.review` es el JSON del campo `review`, y
   `request.files` describe cada parte `files` con su `filename`, su `content_type` y su contenido como `text`
   UTF-8. No hay archivos binarios.
+- **`documentary-situation.json`** (`multipart/form-data`): igual, con el JSON en el campo `situation`.
 - **`chat.json`** (server-sent events): `response` es el stream, `{"events": [{"event", "data"}, ...]}`, con
   eventos `delta` y un `done` final. `error_response` es otro stream que termina en `error`: un stream termina
   en uno de los dos, nunca en ambos.
