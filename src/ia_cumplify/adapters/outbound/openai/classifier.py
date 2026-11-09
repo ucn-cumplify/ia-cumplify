@@ -117,8 +117,8 @@ class OpenAIArticleClassifierAdapter:
     ) -> tuple[list[ClassifiedArticle], TokenUsage, list[str]]:
         # The existing labels go right before the targets, next to where the model writes labels.
         blocks = [_render_legal_body(legal_body, all_articles)]
-        if candidates is not None and not candidates.is_empty():
-            blocks.append(render_candidate_labels(candidates))
+        # Closed catalogs are present even on an empty installation. Open candidates are preserved.
+        blocks.append(render_candidate_labels(candidates))
         blocks.append(_render_targets(targets))
         user_content = "\n\n".join(blocks)
 
