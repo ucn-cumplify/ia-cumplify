@@ -98,8 +98,8 @@ class TestValidation:
         assert rejection(ChatRequest(question="q", history=history)) == "history[1].role must be user or assistant."
 
     def test_passage_count(self) -> None:
-        message = rejection(ChatRequest(question="q", passages=make_passages(13)))
-        assert message == "The request has 13 passages; the limit is 12."
+        message = rejection(ChatRequest(question="q", passages=make_passages(161)))
+        assert message == "The request has 161 passages; the limit is 160."
 
     @pytest.mark.parametrize(
         ("change", "expected"),
