@@ -11,8 +11,8 @@ from ia_cumplify.adapters.inbound.http.schemas.evidence_review import OneLine, _
 from ia_cumplify.domain.documentary_situation import (
     DOCUMENTARY_SITUATION_FILE_ID_MAX_CHARS,
     DOCUMENTARY_SITUATION_FILENAME_MAX_CHARS,
+    DOCUMENTARY_SITUATION_MAX_FILE_BYTES,
     DOCUMENTARY_SITUATION_MAX_FILES,
-    DOCUMENTARY_SITUATION_MAX_TOTAL_BYTES,
     DocumentarySituation,
     DocumentarySituationFile,
     DocumentarySituationRequest,
@@ -23,8 +23,8 @@ def too_many_files(count: int) -> str:
     return f"The request has {count} files; the limit is {DOCUMENTARY_SITUATION_MAX_FILES}."
 
 
-def files_too_large(limit: int) -> str:
-    return f"The files exceed {limit} bytes."
+def file_too_large(limit: int) -> str:
+    return f"A file exceeds {limit} bytes."
 
 
 class DocumentarySituationFileBody(BaseModel):
@@ -103,8 +103,8 @@ def parse_documentary_situation(
     body = _situation_body(situation)
     if len(uploads) > DOCUMENTARY_SITUATION_MAX_FILES:
         raise ValueError(too_many_files(len(uploads)))
-    if sum(len(content) for _, content in uploads) > DOCUMENTARY_SITUATION_MAX_TOTAL_BYTES:
-        raise ValueError(files_too_large(DOCUMENTARY_SITUATION_MAX_TOTAL_BYTES))
+    if any(len(content) > DOCUMENTARY_SITUATION_MAX_FILE_BYTES for _, content in uploads):
+        raise ValueError(file_too_large(DOCUMENTARY_SITUATION_MAX_FILE_BYTES))
 
     received: dict[str, bytes] = {}
     declared = {item.filename for item in body.files}

@@ -1,6 +1,9 @@
 """Extract one company documentary situation from uploaded files."""
 
+import json
 from io import BytesIO
+
+import pytest
 
 from docx import Document
 
@@ -127,3 +130,37 @@ def _docx(paragraph: str) -> bytes:
     buffer = BytesIO()
     document.save(buffer)
     return buffer.getvalue()
+
+
+def _pack(count: int, content: bytes = b"a") -> tuple[str, list[tuple[str, bytes]]]:
+    files = [{"id": f"id-{index}", "filename": f"archivo-{index}.pdf"} for index in range(count)]
+    return json.dumps({"files": files}), [(item["filename"], content) for item in files]
+
+
+def test_the_documentary_pack_is_not_capped_like_an_evidence_review() -> None:
+    from ia_cumplify.domain.documentary_situation import (
+        DOCUMENTARY_SITUATION_MAX_FILE_BYTES,
+        DOCUMENTARY_SITUATION_MAX_FILES,
+    )
+    from ia_cumplify.domain.evidence_review import MAX_FILES, MAX_TOTAL_BYTES
+
+    assert (DOCUMENTARY_SITUATION_MAX_FILES, DOCUMENTARY_SITUATION_MAX_FILE_BYTES) == (50, 20 * 1024 * 1024)
+    assert (MAX_FILES, MAX_TOTAL_BYTES) == (10, 25 * 1024 * 1024)
+
+
+def test_fifty_files_are_accepted_and_one_over_20_mb_is_not(monkeypatch) -> None:
+    from ia_cumplify.adapters.inbound.http.schemas import documentary_situation as schema
+
+    accepted = schema.parse_documentary_situation(*_pack(50, b"a"))
+    assert len(accepted.files) == 50
+
+    monkeypatch.setattr(schema, "DOCUMENTARY_SITUATION_MAX_FILES", 1)
+    with pytest.raises(ValueError, match="the limit is 1"):
+        schema.parse_documentary_situation(*_pack(2, b"a"))
+    monkeypatch.setattr(schema, "DOCUMENTARY_SITUATION_MAX_FILES", 50)
+
+    # Per file, not a shared total: two files that together pass 4 bytes still fit when each stays at 4.
+    monkeypatch.setattr(schema, "DOCUMENTARY_SITUATION_MAX_FILE_BYTES", 4)
+    assert len(schema.parse_documentary_situation(*_pack(2, b"abcd")).files) == 2
+    with pytest.raises(ValueError, match="A file exceeds 4 bytes"):
+        schema.parse_documentary_situation(*_pack(1, b"abcde"))
