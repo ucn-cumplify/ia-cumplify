@@ -118,7 +118,7 @@ Todas las variables están en `.env.example`. Las principales:
 | `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-large` | Modelo de embeddings |
 | `OPENAI_EMBEDDING_DIMENSIONS` | 1024 | Tiene que coincidir con la columna `vector(1024)` del backend |
 | `EMBEDDINGS_MAX_TEXTS` | 256 | Textos máximos por pedido de embeddings; el backend envía lotes de 50 |
-| `PROFILE_TEXT_MAX_CHARS` | 4.000 | Largo máximo del texto de perfil; igual a `AI_PROFILE_TEXT_MAX_CHARS` del backend |
+| `PROFILE_TEXT_MAX_CHARS` | 16.000 | Largo máximo de la situación real, en una sola llamada; igual a `AI_PROFILE_TEXT_MAX_CHARS` del backend. El resumen documental sigue en 4.000 |
 | `OPENAI_TIMEOUT_SECONDS` | 180 | Plazo de cada llamada a OpenAI. Clasificar una norma completa puede tardar minutos. No lo usan el chat, los motivos ni la revisión de respaldos |
 | `OPENAI_MAX_RETRIES` | 2 | Reintentos del SDK ante 408, 409, 429, 5xx, plazos vencidos y errores de conexión. No los usan el chat, los motivos ni la revisión de respaldos |
 | `APPLICABILITY_REASONS_TIMEOUT_SECONDS` | 25 | Plazo de `POST /api/v1/applicability-reasons` |

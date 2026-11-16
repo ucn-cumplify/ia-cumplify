@@ -27,7 +27,7 @@ El sistema debe devolver las seis dimensiones de la empresa a partir de su texto
 
 **Validaciones:**
 
-- `text` se recorta y debe quedar entre 1 y `PROFILE_TEXT_MAX_CHARS` caracteres (defecto 4.000), sin surrogates sueltos (un escape JSON como `\ud800` no es Unicode válido). Si no, `422`.
+- `text` se recorta y debe quedar entre 1 y `PROFILE_TEXT_MAX_CHARS` caracteres (defecto 16.000), sin surrogates sueltos (un escape JSON como `\ud800` no es Unicode válido). Si no, `422`. El texto entra en una sola llamada.
 - Cada dimensión trae al menos un valor; sin respaldo en el texto, las dimensiones 1 a 4 y 6 valen `No especificado`.
 - La respuesta incluye `classification`, `classifier_version` y `usage`.
 

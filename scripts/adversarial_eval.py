@@ -178,7 +178,7 @@ INPUT_PRICE = 0.20
 CACHED_PRICE = 0.02
 OUTPUT_PRICE = 1.20
 # PROFILE_TEXT_MAX_CHARS of the service. Not read from Settings: building one would read .env.
-PROFILE_TEXT_MAX_CHARS = 4000
+PROFILE_TEXT_MAX_CHARS = 16000
 
 # uuid5 namespace of the ids of the set: a case always sends the same ids and the same bytes.
 NAMESPACE = uuid.UUID("5f0c3f0e-7d1a-4f61-9b0e-2b6a4c1d8e75")

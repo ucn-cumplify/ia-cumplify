@@ -218,19 +218,19 @@ def test_an_unreadable_usage_count_is_zero(profile_api) -> None:
 
 
 def test_text_limits(profile_api) -> None:
-    # PRF-008, with PROFILE_TEXT_MAX_CHARS in its default of 4000.
+    # PRF-008, with PROFILE_TEXT_MAX_CHARS in its default of 16000.
     script, post = profile_api("ok", "ok")
-    exact = "a" * 4000
+    exact = "a" * 16000
 
     assert post(json={"text": exact}).status_code == 200
     assert post(json={"text": f"  {exact}\n "}).status_code == 200
     # The spaces around the text do not count, and the model gets it trimmed.
     assert [description(prompt) for prompt in script.prompts] == [exact, exact]
 
-    too_long = post(json={"text": "a" * 4001})
+    too_long = post(json={"text": "a" * 16001})
     assert (too_long.status_code, too_long.json()) == (
         422,
-        {"detail": "The company profile text has 4001 characters; the limit is 4000."},
+        {"detail": "The company profile text has 16001 characters; the limit is 16000."},
     )
     blank = post(json={"text": " \n\t "})
     assert (blank.status_code, blank.json()) == (
