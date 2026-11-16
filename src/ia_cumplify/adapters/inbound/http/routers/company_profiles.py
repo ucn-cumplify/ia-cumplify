@@ -16,7 +16,7 @@ from ia_cumplify.adapters.inbound.http.schemas.company_profile import (
 )
 from ia_cumplify.adapters.inbound.http.schemas.documentary_situation import (
     DocumentarySituationResponse,
-    files_too_large,
+    file_too_large,
     parse_documentary_situation,
     too_many_files,
 )
@@ -25,7 +25,7 @@ from ia_cumplify.application.ports.documentary_situation_extractor import Docume
 from ia_cumplify.application.use_cases.classify_company_profile import ClassifyCompanyProfileUseCase
 from ia_cumplify.application.use_cases.extract_documentary_situation import ExtractDocumentarySituationUseCase
 from ia_cumplify.config.settings import get_settings
-from ia_cumplify.domain.documentary_situation import DOCUMENTARY_SITUATION_MAX_FILES, DOCUMENTARY_SITUATION_MAX_TOTAL_BYTES
+from ia_cumplify.domain.documentary_situation import DOCUMENTARY_SITUATION_MAX_FILE_BYTES, DOCUMENTARY_SITUATION_MAX_FILES
 from ia_cumplify.domain.exceptions import ClassificationError, DocumentarySituationError, InvalidProfileTextError
 
 router = APIRouter(prefix="/company-profiles", tags=["company-profiles"])
@@ -120,16 +120,16 @@ async def _read_uploads(files: Sequence[UploadFile]) -> list[tuple[str | None, b
     if len(files) > DOCUMENTARY_SITUATION_MAX_FILES:
         raise ValueError(too_many_files(len(files)))
     uploads: list[tuple[str | None, bytes]] = []
-    total = 0
     for upload in files:
         chunks: list[bytes] = []
+        size = 0
         while True:
             chunk = await upload.read(_READ_CHUNK)
             if not chunk:
                 break
-            total += len(chunk)
-            if total > DOCUMENTARY_SITUATION_MAX_TOTAL_BYTES:
-                raise ValueError(files_too_large(DOCUMENTARY_SITUATION_MAX_TOTAL_BYTES))
+            size += len(chunk)
+            if size > DOCUMENTARY_SITUATION_MAX_FILE_BYTES:
+                raise ValueError(file_too_large(DOCUMENTARY_SITUATION_MAX_FILE_BYTES))
             chunks.append(chunk)
         uploads.append((upload.filename, b"".join(chunks)))
     return uploads
