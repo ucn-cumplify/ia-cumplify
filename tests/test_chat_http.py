@@ -304,6 +304,40 @@ class TestLimits:
         assert response.json() == {"detail": message}
         assert SECRET not in caplog.text
 
+    def test_the_default_limits_admit_a_whole_legal_body(self, monkeypatch) -> None:
+        # The backend sends the record of a legal body plus one passage per article chunk: 160 passages
+        # and 220000 characters fit by default, without any CHAT_* variable.
+        configure(monkeypatch, chat_fake_responder="true", app_env="development")
+        text = "x" * (220_000 // 160)
+        whole = [passage(number, text=text) for number in range(1, 161)]
+        assert sum(len(item["text"]) for item in whole) == 220_000
+
+        reply = read_reply(post(json=chat_body(passages=whole)))
+
+        assert reply.final.name == "done"
+        assert reply.final.data["citations"] == [{"n": 1, "id": "id-1"}]
+
+    @pytest.mark.parametrize(
+        ("passages", "message"),
+        [
+            (
+                [passage(number) for number in range(1, 162)],
+                "The request has 161 passages; the limit is 160.",
+            ),
+            (
+                [passage(number, text="x" * 5_500) for number in range(1, 41)] + [passage(41, text="x")],
+                "The passages have 220001 characters in total; the limit is 220000.",
+            ),
+        ],
+    )
+    def test_one_passage_or_one_character_over_the_default_limits_is_422(
+        self, monkeypatch, passages: list[dict], message: str
+    ) -> None:
+        configure(monkeypatch, chat_fake_responder="true", app_env="development")
+        response = post(json=chat_body(passages=passages))
+        assert response.status_code == 422
+        assert response.json() == {"detail": message}
+
 
 class TestStream:
     @pytest.fixture(autouse=True)
