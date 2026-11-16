@@ -94,7 +94,7 @@ La respuesta trae la naturaleza, las exigencias con su estado, sus citas y lo qu
 
 **Validaciones:**
 
-- `review_version` es `evidence-review-v4@<modelo usado>`.
+- `review_version` es `evidence-review-v5@<modelo usado>`.
 - Cada exigencia trae `evidence`, el respaldo que la acredita. Sin ese nombre, no sale.
 - `procedure_for` nombra la autorización de un artículo `procedural` y es `null` en las otras naturalezas.
 - Una cita se busca en el texto leído de su archivo, sin distinguir mayúsculas ni espacios. Una cita a otro archivo, en blanco o que no aparece, no sale. Una exigencia `accredited` o `partial` sin citas que queden baja a `not_accredited`, con la marca `cita no encontrada` en `missing`. El veredicto se recalcula a partir de las exigencias.
@@ -181,7 +181,7 @@ Desde `evidence-review-v4` (paso 2.5 del plan del sprint 4 de backend-cumplify),
 
 **Descripción:**
 
-`missing` describe solo lo que no aparece en los archivos. Si no falta nada, queda vacío. Nombra en concreto cada documento, dato o período que falta: en una exigencia periódica, cada período terminado sin respaldo, como «enero y de mayo a agosto de 2026», nunca «los demás meses». La fase 2A parte de ese texto para proponer el hallazgo. No recomienda una acción, una tarea ni lo que la empresa debería hacer. Esas acciones salen de la base de conocimientos (fase 2B del plan).
+`missing` concreta la brecha con lo que el respaldo sí acredita. Cuando los archivos prueban una parte de la exigencia, nombra esa parte y lo que falta, por ejemplo «El acta de marzo acredita la sesión de ese mes. Faltan las actas de abril a septiembre.». Si no acreditan nada, nombra solo lo ausente. Si no falta nada, queda vacío. Sigue nombrando en concreto cada documento, dato o período que falta: en una exigencia periódica, cada período terminado sin respaldo, como «enero y de mayo a agosto de 2026», nunca «los demás meses». No recomienda una acción, una tarea ni lo que la empresa debería hacer. Esas acciones salen de la base de conocimientos.
 
 Esta regla está en el prompt: el servicio no la vuelve a aplicar sobre la respuesta.
 
@@ -215,7 +215,7 @@ La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilo
 
 - Recibir el pedido en partes y leer PDF, Word, Excel, CSV y PowerPoint.
 - Aplicar los topes de archivos, de tamaño, de páginas, de filas, de ZIP y de caracteres.
-- Pedir al modelo una revisión con el prompt `evidence-review-v4`.
+- Pedir al modelo una revisión con el prompt `evidence-review-v5`.
 - Neutralizar las líneas de los datos que imitan un delimitador del mensaje (EVR-009).
 - Cerrar en código el artículo informativo, de remisión o procedimental: sin exigencias y con veredicto `not_evaluable`. Solo el procedimental conserva `procedure_for`.
 - Descartar una exigencia que no nombra su respaldo.
@@ -233,7 +233,7 @@ La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilo
 
 ## Deuda técnica conocida
 
-- `evidence-review-v4` no se sube al cambiar una redacción del prompt. Quien llama distingue el modelo (`review_version` termina en `@<modelo>`), no cada edición de las reglas. El salto desde `evidence-review-v1` es el de la decisión 21 y la verificación de la cita. El de `evidence-review-v2` es la regla de las exigencias periódicas: cambia lo que falta y puede cambiar el veredicto, así que backend-cumplify tiene que subir la versión con la que calcula la huella, y las revisiones guardadas quedan desactualizadas. El de `evidence-review-v3` es la neutralización de los delimitadores (paso 2.5 del plan del sprint 4 de backend-cumplify): cambia el texto que lee el modelo cuando un archivo, un artículo o una obligación imitan un delimitador, y el plan pidió que ninguna revisión hecha sin neutralizar quede vigente. backend-cumplify cambia `EvidenceReviewFingerprint.CurrentReviewVersion` a `evidence-review-v4@gpt-5.6-luna` en la misma ventana de despliegue, y las revisiones guardadas quedan desactualizadas. Falta volver a ejecutar el set con la v4 (EVR-040 de `test.csv`).
+- Una redacción que no cambia lo que la revisión decide no sube la versión. Quien llama distingue el modelo (`review_version` termina en `@<modelo>`), no cada edición de las reglas. El salto desde `evidence-review-v1` es el de la decisión 21 y la verificación de la cita. El de `evidence-review-v2` es la regla de las exigencias periódicas: cambia lo que falta y puede cambiar el veredicto, así que backend-cumplify tiene que subir la versión con la que calcula la huella, y las revisiones guardadas quedan desactualizadas. El de `evidence-review-v3` es la neutralización de los delimitadores (paso 2.5 del plan del sprint 4 de backend-cumplify): cambia el texto que lee el modelo cuando un archivo, un artículo o una obligación imitan un delimitador, y el plan pidió que ninguna revisión hecha sin neutralizar quede vigente. backend-cumplify cambia `EvidenceReviewFingerprint.CurrentReviewVersion` a `evidence-review-v4@gpt-5.6-luna` en la misma ventana de despliegue, y las revisiones guardadas quedan desactualizadas. El de `evidence-review-v5` es la forma de `missing` (paso 0.6 del plan del sprint 5): concreta la brecha con lo que el respaldo sí acredita y no se vuelve una tarea. Cambia el texto del hallazgo, así que la constante pasa a `evidence-review-v5@gpt-5.6-luna` en la misma ventana, y las revisiones de la v4 quedan desactualizadas. Falta volver a ejecutar el set con la v5 (EVR-040 de `test.csv`).
 - El incumplimiento, la fecha de referencia, las instrucciones dentro del archivo y la forma de `missing` dependen de que el modelo siga el prompt. Las pruebas automáticas fijan el texto del prompt; no llaman a OpenAI.
 - El set no trae un artículo procedimental. La naturaleza `procedural` y `procedure_for` se cubren en las pruebas del caso de uso, no en EVR-012 a EVR-031.
 - Los topes de 10 archivos, 25 MB y 200 000 caracteres están en este servicio. El backend tiene que aplicar los mismos antes de enviar el pedido.
