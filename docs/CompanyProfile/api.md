@@ -31,7 +31,7 @@ POST /api/v1/company-profiles/classify
 
 | Campo | Tipo | Requerido | Descripción |
 |---|---|---|---|
-| text | string | Sí | Lo que la empresa escribe de sí misma. Se recorta y debe quedar entre 1 y `PROFILE_TEXT_MAX_CHARS` caracteres (defecto 4.000, igual que `AI_PROFILE_TEXT_MAX_CHARS` del backend) |
+| text | string | Sí | Lo que la empresa escribe de sí misma. Se recorta y debe quedar entre 1 y `PROFILE_TEXT_MAX_CHARS` caracteres (defecto 16.000, igual que `AI_PROFILE_TEXT_MAX_CHARS` del backend). Entra en una sola llamada |
 | candidate_values | objeto | No | Etiquetas ya usadas en los artículos, para que el modelo las reutilice |
 | candidate_values.scope | lista de string | No | Máximo 60. Defecto: lista vacía |
 | candidate_values.productive_sector | lista de string | No | Máximo 60. Defecto: lista vacía |

@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     embeddings_max_texts: int = 256
     # POST /api/v1/company-profiles/classify: longest description accepted, after trimming. Mirrors the
     # backend's AI_PROFILE_TEXT_MAX_CHARS; a longer text gets 422.
-    profile_text_max_chars: int = 4000
+    profile_text_max_chars: int = 16000
     openai_timeout_seconds: float = 180
     openai_max_retries: int = 2
     # POST /api/v1/applicability-reasons. The backend waits AI_APPLICABILITY_REASONS_TIMEOUT_SECONDS
