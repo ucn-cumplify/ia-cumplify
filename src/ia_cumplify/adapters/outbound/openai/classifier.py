@@ -10,7 +10,7 @@ from ia_cumplify.adapters.outbound.openai.llm_schema import (
     LlmLegalBodyClassification,
 )
 from ia_cumplify.adapters.outbound.openai.prompt_cache import PROMPT_CACHE_OPTIONS, cached_prefix
-from ia_cumplify.adapters.outbound.openai.prompt_text import block_text
+from ia_cumplify.adapters.outbound.openai.prompt_text import classification_block
 from ia_cumplify.adapters.outbound.openai.prompts import (
     PROMPT_VERSION,
     SYSTEM_PROMPT,
@@ -220,17 +220,17 @@ def _chunks(items: list[Article], size: int) -> list[list[Article]]:
     return [items[index : index + size] for index in range(0, len(items), size)]
 
 
-# Every text of the law goes through block_text: a manual law can bring any line in it, and a line that imitates a
-# delimiter gets "> " (step 2.5 of the sprint 4 plan). Only the data changes, so classify-v2 stays.
+# Every text of the law goes through classification_block: a manual law can bring any line in it.
+# A line that imitates a delimiter, or an "Article ID:" header, gets "> " (CLS-007).
 def _render_legal_body(legal_body: LegalBody, articles: Sequence[Article]) -> str:
     header_lines = [
         "--- FULL LEGAL BODY (base context) ---",
         f"ID: {legal_body.id}",
-        f"Title: {block_text(legal_body.title)}",
-        f"Type: {block_text(legal_body.type)}",
+        f"Title: {classification_block(legal_body.title)}",
+        f"Type: {classification_block(legal_body.type)}",
     ]
     if legal_body.summary:
-        header_lines.append(f"Summary:\n{block_text(legal_body.summary)}")
+        header_lines.append(f"Summary:\n{classification_block(legal_body.summary)}")
 
     article_blocks = [_render_article_block(item) for item in articles]
     body = "\n\n".join(article_blocks) if article_blocks else "(no articles)"
@@ -251,10 +251,10 @@ def _render_targets(targets: Sequence[Article]) -> str:
 def _render_article_block(article: Article) -> str:
     return (
         f"Article ID: {article.id}\n"
-        f"Number: {block_text(article.number)}\n"
-        f"Section: {block_text(article.section)}\n"
+        f"Number: {classification_block(article.number)}\n"
+        f"Section: {classification_block(article.section)}\n"
         f"Order: {article.order}\n"
-        f"Text:\n{block_text(article.text)}"
+        f"Text:\n{classification_block(article.text)}"
     )
 
 
