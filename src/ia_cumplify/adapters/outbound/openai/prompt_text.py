@@ -28,10 +28,10 @@ def block_text(text: str) -> str:
 
 
 def classification_block(text: str) -> str:
-    """Law text inside a classification block.
+    """Law text inside a block that separates articles with an "Article ID:" header.
 
-    Delimiter lines are neutralized like any other block, and a line that could pass for an
-    "Article ID:" header is neutralized too: the classifier separates articles with that header.
+    Delimiter lines are neutralized like any other block, and a line that could pass for that
+    header is neutralized too. Classification and applicability reasons both use the header.
     """
     return neutralize_article_id_lines(block_text(text))
 
