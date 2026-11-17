@@ -37,7 +37,7 @@ class ScriptedPlanner:
 
     @property
     def version(self) -> str:
-        return "action-plan-v1@gpt-5.6-luna"
+        return "action-plan-v2@gpt-5.6-luna"
 
     def propose(self, findings):
         self.calls.append(findings)
@@ -105,7 +105,7 @@ def test_the_backend_request_gets_the_contract_the_backend_reads():
     assert response.status_code == 200, response.text
     payload = response.json()
     assert list(payload) == ["proposal_version", "model", "usage", "findings"]
-    assert payload["proposal_version"] == "action-plan-v1@gpt-5.6-luna"
+    assert payload["proposal_version"] == "action-plan-v2@gpt-5.6-luna"
     assert payload["model"] == "gpt-5.6-luna"
     assert payload["usage"] == {
         "prompt_tokens": 20,
@@ -244,7 +244,7 @@ def _with_fragment(**changes) -> dict:
 @pytest.mark.parametrize(
     ("payload", "loc"),
     [
-        (body(prompt_version="action-plan-v2"), ["body", "prompt_version"]),
+        (body(prompt_version="action-plan-v0"), ["body", "prompt_version"]),
         ({"findings": body()["findings"]}, ["body", "prompt_version"]),
         (body(findings=[]), ["body", "findings"]),
         (body(findings=None), ["body", "findings"]),
@@ -370,7 +370,7 @@ def test_the_log_counts_findings_and_tasks_without_their_text(caplog):
     assert response.status_code == 200
     assert (
         "Action plan response: 1 findings, 1 fragments, 1 with tasks, 1 tasks, "
-        "proposal_version action-plan-v1@gpt-5.6-luna." in caplog.text
+        "proposal_version action-plan-v2@gpt-5.6-luna." in caplog.text
     )
     assert SECRET not in caplog.text
     assert TEXT not in caplog.text

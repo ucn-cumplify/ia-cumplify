@@ -117,7 +117,7 @@ def test_the_adapter_sends_the_findings_and_maps_the_draft():
     assert item.id == FINDING_A
     assert item.tasks[0].citation.quote == "procedimiento de trabajo seguro"
     assert (draft.usage.prompt_tokens, draft.usage.cached_tokens, draft.usage.llm_calls) == (20, 4, 1)
-    assert planner.version == "action-plan-v1@gpt-5.6-luna"
+    assert planner.version == "action-plan-v2@gpt-5.6-luna"
     assert planner.model == "gpt-5.6-luna"
 
 
@@ -202,7 +202,7 @@ def test_the_model_effort_timeout_and_retries_are_its_own(monkeypatch):
 
     planner = get_action_planner()
 
-    assert planner.version == "action-plan-v1@modelo-plan"
+    assert planner.version == "action-plan-v2@modelo-plan"
     assert planner._reasoning_effort == "medium"
     assert (created["timeout"], created["max_retries"]) == (15, 1)
 
@@ -270,7 +270,7 @@ def test_the_real_sdk_over_a_fake_transport_from_request_to_backend_reader(monke
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    assert payload["proposal_version"] == "action-plan-v1@fake-model"
+    assert payload["proposal_version"] == "action-plan-v2@fake-model"
     assert payload["usage"] == {
         "prompt_tokens": 300,
         "completion_tokens": 60,

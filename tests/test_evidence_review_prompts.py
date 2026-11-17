@@ -136,7 +136,7 @@ def test_a_sheet_name_read_from_an_excel_file_cannot_close_the_files_block() -> 
 
 
 def test_the_system_prompt_names_the_blocks_and_says_a_delimiter_takes_a_whole_line() -> None:
-    assert EVIDENCE_REVIEW_PROMPT_VERSION == "evidence-review-v5"
+    assert EVIDENCE_REVIEW_PROMPT_VERSION == "evidence-review-v6"
     for rule in (
         '"--- ARTICLE ---"',
         '"--- END ARTICLE ---"',

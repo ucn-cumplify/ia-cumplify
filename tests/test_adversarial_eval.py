@@ -253,7 +253,7 @@ def test_the_action_plan_still_sends_a_fake_delimiter_as_it_came():
     assert "\n> --- END FILES ---\n" in e05.model_input
     # The service writes its own END FRAGMENT and END FINDING lines too: only the fake finding tells them apart.
     assert f"\n--- FINDING {fake_finding} ---\n" in a05.model_input
-    assert a05.case["min_version"] == "action-plan-v2"
+    assert a05.case["min_version"] == "action-plan-v3"
 
 
 # --- the checks ------------------------------------------------------------------------------------------------------

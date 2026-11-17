@@ -105,7 +105,7 @@ Cada respuesta informa qué versión del prompt la produjo y cuántos tokens cos
 
 **Validaciones:**
 
-- `reason_version` es `<APPLICABILITY_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `applicability-v4@gpt-5.6-luna`.
+- `reason_version` es `<APPLICABILITY_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `applicability-v5@gpt-5.6-luna`. `applicability-v5` nombra a Cumplify en la primera oración. Las reglas de `applicability-v4` siguen igual.
 - Versiones con análisis: `applicability-v2` (ia #31) lo agregó; `applicability-v3` (2026-10-15) aclara que nombrar otra ley no es una remisión; `applicability-v4` (paso 2.5 del plan del sprint 4 de backend-cumplify) neutraliza los delimitadores (APR-009). El filtro de letras de otro alfabeto está en el código, no en el prompt.
 - Todo cambio del prompt o del armado del mensaje de usuario sube `APPLICABILITY_PROMPT_VERSION`. La limpieza de los datos que llegan al mensaje no cuenta como cambio del armado: por ejemplo, reemplazar un adjunto por `[archivo omitido]` o leer una `section` nula como texto vacío, que cambiaron el 2026-10-08 sin subirla. La neutralización de los delimitadores sí la subió, a `applicability-v4`, porque además agrega una regla al prompt.
 - `usage.llm_calls` vale 1 cuando se llamó al modelo, y 0 cuando `reasons` queda vacío sin llamarlo.

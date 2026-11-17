@@ -94,7 +94,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 **Validaciones:**
 
-- `classifier_version` es `<PROFILE_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `profile-v1@gpt-5.6-luna`.
+- `classifier_version` es `<PROFILE_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `profile-v2@gpt-5.6-luna`. `profile-v2` nombra a Cumplify en la primera oración y conserva las etiquetas de `profile-v1`.
 - Todo cambio del prompt del perfil o de su bloque de etiquetas sube `PROFILE_PROMPT_VERSION`.
 - `usage` trae los tokens de la llamada, con `cached_tokens` (la parte de `prompt_tokens` servida desde la caché del proveedor, 0 si no la informa), y `llm_calls` vale 1.
 - Cada campo del `usage` del proveedor se lee por separado: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta (caso PRF-015 de `test.csv`).

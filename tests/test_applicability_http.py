@@ -364,7 +364,7 @@ def test_the_real_adapter_reports_cached_tokens_and_strips_attachments(monkeypat
             "procedure_for": None,
         }
     ]
-    assert body["reason_version"] == "applicability-v4@fake-model"
+    assert body["reason_version"] == "applicability-v5@fake-model"
     assert body["usage"] == {
         "prompt_tokens": 900,
         "completion_tokens": 80,

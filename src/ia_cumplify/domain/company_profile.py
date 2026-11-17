@@ -20,6 +20,6 @@ class ClassifiedCompanyProfile:
     """
 
     classification: ArticleClassification
-    # "<prompt version>@<model>", e.g. "profile-v1@gpt-5.6-luna". The backend stores it with the text.
+    # "<prompt version>@<model>", e.g. "profile-v2@gpt-5.6-luna". The backend stores it with the text.
     classifier_version: str
     usage: TokenUsage

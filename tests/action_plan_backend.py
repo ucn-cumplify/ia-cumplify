@@ -14,7 +14,7 @@ import re
 import uuid
 from dataclasses import dataclass, field
 
-PROMPT_VERSION = "action-plan-v1"
+PROMPT_VERSION = "action-plan-v2"
 PROPOSAL_VERSION_MAX_LENGTH = 200
 MODEL_MAX_LENGTH = 100
 NAME_MAX_LENGTH = 255

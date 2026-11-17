@@ -30,7 +30,7 @@
   },
   "response": {
     "content": "RCA 123/2024 autoriza 30 m² de acopio temporal.",
-    "prompt_version": "documentary-situation-v1@gpt-5.6-luna",
+    "prompt_version": "documentary-situation-v2@gpt-5.6-luna",
     "usage": {
       "prompt_tokens": 120,
       "completion_tokens": 40,

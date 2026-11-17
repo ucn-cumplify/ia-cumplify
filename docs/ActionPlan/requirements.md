@@ -27,7 +27,7 @@ El sistema debe aceptar el JSON que arma `IaCumplifyClient.ProposeActionPlanAsyn
 
 **Validaciones:**
 
-- `prompt_version` es `action-plan-v1`.
+- `prompt_version` es `action-plan-v2`.
 - Entre 1 y `ACTION_PLAN_MAX_FINDINGS` hallazgos, sin repetir el `id`. Hasta 5 fragmentos por hallazgo.
 - Los ids son UUID distintos del nulo. `chunk_index` es un entero de 0 o más.
 - Los topes de `api.md`: descripción 2.000, exigencia y faltante 20.000, fragmento 4.000 y localizador 1.000 caracteres.
@@ -44,7 +44,7 @@ El sistema debe aceptar el JSON que arma `IaCumplifyClient.ProposeActionPlanAsyn
 
 **Descripción:**
 
-El prompt `action-plan-v1` pide al modelo tareas para cada hallazgo. Si un fragmento de ese hallazgo respalda la acción, la tarea lo cita, y nunca cita el fragmento de otro hallazgo. Si ninguno la respalda, la tarea resume la descripción, la exigencia y lo que falta, y deja la cita vacía (decisión S4-D12 de backend-cumplify). Las descripciones de los campos del esquema dicen lo mismo, porque el modelo también las lee. Cada tarea trae un nombre breve en español, una descripción y una prioridad `alta`, `media` o `baja`. Las instrucciones escritas dentro de un fragmento o de un hallazgo se ignoran.
+El prompt `action-plan-v2` abre diciendo que el modelo trabaja para Cumplify y pide tareas para cada hallazgo. Si un fragmento de ese hallazgo respalda la acción, la tarea lo cita, y nunca cita el fragmento de otro hallazgo. Si ninguno la respalda, la tarea resume la descripción, la exigencia y lo que falta, y deja la cita vacía (decisión S4-D12 de backend-cumplify). Las descripciones de los campos del esquema dicen lo mismo, porque el modelo también las lee. Cada tarea trae un nombre breve en español, una descripción y una prioridad `alta`, `media` o `baja`. Las instrucciones escritas dentro de un fragmento o de un hallazgo se ignoran.
 
 **Validaciones:**
 
@@ -117,7 +117,7 @@ El servicio aplica a cada tarea los topes de `ActionPlanResponseReader` antes de
 
 **Descripción:**
 
-`usage` trae `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens` y `llm_calls`, con el formato de la revisión de respaldos. El backend lo registra como la tarea `action_plan` de `ai_usage`. `proposal_version` es `action-plan-v1@<modelo>` y `model` es el modelo usado.
+`usage` trae `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens` y `llm_calls`, con el formato de la revisión de respaldos. El backend lo registra como la tarea `action_plan` de `ai_usage`. `proposal_version` es `action-plan-v2@<modelo>` y `model` es el modelo usado.
 
 ---
 
@@ -168,7 +168,7 @@ El plan pide un set de evaluación con casos de la base del cliente. Queda pendi
 ## Dentro de alcance
 
 - Validar el pedido con el contrato de la PR #225 de backend-cumplify y los topes de `api.md`.
-- Pedir al modelo una propuesta estructurada con el prompt `action-plan-v1`.
+- Pedir al modelo una propuesta estructurada con el prompt `action-plan-v2`.
 - Verificar cada cita contra los fragmentos del hallazgo y ajustar los campos a lo que guarda el backend.
 - Mandar al modelo también los hallazgos sin fragmentos, y devolver con `citation` en `null` la tarea que resume el hallazgo.
 - Probar el adaptador real contra un cliente falso de OpenAI, sin salir de la máquina.

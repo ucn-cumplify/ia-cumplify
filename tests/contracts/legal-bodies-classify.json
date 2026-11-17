@@ -102,7 +102,7 @@
         }
       }
     ],
-    "classifier_version": "classify-v3-closed-catalogs@gpt-5.6-luna",
+    "classifier_version": "classify-v4-closed-catalogs@gpt-5.6-luna",
     "usage": {
       "prompt_tokens": 2400,
       "completion_tokens": 600,

@@ -1,10 +1,14 @@
+from ia_cumplify.adapters.outbound.openai.prompt_text import CUMPLIFY_ROLE
 from ia_cumplify.domain.classification import CandidateLabels
 
 # Bump on every change to PROFILE_SYSTEM_PROMPT or to the EXISTING LABELS block below. The backend
 # stores it with each analyzed text, so it can find the profiles produced by an older prompt.
-PROFILE_PROMPT_VERSION = "profile-v1"
+# v2 keeps the labels of v1 and names Cumplify in the first sentence.
+PROFILE_PROMPT_VERSION = "profile-v2"
 
-PROFILE_SYSTEM_PROMPT = """You classify how a Chilean company describes itself, so the regulations that apply to it can be found.
+PROFILE_SYSTEM_PROMPT = f"""{CUMPLIFY_ROLE}
+
+You classify how a Chilean company describes itself, so the regulations that apply to it can be found.
 
 You receive these blocks:
 1. EXISTING LABELS — optional. Labels already used to classify the articles of Chilean legal bodies, per dimension.

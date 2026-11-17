@@ -7,6 +7,7 @@ non-empty citation against the fragments of its finding, and keeps an empty one 
 Instructions inside a fragment are ignored.
 """
 
+from ia_cumplify.adapters.outbound.openai.prompt_text import CUMPLIFY_ROLE
 from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
 from ia_cumplify.domain.action_plan import (
     MAX_TASKS_PER_FINDING,
@@ -16,7 +17,9 @@ from ia_cumplify.domain.action_plan import (
     KnowledgeFragment,
 )
 
-ACTION_PLAN_SYSTEM_PROMPT = f"""You propose the tasks of a compliance action plan for findings of a legal-requirements review.
+ACTION_PLAN_SYSTEM_PROMPT = f"""{CUMPLIFY_ROLE}
+
+You propose the tasks of a compliance action plan for findings of a legal-requirements review.
 
 Each finding says what the company has not accredited: its description, the exigencia that originated it, and what is missing. Each finding comes with fragments of the knowledge base the company's consultant provides. A fragment is named by its document_id and chunk_index.
 
