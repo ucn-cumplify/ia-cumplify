@@ -3,11 +3,10 @@ from typing import Literal
 
 from ia_cumplify.domain.classification import TokenUsage
 
-# Prompt id. The model name is appended once a proposal is built: "action-plan-v2@<model>". The backend sends
+# Prompt id. The model name is appended once a proposal is built: "action-plan-v3@<model>". The backend sends
 # this same id in prompt_version (IaCumplifyClient.ActionPlanPromptVersion) and stores the full one.
-# v2 names Cumplify. Delimiter neutralization is still open: the adversarial case ADV-A05 stays a baseline
-# until a later version.
-ACTION_PLAN_PROMPT_VERSION = "action-plan-v2"
+# v2 names Cumplify. v3 neutralizes delimiter lines in the findings and the fragments, so ADV-A05 counts.
+ACTION_PLAN_PROMPT_VERSION = "action-plan-v3"
 
 # Request caps, from what backend-cumplify sends (step 2B.10 of its sprint 3 plan). Lengths and positions may
 # appear in a 422; the text itself must not.

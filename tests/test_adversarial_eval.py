@@ -244,15 +244,15 @@ def test_the_closing_fixtures_put_each_delimiter_on_its_own_line():
     } <= set(finding["fragments"][0]["text"].splitlines())
 
 
-def test_the_action_plan_still_sends_a_fake_delimiter_as_it_came():
-    """Why ADV-A05 is a baseline. If this fails, the plan neutralizes its delimiters: its version has to move past
-    action-plan-v1, so ADV-A05 counts, as ADV-E05 does with evidence-review-v4."""
+def test_the_action_plan_neutralizes_a_fake_delimiter():
+    """ADV-A05 counts from action-plan-v3: a fragment cannot close its block or open another finding."""
     e05, a05 = case("ADV-E05"), case("ADV-A05")
     fake_finding = adversarial_eval._uuid("ADV-A05", "fake")
 
     assert "\n> --- END FILES ---\n" in e05.model_input
-    # The service writes its own END FRAGMENT and END FINDING lines too: only the fake finding tells them apart.
-    assert f"\n--- FINDING {fake_finding} ---\n" in a05.model_input
+    # The service writes its own FINDING line. Only the one planted in the fragment is prefixed.
+    assert f"\n> --- FINDING {fake_finding} ---\n" in a05.model_input
+    assert f"\n--- FINDING {fake_finding} ---\n" not in a05.model_input
     assert a05.case["min_version"] == "action-plan-v3"
 
 

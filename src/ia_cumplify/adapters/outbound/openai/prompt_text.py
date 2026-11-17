@@ -27,6 +27,21 @@ def block_text(text: str) -> str:
     return neutralize_delimiter_lines(strip_base64_images(text))
 
 
+def classification_block(text: str) -> str:
+    """Law text inside a classification block.
+
+    Delimiter lines are neutralized like any other block, and a line that could pass for an
+    "Article ID:" header is neutralized too: the classifier separates articles with that header.
+    """
+    return neutralize_article_id_lines(block_text(text))
+
+
+def neutralize_article_id_lines(text: str) -> str:
+    """Prefixes "> " to every line that could pass for an Article ID header."""
+    lines = text.splitlines(keepends=True)
+    return "".join(f"> {line}" if _looks_like_article_id(line) else line for line in lines)
+
+
 # Invisible characters outside the C, Mn and Me categories: the Hangul fillers, which are
 # Default_Ignorable_Code_Point (a property unicodedata does not expose), and two blank symbols.
 _BLANK_CHARACTERS = frozenset("\u115f\u1160\u3164\uffa0\u2800\U0001d159")
@@ -37,6 +52,19 @@ def _is_invisible(char: str) -> bool:
     return category[0] == "C" or category in ("Mn", "Me") or char in _BLANK_CHARACTERS
 
 
+def _looks_like_article_id(line: str) -> bool:
+    """An "Article ID:" header, once invisibles and a leading quote marker are set aside."""
+    if line.startswith("> "):
+        return False
+    probe = _probe(line)
+    return probe.startswith("Article ID:")
+
+
+def _probe(line: str) -> str:
+    probe = "".join(char for char in line if not _is_invisible(char))
+    return unicodedata.normalize("NFKC", probe).lstrip()
+
+
 def _looks_like_delimiter(line: str) -> bool:
     """Three or more dashes of any kind at the start, even with spaces between them.
 
@@ -45,8 +73,7 @@ def _looks_like_delimiter(line: str) -> bool:
     the line as content. The probe only decides: the line is sent as written, since NFKC would also
     turn "Nº" into "No".
     """
-    probe = "".join(char for char in line if not _is_invisible(char))
-    probe = unicodedata.normalize("NFKC", probe).lstrip()
+    probe = _probe(line)
     dashes = 0
     for char in probe:
         if char == "\u2212" or unicodedata.category(char) == "Pd":

@@ -50,7 +50,7 @@ class ScriptedPlanner:
 
     @property
     def version(self) -> str:
-        return "action-plan-v2@gpt-5.6-luna"
+        return "action-plan-v3@gpt-5.6-luna"
 
     def propose(self, findings):
         self.calls.append(findings)
@@ -102,7 +102,7 @@ def test_a_task_that_quotes_its_fragment_is_kept():
     assert item.tasks == (task(),)
     assert result.usage == USAGE
     assert result.model == "gpt-5.6-luna"
-    assert result.proposal_version == "action-plan-v2@gpt-5.6-luna"
+    assert result.proposal_version == "action-plan-v3@gpt-5.6-luna"
 
 
 def test_case_and_whitespace_do_not_count_in_the_quote():
@@ -171,7 +171,7 @@ def test_without_any_fragment_the_model_is_still_called():
     assert result.findings[1].tasks == ()
     assert result.usage == USAGE
     assert result.model == "gpt-5.6-luna"
-    assert result.proposal_version == "action-plan-v2@gpt-5.6-luna"
+    assert result.proposal_version == "action-plan-v3@gpt-5.6-luna"
 
 
 def test_a_finding_the_model_leaves_out_or_answers_twice():
@@ -251,13 +251,13 @@ def test_sufficient_insufficient_and_missing_support_survive_the_backend_reader(
         FindingTasks(FINDING_B, (task(name="Registrar la entrega de EPP", document_id=GUIDE, chunk_index=3, quote="registro de EPP"),)),
         FindingTasks(FINDING_C, (task(name="Redactar el plan de emergencia", document_id="", quote="", priority="media"),)),
     )
-    request = ActionPlanBody.model_validate({"prompt_version": "action-plan-v2", "findings": sent}).to_request(30)
+    request = ActionPlanBody.model_validate({"prompt_version": "action-plan-v3", "findings": sent}).to_request(30)
 
     response = ActionPlanResponse.from_domain(ProposeActionPlanUseCase(planner).execute(request))
     reading = read_like_backend(response.model_dump_json(), sent)
 
     assert reading.can_store
-    assert (reading.proposal_version, reading.model) == ("action-plan-v2@gpt-5.6-luna", "gpt-5.6-luna")
+    assert (reading.proposal_version, reading.model) == ("action-plan-v3@gpt-5.6-luna", "gpt-5.6-luna")
     assert (reading.prompt_tokens, reading.completion_tokens, reading.total_tokens, reading.cached_tokens) == (
         900,
         150,

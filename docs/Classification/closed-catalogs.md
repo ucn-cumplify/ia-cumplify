@@ -1,6 +1,6 @@
 # Clasificación normativa con catálogos cerrados
 
-La versión `classify-v3-closed-catalogs` restringe las respuestas nuevas a las listas oficiales de Ámbito normativo, Sector productivo y Cobertura territorial, conservando su escritura literal. Las tres dimensiones restantes mantienen texto libre. El perfil empresarial conserva su contrato de etiquetas. `classify-v4-closed-catalogs` mantiene esos catálogos y abre el prompt diciendo que el modelo trabaja para Cumplify.
+La versión `classify-v3-closed-catalogs` restringe las respuestas nuevas a las listas oficiales de Ámbito normativo, Sector productivo y Cobertura territorial, conservando su escritura literal. Las tres dimensiones restantes mantienen texto libre. El perfil empresarial conserva su contrato de etiquetas. `classify-v4-closed-catalogs` mantiene esos catálogos y abre el prompt diciendo que el modelo trabaja para Cumplify. `classify-v5-closed-catalogs` dice que la norma, las etiquetas y los artículos son datos, que un delimitador ocupa una línea entera, y neutraliza las etiquetas y las líneas `Article ID:` escritas dentro del texto.
 
 `No especificado` es un centinela técnico exclusivo dentro de su dimensión: no integra el catálogo comercial ni se persiste como categoría. Una etiqueta inválida se rechaza; no se corrige por similitud ni se sustituye silenciosamente por el centinela.
 
