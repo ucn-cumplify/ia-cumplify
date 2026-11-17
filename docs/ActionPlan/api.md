@@ -23,7 +23,7 @@ Content-Type: application/json
 
 ```json
 {
-  "prompt_version": "action-plan-v1",
+  "prompt_version": "action-plan-v2",
   "findings": [
     {
       "id": "3f1c6b0e-8a6d-4b8e-9d2a-0c7e5b1a2f01",
@@ -45,7 +45,7 @@ Content-Type: application/json
 
 | Campo | Tipo | Requerido | Descripción |
 |---|---|---|---|
-| prompt_version | string | Sí | `action-plan-v1`. Otro valor responde 422: el backend espera las reglas de ese prompt |
+| prompt_version | string | Sí | `action-plan-v2`. Otro valor responde 422: el backend espera las reglas de ese prompt |
 | findings | lista | Sí | 1 a `ACTION_PLAN_MAX_FINDINGS` (30 por defecto). No se repite un `id` |
 | findings[].id | UUID | Sí | Id del hallazgo en `legal_requirement_findings`. No puede ser el UUID nulo |
 | findings[].description | string | Sí | 1 a 2.000 caracteres, el tope de la descripción del hallazgo en el backend |
@@ -63,7 +63,7 @@ Campos extra se rechazan. Un campo opcional en blanco queda en `null`. Un sustit
 
 ```json
 {
-  "proposal_version": "action-plan-v1@gpt-5.6-luna",
+  "proposal_version": "action-plan-v2@gpt-5.6-luna",
   "model": "gpt-5.6-luna",
   "usage": {
     "prompt_tokens": 20,
@@ -97,7 +97,7 @@ Campos extra se rechazan. Un campo opcional en blanco queda en `null`. Un sustit
 - `findings` trae cada hallazgo del pedido una vez, en su orden. Una tarea con `citation` en `null` resume el hallazgo: la base no lo cubre. El backend la guarda sin documento. Si no queda ninguna tarea, el hallazgo queda sin respaldo.
 - `description`, `priority` y `citation` pueden ser `null`.
 
-**Reglas de la propuesta (`action-plan-v1`):**
+**Reglas de la propuesta (`action-plan-v2`):**
 
 - Todo hallazgo se manda al modelo, también el que no tiene fragmentos.
 - Si un fragmento de ese hallazgo respalda la acción, la tarea lo cita con `document_id`, `chunk_index` y un texto literal (`quote`). No usa el fragmento de otro hallazgo.
@@ -130,7 +130,7 @@ Campos extra se rechazan. Un campo opcional en blanco queda en `null`. Un sustit
 | ACTION_PLAN_MAX_RETRIES | 0 | Reintentos del SDK, que también reintenta un plazo vencido. Con uno, la propuesta podría pasar los 90 s del backend |
 | ACTION_PLAN_MAX_FINDINGS | 30 | Hallazgos por pedido. **Valor propuesto, sin acordar con el backend**, que hoy manda todos los hallazgos abiertos de la revisión sin tope |
 
-`proposal_version` es `action-plan-v1@<modelo usado>`. El backend lo guarda con un tope de 200 caracteres, y `model` con uno de 100: un nombre de modelo más largo haría que el backend no guarde la propuesta.
+`proposal_version` es `action-plan-v2@<modelo usado>`. El backend lo guarda con un tope de 200 caracteres, y `model` con uno de 100: un nombre de modelo más largo haría que el backend no guarde la propuesta.
 
 El endpoint es una función sincrónica: FastAPI la ejecuta en el pool de hilos, y mientras espera al modelo el servicio sigue atendiendo los demás endpoints y `/health`.
 
@@ -139,7 +139,7 @@ El endpoint es una función sincrónica: FastAPI la ejecuta en el pool de hilos,
 | Código | Cuándo |
 |---|---|
 | 401 | Falta `X-API-Key` o no coincide con `SERVICE_API_KEY` |
-| 422 | El JSON no es válido, falta un campo, sobra un campo, `prompt_version` no es `action-plan-v1`, un id no es un UUID o es el nulo, se repite un hallazgo, se pasa un tope o hay más de `ACTION_PLAN_MAX_FINDINGS` hallazgos. El mensaje no repite el contenido del pedido |
+| 422 | El JSON no es válido, falta un campo, sobra un campo, `prompt_version` no es `action-plan-v2`, un id no es un UUID o es el nulo, se repite un hallazgo, se pasa un tope o hay más de `ACTION_PLAN_MAX_FINDINGS` hallazgos. El mensaje no repite el contenido del pedido |
 | 502 | El proveedor falló, el modelo no devolvió una propuesta válida o hubo una falla inesperada. El detalle nombra el tipo de falla y, si hay, el estado HTTP. No repite el pedido ni la salida del modelo, que tampoco llegan al log (paso 2.12 del plan del sprint 4 de backend-cumplify) |
 | 503 | Falta `SERVICE_API_KEY` u `OPENAI_API_KEY`. La clave de OpenAI se exige antes de validar los hallazgos |
 

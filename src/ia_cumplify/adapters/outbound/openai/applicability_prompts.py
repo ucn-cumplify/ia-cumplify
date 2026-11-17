@@ -1,16 +1,22 @@
 from collections.abc import Sequence
 
-from ia_cumplify.adapters.outbound.openai.prompt_text import block_text, neutralize_delimiter_lines
+from ia_cumplify.adapters.outbound.openai.prompt_text import (
+    CUMPLIFY_ROLE,
+    block_text,
+    neutralize_delimiter_lines,
+)
 from ia_cumplify.domain.applicability import ApplicabilityArticleContext
 from ia_cumplify.domain.legal_body import LegalBody
 
 # Bump on every change to SYSTEM_PROMPT or to the user-message layout. The backend does not store
 # this version on the alert; it still travels in the response so a caller can tell which prompt wrote
 # the reasons and the analysis. v4 neutralizes the lines of the data that imitate a delimiter, and the
-# prompt says that a delimiter takes a whole line (sprint 4 plan, step 2.5).
-APPLICABILITY_PROMPT_VERSION = "applicability-v4"
+# prompt says that a delimiter takes a whole line (sprint 4 plan, step 2.5). v5 names Cumplify.
+APPLICABILITY_PROMPT_VERSION = "applicability-v5"
 
-APPLICABILITY_SYSTEM_PROMPT = """You read Chilean regulatory articles for a compliance platform. For each listed article you decide what it asks of the company and, when asked, write a short reason in Spanish for why it matched the company.
+APPLICABILITY_SYSTEM_PROMPT = f"""{CUMPLIFY_ROLE}
+
+You read Chilean regulatory articles for a compliance platform. For each listed article you decide what it asks of the company and, when asked, write a short reason in Spanish for why it matched the company.
 
 The backend already matched these articles to a company from taxonomy labels. You explain that match. You do not decide whether the article applies.
 

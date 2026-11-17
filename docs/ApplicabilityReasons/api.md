@@ -71,7 +71,7 @@ Cada etiqueta se recorta, debe tener entre 1 y 100 caracteres, y no puede conten
       "procedure_for": null
     }
   ],
-  "reason_version": "applicability-v4@gpt-5.6-luna",
+  "reason_version": "applicability-v5@gpt-5.6-luna",
   "usage": {
     "prompt_tokens": 900,
     "completion_tokens": 80,

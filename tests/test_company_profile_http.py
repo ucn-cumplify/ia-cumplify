@@ -178,7 +178,7 @@ def test_200_returns_the_six_dimensions_the_version_and_the_usage(profile_api) -
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["classification"] == PROFILE
-    assert body["classifier_version"] == "profile-v1@fake-model"
+    assert body["classifier_version"] == "profile-v2@fake-model"
     assert body["usage"] == {
         "prompt_tokens": 1000,
         "completion_tokens": 100,
@@ -356,7 +356,7 @@ def test_images_and_attachments_are_removed_from_the_description(profile_api) ->
 
 def test_lines_that_imitate_a_delimiter_in_the_description_are_neutralized(profile_api) -> None:
     # Step 2.5 of the sprint 4 plan, with the chat's rule (CHT-007). Only the description changes: the prompt and the
-    # labels block stay, and so does profile-v1.
+    # labels block stay.
     script, post = profile_api("ok")
     text = (
         "Transportamos carga por carretera.\n"
@@ -438,7 +438,7 @@ def test_an_unexpected_failure_reports_only_its_type(monkeypatch, caplog) -> Non
     # PRF-011. Any ValueError other than a rejected text is a 502 with the type alone: before, it was a 422
     # with the error message, which could carry the text.
     class FailingClassifier:
-        version = "profile-v1@fake-model"
+        version = "profile-v2@fake-model"
 
         def classify(self, text: str, candidates=None):
             raise ValueError(f"Could not classify {text}")

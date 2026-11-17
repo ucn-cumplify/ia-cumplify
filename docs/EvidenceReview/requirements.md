@@ -94,7 +94,7 @@ La respuesta trae la naturaleza, las exigencias con su estado, sus citas y lo qu
 
 **Validaciones:**
 
-- `review_version` es `evidence-review-v5@<modelo usado>`.
+- `review_version` es `evidence-review-v6@<modelo usado>`. `evidence-review-v6` nombra a Cumplify en la primera oración. Las reglas de la revisión siguen las de `evidence-review-v5`, y las revisiones guardadas con esa versión quedan desactualizadas.
 - Cada exigencia trae `evidence`, el respaldo que la acredita. Sin ese nombre, no sale.
 - `procedure_for` nombra la autorización de un artículo `procedural` y es `null` en las otras naturalezas.
 - Una cita se busca en el texto leído de su archivo, sin distinguir mayúsculas ni espacios. Una cita a otro archivo, en blanco o que no aparece, no sale. Una exigencia `accredited` o `partial` sin citas que queden baja a `not_accredited`, con la marca `cita no encontrada` en `missing`. El veredicto se recalcula a partir de las exigencias.

@@ -91,8 +91,9 @@ MAX_PROCEDURE_FOR_CHARS = 300
 # v4 neutralizes the lines of the data that imitate a delimiter, and the prompt says that a delimiter
 # takes a whole line (sprint 4 plan, step 2.5).
 # v5 states the gap together with what the files do accredit, and still does not recommend a task
-# (sprint 5 plan, step 0.6). backend-cumplify fingerprints a review with this version.
-REVIEW_PROMPT_VERSION = "evidence-review-v5"
+# (sprint 5 plan, step 0.6). v6 names Cumplify in the first sentence. backend-cumplify fingerprints a
+# review with this version: a review saved with v5 is stale until it is run again.
+REVIEW_PROMPT_VERSION = "evidence-review-v6"
 
 
 @dataclass(frozen=True, slots=True)

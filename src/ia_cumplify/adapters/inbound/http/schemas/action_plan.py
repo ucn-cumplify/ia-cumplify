@@ -110,7 +110,7 @@ class ActionPlanBody(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    prompt_version: Literal["action-plan-v1"] = Field(
+    prompt_version: Literal["action-plan-v2"] = Field(
         ..., description=f"The prompt the backend expects: {ACTION_PLAN_PROMPT_VERSION}"
     )
     findings: list[ActionPlanFindingBody] = Field(..., min_length=1)

@@ -1,7 +1,7 @@
 {
   "endpoint": "POST /api/v1/action-plans",
   "request": {
-    "prompt_version": "action-plan-v1",
+    "prompt_version": "action-plan-v2",
     "findings": [
       {
         "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
@@ -47,7 +47,7 @@
     ]
   },
   "response": {
-    "proposal_version": "action-plan-v1@gpt-5.6-luna",
+    "proposal_version": "action-plan-v2@gpt-5.6-luna",
     "model": "gpt-5.6-luna",
     "usage": {
       "prompt_tokens": 2800,

@@ -1,11 +1,15 @@
+from ia_cumplify.adapters.outbound.openai.prompt_text import CUMPLIFY_ROLE
 from ia_cumplify.domain.classification import CandidateLabels
 from ia_cumplify.domain.classification_catalogs import CLOSED_CATALOGS
 
 # Bump on every change to SYSTEM_PROMPT or to the EXISTING LABELS block. The backend stores it
 # with each response, so it can find the legal bodies classified with an older prompt.
-PROMPT_VERSION = "classify-v3-closed-catalogs"
+# v4 keeps the closed catalogs of v3 and names Cumplify in the first sentence.
+PROMPT_VERSION = "classify-v4-closed-catalogs"
 
-SYSTEM_PROMPT = """You classify Chilean regulatory and compliance articles for companies.
+SYSTEM_PROMPT = f"""{CUMPLIFY_ROLE}
+
+You classify Chilean regulatory and compliance articles for companies.
 
 You receive these blocks:
 1. FULL LEGAL BODY — title, metadata, summary, and every article of the same statute, in order. Use this as base context: defined terms, who the rule applies to, territorial scope, related obligations, and cross-references (e.g. "el artículo anterior", "la presente ley").

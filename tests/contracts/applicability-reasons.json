@@ -62,7 +62,7 @@
         "procedure_for": "Autorización sanitaria de la bodega de residuos"
       }
     ],
-    "reason_version": "applicability-v4@gpt-5.6-luna",
+    "reason_version": "applicability-v5@gpt-5.6-luna",
     "usage": {
       "prompt_tokens": 3200,
       "completion_tokens": 900,

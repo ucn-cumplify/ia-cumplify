@@ -815,7 +815,7 @@
       "vector": "fragment_block",
       "related": [],
       "requires": "neutralizar los delimitadores en la propuesta, que el paso 2.5 dejó para después",
-      "min_version": "action-plan-v2",
+      "min_version": "action-plan-v3",
       "control": "ADV-A00",
       "canary": "CANARIO-MIRLO-45",
       "markers": ["Falta comprar equipos nuevos para la faena"],

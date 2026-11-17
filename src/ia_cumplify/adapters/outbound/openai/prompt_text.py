@@ -10,6 +10,10 @@ import unicodedata
 
 from ia_cumplify.adapters.outbound.openai.strip_images import strip_base64_images
 
+# Opening of every language-model system prompt except the chat. The chat already says it works for
+# Cumplify in its own first sentence (chat-v4) and is not rebuilt from this constant.
+CUMPLIFY_ROLE = "You work for Cumplify, a Chilean legal-compliance platform."
+
 
 def neutralize_delimiter_lines(text: str) -> str:
     """Prefixes "> " to every line that could pass for a passage delimiter."""

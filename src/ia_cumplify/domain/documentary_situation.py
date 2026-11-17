@@ -4,7 +4,7 @@ from ia_cumplify.domain.classification import TokenUsage
 from ia_cumplify.domain.evidence_review import FILE_ID_MAX_CHARS, FILENAME_MAX_CHARS
 from ia_cumplify.domain.evidence_text import FileReadStatus
 
-DOCUMENTARY_SITUATION_PROMPT_VERSION = "documentary-situation-v1"
+DOCUMENTARY_SITUATION_PROMPT_VERSION = "documentary-situation-v2"
 MAX_CONTENT_CHARS = 4000
 
 # The documentary pack is not an evidence review: 50 files, 20 MB each, not 10 files and 25 MB total.
