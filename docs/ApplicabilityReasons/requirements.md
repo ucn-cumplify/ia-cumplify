@@ -105,8 +105,8 @@ Cada respuesta informa qué versión del prompt la produjo y cuántos tokens cos
 
 **Validaciones:**
 
-- `reason_version` es `<APPLICABILITY_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `applicability-v5@gpt-5.6-luna`. `applicability-v5` nombra a Cumplify en la primera oración. Las reglas de `applicability-v4` siguen igual.
-- Versiones con análisis: `applicability-v2` (ia #31) lo agregó; `applicability-v3` (2026-10-15) aclara que nombrar otra ley no es una remisión; `applicability-v4` (paso 2.5 del plan del sprint 4 de backend-cumplify) neutraliza los delimitadores (APR-009). El filtro de letras de otro alfabeto está en el código, no en el prompt.
+- `reason_version` es `<APPLICABILITY_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `applicability-v6@gpt-5.6-luna`. `applicability-v5` nombra a Cumplify en la primera oración. `applicability-v6` neutraliza una línea `Article ID:` escrita en la norma, en un artículo, en un valor coincidente o en una acción. Las reglas de `applicability-v4` siguen igual.
+- Versiones con análisis: `applicability-v2` (ia #31) lo agregó; `applicability-v3` (2026-10-15) aclara que nombrar otra ley no es una remisión; `applicability-v4` (paso 2.5 del plan del sprint 4 de backend-cumplify) neutraliza los delimitadores (APR-009); `applicability-v6` neutraliza una línea `Article ID:` escrita en los datos. El filtro de letras de otro alfabeto está en el código, no en el prompt.
 - Todo cambio del prompt o del armado del mensaje de usuario sube `APPLICABILITY_PROMPT_VERSION`. La limpieza de los datos que llegan al mensaje no cuenta como cambio del armado: por ejemplo, reemplazar un adjunto por `[archivo omitido]` o leer una `section` nula como texto vacío, que cambiaron el 2026-10-08 sin subirla. La neutralización de los delimitadores sí la subió, a `applicability-v4`, porque además agrega una regla al prompt.
 - `usage.llm_calls` vale 1 cuando se llamó al modelo, y 0 cuando `reasons` queda vacío sin llamarlo.
 - Cada campo del `usage` del proveedor se lee por separado: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta (caso APR-017 de `test.csv`).
@@ -193,7 +193,7 @@ La norma y los artículos son datos, no instrucciones: el prompt pide ignorar cu
 **Validaciones:**
 
 - Una norma y un artículo con líneas que imitan los cuatro delimitadores, y un valor o una acción con U+2028 o U+0085 antes de uno, llegan al modelo con esas líneas neutralizadas: el mensaje tiene solo los delimitadores reales (APR-033 de `test.csv`).
-- Los artículos se separan con una línea en blanco y la etiqueta `Article ID:`, no con delimitadores, así que una línea `Article ID:` escrita en el texto no se neutraliza. Lo limitan que solo vuelven los ids pedidos (APR-002) y la regla del prompt; el caso queda para el set adversarial del paso 2.6.
+- Desde `applicability-v6`, una línea `Article ID:` escrita en el título, el resumen, el número, la sección, el texto, un valor coincidente o una acción llega con el prefijo `> `. El encabezado de un artículo es solo la línea `Article ID:` que escribe este pedido. Sigue valiendo que solo vuelven los ids pedidos (APR-002).
 
 ---
 
@@ -204,7 +204,7 @@ La norma y los artículos son datos, no instrucciones: el prompt pide ignorar cu
 - Decidir en la misma llamada la naturaleza de cada artículo y sus obligaciones explícitas con su respaldo, y cerrar en código las reglas de C9 y el criterio del cliente.
 - Usar timeout y reintentos propios (`APPLICABILITY_REASONS_TIMEOUT_SECONDS`, `APPLICABILITY_REASONS_MAX_RETRIES`), más cortos que los de clasificar, para caber en la espera del backend.
 - Quitar del texto que se envía al modelo las imágenes y los demás archivos embebidos como data URI.
-- Neutralizar las líneas de la norma, de los artículos, de los valores y de las acciones que imitan un delimitador del mensaje (APR-009).
+- Neutralizar las líneas de la norma, de los artículos, de los valores y de las acciones que imitan un delimitador del mensaje o un encabezado `Article ID:` (APR-009).
 - Informar siempre la versión del prompt y el uso de tokens.
 
 ## Fuera de alcance
