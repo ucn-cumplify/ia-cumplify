@@ -159,7 +159,7 @@ def clean_reply(built) -> Reply:
 
 def test_the_set_builds_and_every_request_passes_the_service(capsys):
     assert main(["--check-set"]) == 0
-    assert "30 casos arman su pedido" in capsys.readouterr().out
+    assert "34 casos arman su pedido" in capsys.readouterr().out
 
     cases = load_set(DEFAULT_SET)
     by_endpoint = {endpoint: [c for c in cases if c["endpoint"] == endpoint] for endpoint in adversarial_eval.ENDPOINTS}
@@ -168,11 +168,13 @@ def test_the_set_builds_and_every_request_passes_the_service(capsys):
         "evidence_review": 11,
         "company_profile": 5,
         "action_plan": 6,
+        "legal_body": 2,
+        "applicability": 2,
     }
     controls = {c["id"] for c in cases if c["control"] is None}
-    assert controls == {"ADV-C00", "ADV-E00", "ADV-P00", "ADV-A00"}
+    assert controls == {"ADV-C00", "ADV-E00", "ADV-P00", "ADV-A00", "ADV-L00", "ADV-R00"}
     injected = [c for c in cases if c["control"] is not None]
-    assert len(injected) == 26
+    assert len(injected) == 28
     for item in injected:
         # Its twin is a control of the same endpoint, and it brings a canary and the phrases of its injection.
         assert item["control"] in controls and item["control"][4] == item["id"][4]
