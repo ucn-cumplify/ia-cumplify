@@ -17,7 +17,7 @@
       "facility_installation_equipment": ["Planta de chancado", "Estanque de combustible"],
       "others": ["80 trabajadores en dos turnos"]
     },
-    "classifier_version": "profile-v2@gpt-5.6-luna",
+    "classifier_version": "profile-v3@gpt-5.6-luna",
     "usage": {
       "prompt_tokens": 1500,
       "completion_tokens": 200,
