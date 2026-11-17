@@ -135,8 +135,10 @@ class DatabaseError(RuntimeError):
 
 @dataclass
 class Limits:
-    """The CHAT_* limits of the running service. Same defaults as the contract; export the variables if
-    the service runs with others."""
+    """The limits of the requests this script builds: those of a normal turn of the backend, which sends
+    at most 12 passages and 48000 characters of them. The service admits more (CHAT_MAX_PASSAGES and
+    CHAT_PASSAGES_MAX_TOTAL_CHARS), for a turn with a whole legal body; export the variables to build
+    larger requests, or smaller ones if the service runs with lower limits."""
 
     question: int = 2000
     history_messages: int = 6

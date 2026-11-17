@@ -120,7 +120,7 @@ class TestTheCall:
                 "reasoning_effort", "max_completion_tokens",
             ]
         )
-        assert (body["model"], body["reasoning_effort"], body["max_completion_tokens"]) == ("gpt-5.6-luna", "low", 4000)
+        assert (body["model"], body["reasoning_effort"], body["max_completion_tokens"]) == ("gpt-5.6-luna", "low", 8000)
         assert (body["stream"], body["stream_options"], body["store"]) == (True, {"include_usage": True}, False)
         # Option (b) of "Caché de prompts": the explicit mode, with a single breakpoint at the end of the
         # instructions, so nothing of the request enters the cache.

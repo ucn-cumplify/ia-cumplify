@@ -50,12 +50,12 @@ El pedido se valida entero antes de abrir el stream y de llamar al proveedor. Lo
 
 - `question`, recortada, tiene entre 1 y `CHAT_QUESTION_MAX_CHARS` caracteres (defecto 2.000).
 - `history` tiene hasta `CHAT_HISTORY_MAX_MESSAGES` mensajes (defecto 6) y `CHAT_HISTORY_MAX_CHARS` caracteres sumados (defecto 8.000). `role` es `user` o `assistant`. Cada mensaje se recorta, y los vacíos se descartan antes de contar. No se exige que `user` y `assistant` alternen.
-- `passages` tiene de 0 a `CHAT_MAX_PASSAGES` pasajes (defecto 12):
+- `passages` tiene de 0 a `CHAT_MAX_PASSAGES` pasajes (defecto 160):
   - `id`, de 1 a 100 caracteres, en una línea y único en el pedido. No se recorta: vuelve tal cual en las citas;
   - `kind`, dentro de la lista cerrada de `api.md`;
   - `reference`, recortada, de 1 a 200 caracteres, en una línea;
   - `text`, recortado, entre 1 y `CHAT_PASSAGE_MAX_CHARS` caracteres (defecto 6.000);
-  - la suma de los `text`, hasta `CHAT_PASSAGES_MAX_TOTAL_CHARS` (defecto 48.000).
+  - la suma de los `text`, hasta `CHAT_PASSAGES_MAX_TOTAL_CHARS` (defecto 220.000).
 - `context.app_name`, si viene, recortado, tiene de 1 a 200 caracteres, en una línea.
 - "Carácter", "recortar" y "en una línea" tienen la definición de `api.md`. Un carácter es un punto de código (`len`). El recorte usa `strip_whitespace` de Pydantic, que quita los mismos espacios que `Trim()` de .NET, y no `str.strip()`. El recorte va antes de medir y de comprobar la línea, y `id` no se recorta. En un texto no vacío, "en una línea" equivale a `s.splitlines() == [s]`: ningún carácter de la lista de `api.md`, tampoco al final. Las reglas de una línea se escriben con un `pattern` que excluye esos saltos, como `CandidateLabel` en la clasificación, para que el mensaje del error no repita el valor.
 - `null` en `history`, `context` o `context.app_name` equivale a omitirlo; en un campo requerido da 422. Con `default_factory`, Pydantic responde 422 a `null`: esos campos se declaran `| None = None` y `history` se normaliza a la lista vacía.

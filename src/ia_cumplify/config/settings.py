@@ -50,8 +50,9 @@ class Settings(BaseSettings):
     # Empty CHAT_MODEL and CHAT_REASONING_EFFORT use OPENAI_MODEL and OPENAI_REASONING_EFFORT.
     chat_model: str = ""
     chat_reasoning_effort: str = ""
-    # Output cap per answer, reasoning included.
-    chat_max_completion_tokens: int = 4000
+    # Output cap per answer, reasoning included. A normal answer stays far below it; it leaves room to
+    # list every article of a whole legal body with a line each (a 137-chunk one was cut at 4000).
+    chat_max_completion_tokens: int = 8000
     # Per attempt: the longest wait for the provider's headers or for its next chunk. Connecting has 5 s.
     chat_timeout_seconds: float = 60
     # SDK retries, only before the provider answers 2xx. 0 leaves the retry to the backend.
@@ -61,9 +62,12 @@ class Settings(BaseSettings):
     chat_question_max_chars: int = 2000
     chat_history_max_messages: int = 6
     chat_history_max_chars: int = 8000
-    chat_max_passages: int = 12
+    # The passage limits fit a whole legal body: its record plus one passage per article chunk. The backend
+    # sends that only when the question asks for the articles of a named legal body; any other turn stays
+    # at 12 passages and 48000 characters, which the backend chooses by itself.
+    chat_max_passages: int = 160
     chat_passage_max_chars: int = 6000
-    chat_passages_max_total_chars: int = 48000
+    chat_passages_max_total_chars: int = 220000
     # Fixed answers without OpenAI (chat_version fake-v1@fake), to integrate the backend without tokens.
     chat_fake_responder: bool = False
 

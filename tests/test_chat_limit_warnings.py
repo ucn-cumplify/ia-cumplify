@@ -126,7 +126,7 @@ class TestThresholds:
         monkeypatch.setenv("CHAT_MAX_PASSAGES", "11")
         monkeypatch.setenv("CHAT_HISTORY_MAX_CHARS", "8001")
 
-        assert chat_limits_below_default(Settings()) == [("CHAT_MAX_PASSAGES", 11, 12)]
+        assert chat_limits_below_default(Settings()) == [("CHAT_MAX_PASSAGES", 11, 160)]
 
 
 class TestPrivacy:
@@ -142,7 +142,7 @@ class TestPrivacy:
         assert len(warnings) == 1
         assert SECRET not in caplog.text
         # Only the variable name and two integers reach the record.
-        assert warnings[0].args == ("CHAT_MAX_PASSAGES", 11, 12)
+        assert warnings[0].args == ("CHAT_MAX_PASSAGES", 11, 160)
 
     def test_a_non_integer_value_stops_the_settings_without_showing_it(self, monkeypatch) -> None:
         # Existing pydantic behavior (no new restriction): an invalid value fails at startup, naming the field.

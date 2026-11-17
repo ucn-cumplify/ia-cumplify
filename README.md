@@ -156,15 +156,15 @@ contrato (`docs/Chat/api.md`).
 |---|---|---|---|
 | `CHAT_MODEL` | vacía (usa `OPENAI_MODEL`) | Modelo del chat | |
 | `CHAT_REASONING_EFFORT` | vacía (usa `OPENAI_REASONING_EFFORT`) | Esfuerzo de razonamiento del chat. `medium` no mejoró la fidelidad frente a `low` (CHT-041, 2026-10-19) | |
-| `CHAT_MAX_COMPLETION_TOKENS` | 4.000 | Tope de salida por respuesta, razonamiento incluido | |
+| `CHAT_MAX_COMPLETION_TOKENS` | 8.000 | Tope de salida por respuesta, razonamiento incluido. Alcanza para listar todos los artículos de una norma completa con una línea por artículo | |
 | `CHAT_TIMEOUT_SECONDS` | 60 | Lectura, por intento: lo máximo que se esperan las cabeceras de OpenAI o su siguiente fragmento. La conexión tiene 5 s | |
 | `CHAT_MAX_RETRIES` | 0 | Reintentos del SDK, solo antes de que OpenAI responda 2xx. Con 0, el backend decide si reintenta | |
 | `CHAT_QUESTION_MAX_CHARS` | 2.000 | Largo máximo de la pregunta, recortada | `ChatTurnRules.QuestionMaxChars` |
 | `CHAT_HISTORY_MAX_MESSAGES` | 6 | Mensajes máximos del historial, sin contar los vacíos | `ChatHistory.MaxMessages` |
 | `CHAT_HISTORY_MAX_CHARS` | 8.000 | Caracteres máximos del historial, sumados | `ChatHistory.MaxChars` |
-| `CHAT_MAX_PASSAGES` | 12 | Pasajes máximos por pedido | `ChatPassageLimits.MaxPassages` |
+| `CHAT_MAX_PASSAGES` | 160 | Pasajes máximos por pedido. Alcanza para una norma completa: su ficha y un pasaje por trozo de artículo | `ChatPassageLimits.RequestMaxPassages` |
 | `CHAT_PASSAGE_MAX_CHARS` | 6.000 | Largo máximo del texto de un pasaje, recortado | `ChatPassageLimits.MaxPassageChars` |
-| `CHAT_PASSAGES_MAX_TOTAL_CHARS` | 48.000 | Suma máxima de los textos de los pasajes | `ChatPassageLimits.MaxTotalChars` |
+| `CHAT_PASSAGES_MAX_TOTAL_CHARS` | 220.000 | Suma máxima de los textos de los pasajes | `ChatPassageLimits.RequestMaxTotalChars` |
 | `CHAT_FAKE_RESPONDER` | `false` | Respondedor falso: un texto fijo que cita el primer pasaje, sin llamar a OpenAI ni exigir `OPENAI_API_KEY`, con `chat_version` `fake-v1@fake`. Solo para integrar sin gastar tokens, y solo con `APP_ENV=development`: con otro valor, el servicio no arranca. Si arranca activo, el log lo avisa | |
 
 - **Topes del chat:** en el backend son constantes, no variables de entorno. Subir uno exige cambiar el backend y este

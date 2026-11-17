@@ -19,15 +19,15 @@ ENV_EXAMPLE = Path(__file__).resolve().parents[1] / ".env.example"
 CONTRACT_DEFAULTS = {
     "chat_model": "",
     "chat_reasoning_effort": "",
-    "chat_max_completion_tokens": 4000,
+    "chat_max_completion_tokens": 8000,
     "chat_timeout_seconds": 60,
     "chat_max_retries": 0,
     "chat_question_max_chars": 2000,
     "chat_history_max_messages": 6,
     "chat_history_max_chars": 8000,
-    "chat_max_passages": 12,
+    "chat_max_passages": 160,
     "chat_passage_max_chars": 6000,
-    "chat_passages_max_total_chars": 48000,
+    "chat_passages_max_total_chars": 220000,
     "chat_fake_responder": False,
 }
 
