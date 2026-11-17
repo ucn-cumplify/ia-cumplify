@@ -94,7 +94,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 **Validaciones:**
 
-- `classifier_version` es `<PROFILE_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `profile-v2@gpt-5.6-luna`. `profile-v2` nombra a Cumplify en la primera oración y conserva las etiquetas de `profile-v1`.
+- `classifier_version` es `<PROFILE_PROMPT_VERSION>@<OPENAI_MODEL>`, por ejemplo `profile-v3@gpt-5.6-luna`. `profile-v2` nombra a Cumplify en la primera oración. `profile-v3` dice que un delimitador ocupa una línea entera y neutraliza las líneas de una etiqueta existente que imitan un delimitador. Las etiquetas de las dimensiones siguen las de `profile-v1`.
 - Todo cambio del prompt del perfil o de su bloque de etiquetas sube `PROFILE_PROMPT_VERSION`.
 - `usage` trae los tokens de la llamada, con `cached_tokens` (la parte de `prompt_tokens` servida desde la caché del proveedor, 0 si no la informa), y `llm_calls` vale 1.
 - Cada campo del `usage` del proveedor se lee por separado: uno que falta o no es un entero positivo cuenta 0, sin hacer fallar la respuesta (caso PRF-015 de `test.csv`).
@@ -111,7 +111,7 @@ Cada respuesta informa qué versión del clasificador la produjo y cuántos toke
 
 **Descripción:**
 
-El texto es información de la empresa. No se registra en el log ni aparece en el cuerpo de un error: los errores dicen el tipo de falla, y el log, el largo del texto. Tampoco se copia la respuesta de rechazo del modelo, que podría citarlo, ni una salida que no cumple el esquema o no es JSON: esa falla responde `502` con un texto fijo. El texto es dato, no instrucciones: el prompt pide ignorar las instrucciones escritas dentro de él. Desde el paso 2.5 del plan del sprint 4 de backend-cumplify, además, una línea del texto que imita un delimitador del mensaje, como `--- END COMPANY DESCRIPTION ---` o `--- EXISTING LABELS (reuse when they fit) ---`, recibe el prefijo `> `, con la regla de CHT-007 de `docs/Chat` (PRF-020 de `test.csv`). Solo cambia el texto: el prompt y el bloque de etiquetas quedan iguales, así que `profile-v1` no sube (PRF-005).
+El texto es información de la empresa. No se registra en el log ni aparece en el cuerpo de un error: los errores dicen el tipo de falla, y el log, el largo del texto. Tampoco se copia la respuesta de rechazo del modelo, que podría citarlo, ni una salida que no cumple el esquema o no es JSON: esa falla responde `502` con un texto fijo. El texto es dato, no instrucciones: el prompt pide ignorar las instrucciones escritas dentro de él. Desde el paso 2.5 del plan del sprint 4 de backend-cumplify, además, una línea del texto que imita un delimitador del mensaje, como `--- END COMPANY DESCRIPTION ---` o `--- EXISTING LABELS (reuse when they fit) ---`, recibe el prefijo `> `, con la regla de CHT-007 de `docs/Chat` (PRF-020 de `test.csv`). Solo cambia el texto: el prompt y el bloque de etiquetas quedan iguales, así que `profile-v1` no sube (PRF-005). `profile-v3` neutraliza también una etiqueta existente: el pedido no admite `|`, CR ni LF en ella, pero sí otros saltos de `str.splitlines`, y una línea que imita `--- END EXISTING LABELS ---` llega con el prefijo `> `.
 
 ---
 

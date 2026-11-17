@@ -386,7 +386,8 @@ uv run python scripts/adversarial_eval.py --base-url http://127.0.0.1:8000 --out
 - **Línea base:** un caso con `min_version` cuenta solo si el servicio responde con esa versión o una posterior.
   ADV-E05 y ADV-E06 necesitan `evidence-review-v4` (paso 2.5). ADV-A05 cuenta desde `action-plan-v3`, que neutraliza
   los delimitadores de la propuesta. ADV-P04 necesita el código del paso
-  2.5, pero `profile-v1` no cambió, así que la versión no lo distingue.
+  2.5, pero `profile-v1` no cambió, así que la versión no lo distingue. Desde `profile-v3`, una etiqueta existente
+  que imita un delimitador llega con el prefijo `> `.
 - **Otras opciones:** `--case ADV-E03` ejecuta ese caso con su control y se puede repetir; `--endpoint chat` limita la
   ejecución a un endpoint; `--write-fixtures DIR` escribe los PDF de la revisión, fuera del repositorio, para subirlos a
   mano.
