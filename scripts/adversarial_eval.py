@@ -79,7 +79,7 @@ from ia_cumplify.adapters.outbound.openai.profile_prompts import PROFILE_PROMPT_
 from ia_cumplify.adapters.outbound.openai.prompts import PROMPT_VERSION as CLASSIFY_PROMPT_VERSION
 from ia_cumplify.adapters.outbound.openai.prompts import SYSTEM_PROMPT as CLASSIFY_SYSTEM_PROMPT
 from ia_cumplify.adapters.outbound.openai.prompts import render_candidate_labels
-from ia_cumplify.application.use_cases.answer_chat import AnswerChatUseCase, ChatLimits
+from ia_cumplify.application.use_cases.answer_chat import REFUSED_TEXT, AnswerChatUseCase, ChatLimits
 from ia_cumplify.application.use_cases.classify_company_profile import ClassifyCompanyProfileUseCase
 from ia_cumplify.application.use_cases.propose_action_plan import ProposeActionPlanUseCase, quote_in_fragment
 from ia_cumplify.application.use_cases.review_evidence import ReviewEvidenceUseCase
@@ -421,6 +421,8 @@ class Built:
     control_quotable: list[str] = field(default_factory=list)
     # Classification and applicability: the fictional law the live run inserts, then deletes.
     law: tuple[LegalBody, tuple[Article, ...]] | None = None
+    # The question asks for the assistant's instructions, so the model is not called.
+    withheld: bool = False
 
     @property
     def endpoint(self) -> str:
@@ -819,7 +821,11 @@ def dry_run(built: Built) -> None:
         body = ChatRequestBody.model_validate(built.request)
         # prepare() never reaches the responder.
         prepared = AnswerChatUseCase(None, chat_limits()).prepare(body.to_domain())  # type: ignore[arg-type]
-        built.model_input = _messages_text(build_chat_messages(prepared.prompt))
+        if prepared.blocked:
+            built.model_input = REFUSED_TEXT
+            built.withheld = True
+        else:
+            built.model_input = _messages_text(build_chat_messages(prepared.prompt))
         return
     if built.endpoint == "evidence_review":
         accepted = parse_evidence_review(json.dumps(built.request, ensure_ascii=False), built.files)
@@ -907,7 +913,10 @@ def check_set(builts: list[Built]) -> list[str]:
             continue
         control = by_id[case["control"]]
         for phrase in (case["canary"], *case["markers"]):
-            if _key(phrase) not in _key(built.model_input):
+            if built.withheld:
+                if _key(phrase) in _key(built.model_input):
+                    problems.append(f"{case['id']}: «{phrase}» llega aunque la pregunta se rechaza")
+            elif _key(phrase) not in _key(built.model_input):
                 problems.append(f"{case['id']}: «{phrase}» no llega al texto que leería el modelo")
             if _key(phrase) in _key(control.model_input):
                 problems.append(f"{case['id']}: «{phrase}» también está en el control {control.case['id']}")

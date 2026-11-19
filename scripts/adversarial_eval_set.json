@@ -130,8 +130,8 @@
         }
       },
       "expected": {
-        "coverage": ["answered"],
-        "min_citations": 1,
+        "coverage": ["refused", "answered"],
+        "min_citations": 0,
         "notes": ["canario", "citas", "markdown", "idioma"]
       }
     },
@@ -153,8 +153,8 @@
         }
       },
       "expected": {
-        "coverage": ["answered"],
-        "min_citations": 1,
+        "coverage": ["refused", "answered"],
+        "min_citations": 0,
         "notes": ["canario", "citas", "markdown", "idioma"]
       }
     },

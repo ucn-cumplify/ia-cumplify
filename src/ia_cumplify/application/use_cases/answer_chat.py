@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from ia_cumplify.application.ports.chat_responder import ChatResponderPort, ProviderStreamSlot
 from ia_cumplify.application.use_cases.chat_citations import CitationFilter, neutralize_markers
+from ia_cumplify.application.use_cases.chat_input_filter import is_blocked_question, redact_sensitive
 from ia_cumplify.domain.chat import (
     APP_NAME_MAX_CHARS,
     CHAT_ROLES,
@@ -73,6 +74,9 @@ class PreparedChat:
     prompt: ChatPrompt
     # Index i holds the id of key P(i+1).
     passage_ids: tuple[str, ...]
+    # The question asks for this assistant's instructions. stream() answers with the fixed refusal and
+    # does not call the model. The prompt is still built, so a check can see what was withheld.
+    blocked: bool = False
 
 
 class AnswerChatUseCase:
@@ -187,19 +191,24 @@ class AnswerChatUseCase:
 
         prompt_history = []
         for message in history:
-            content = _for_model(message.content, assistant=message.role == "assistant")
+            content = _for_input(message.content, assistant=message.role == "assistant")
             # A message the neutralization leaves empty (an earlier answer made only of markers, or a
             # message made only of the not_covered mark) is not sent.
             if content:
                 prompt_history.append(ChatMessage(role=message.role, content=content))
+        question_for_model = _for_input(question)
         prompt = ChatPrompt(
-            question=_for_model(question),
+            question=question_for_model,
             history=tuple(prompt_history),
             passages=tuple(passages),
             # A name made only of the not_covered mark is left out, not sent as an empty "App:" line.
             app_name=(_for_model(app_name) or None) if app_name is not None else None,
         )
-        return PreparedChat(prompt=prompt, passage_ids=tuple(passage.id for passage in request.passages))
+        return PreparedChat(
+            prompt=prompt,
+            passage_ids=tuple(passage.id for passage in request.passages),
+            blocked=is_blocked_question(question_for_model),
+        )
 
     async def stream(self, prepared: PreparedChat, slot: ProviderStreamSlot) -> AsyncIterator[ChatEvent]:
         """Deltas, then exactly one done or error event.
@@ -208,6 +217,17 @@ class AnswerChatUseCase:
         client disconnects. Any failure becomes the error event; cancellation propagates untouched.
         """
         version = self._responder.version
+        if prepared.blocked:
+            yield ChatDeltaEvent(REFUSED_TEXT)
+            yield ChatDoneEvent(
+                citations=(),
+                coverage="refused",
+                citations_dropped=0,
+                finish_reason="stop",
+                usage=ChatUsage(),
+                chat_version=version,
+            )
+            return
         if not prepared.passage_ids:
             # Nothing to answer from: a fixed refusal, without spending tokens.
             yield ChatDeltaEvent(NO_PASSAGES_TEXT)
@@ -347,5 +367,10 @@ def _is_single_line(text: str) -> bool:
 
 
 def _for_model(text: str, *, assistant: bool = False) -> str:
-    """Input text as the model gets it. Lone surrogates become U+FFFD, which keeps every length."""
+    """Passage text as the model gets it. Lone surrogates become U+FFFD, which keeps every length."""
     return _trim(neutralize_markers(replace_lone_surrogates(text), assistant=assistant))
+
+
+def _for_input(text: str, *, assistant: bool = False) -> str:
+    """A question or an earlier message. Secrets are replaced after the citation markers are neutralized."""
+    return redact_sensitive(_for_model(text, assistant=assistant))
