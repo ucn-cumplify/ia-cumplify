@@ -30,7 +30,7 @@ def context(article_id: str, number: str, text: str, *, write_reason: bool = Tru
 
 
 def test_prompt_version() -> None:
-    assert APPLICABILITY_PROMPT_VERSION == "applicability-v6"
+    assert APPLICABILITY_PROMPT_VERSION == "applicability-v7"
 
 
 def test_system_prompt_forbids_quoting_the_profile_and_dictating() -> None:
@@ -46,7 +46,7 @@ def test_system_prompt_decides_nature_with_the_c9_rules() -> None:
     for nature in ("explicit_obligations", "informative", "referral", "procedural"):
         assert nature in text
     assert "Check the natures in this order and keep the first that fits" in text
-    assert "only obliges or empowers the State" in text
+    assert "only obliges, forbids or empowers the State, its bodies or its officials" in text
     assert "It is a referral even when the added text imposes an obligation" in text
     assert "referred_legal_body" in text
     assert "Decide it only from the article text, never from the matched values or the actions" in text
@@ -63,11 +63,89 @@ def test_obligations_come_only_from_the_article_text() -> None:
 def test_an_obligation_needs_the_respaldo_that_accredits_it() -> None:
     # Decision 21, the client's criterion: an obligation corresponds to a respaldo at all times.
     text = APPLICABILITY_SYSTEM_PROMPT
-    assert "Before you list an obligation, name its respaldo" in text
+    assert "a concrete conduct the article requires of the company and that a respaldo can accredit" in text
+    assert "Then name its respaldo" in text
     assert "If you cannot name one, it is not an obligation" in text
     assert "imposes the obligation to hold it" in text
-    assert "A prohibition counts only when a respaldo accredits compliance with it" in text
+    assert "A prohibition the article sets on the company or on those who act inside it is an obligation" in text
     assert "evidence: the respaldo that accredits it" in text
+
+
+def test_the_conduct_is_found_in_the_words_of_the_article_before_its_respaldo() -> None:
+    # applicability-v7, after the client's identification methodology: first who must do what, then the respaldo.
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "Take two steps" in text
+    assert "First find the conduct in the words of the article: who must fulfil it, what they must do, and on what" in text
+    assert "Do not infer it from the subject of the article or from the mention of an authority" in text
+    assert text.index("First find the conduct") < text.index("Then name its respaldo")
+    assert 'The article can impose it without the word "deberá"' in text
+
+
+def test_the_company_includes_those_who_act_inside_it() -> None:
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "the employer, its workers, its contractors and subcontractors, and the bodies that work inside it" in text
+    for body in ("Comité Paritario", "Departamento de Prevención de Riesgos", "delegado", "sindicato"):
+        assert body in text
+    assert "its summary names who must fulfil it" in text
+    assert "is an obligation when it requires someone to act" in text
+    assert "on those who act inside it (its workers, its contractors, a committee, a union)" in text
+
+
+def test_a_rule_of_an_internal_body_is_an_obligation_only_when_it_requires_an_act() -> None:
+    # Team decision of 2026-11-17: the company includes its internal bodies, but a rule about them counts only
+    # when someone must act. A status or validity rule (who composes it, the quorum, how long members serve) does not.
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "is an obligation when it requires someone to act" in text
+    assert "to hold an election within a deadline, to draw up a record, to meet, to notify, to carry out a function" in text
+    assert "requires no act and is not an obligation" in text
+    for rule in ("how long the members serve", "when they cease", "who belongs by right", "the quorum"):
+        assert rule in text
+    assert "how one of those bodies must be formed, elected or run" not in text
+
+
+def test_a_prohibition_on_the_company_is_an_obligation_without_a_document() -> None:
+    # Team decision of 2026-11-17, after point 40 of the client's methodology: it replaces the prohibition rule
+    # of decision 21. The respaldo still defines every other obligation.
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "is an obligation, even when the article names no document" in text
+    assert "the authorization that lifts it or, when there is none, the record that would show it is respected" in text
+    assert "A prohibition set only on the State, its bodies or its officials is not." in text
+    assert "A prohibition counts only when a respaldo accredits" not in text
+    assert "If you cannot name one, it is not an obligation" in text
+
+
+
+def test_an_entity_outside_the_company_does_not_oblige_it() -> None:
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "only of an entity outside the company that insures, certifies or supervises it" in text
+    assert "organismo administrador del seguro" in text
+    assert "A company with administración delegada stands in the place of the organismo administrador" in text
+    assert "So is an article that only obliges an entity outside the company" in text
+
+
+def test_a_power_a_purpose_or_a_permission_is_not_an_obligation() -> None:
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "does not by itself require anything of the company" in text
+    assert "states the purpose or the scope of the law" in text
+    assert "sets when a law or a duty enters into force" in text
+    assert 'only allows the company to do something ("podrá") without requiring it' in text
+
+
+def test_obligations_are_counted_by_independent_duty() -> None:
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "One item per independent duty" in text
+    assert "are part of that duty: say them in its summary, never as separate obligations" in text
+    assert "Do not merge two different duties into one item, and do not list the same duty twice" in text
+    assert "A duty that arises only when something happens" in text
+    assert "say the condition in its summary" in text
+
+
+def test_an_article_with_explicit_obligations_always_lists_one() -> None:
+    # close_analysis drops an explicit_obligations article without a usable obligation, and the backend shows it
+    # as not evaluated: the prompt asks for informative instead.
+    text = APPLICABILITY_SYSTEM_PROMPT
+    assert "An explicit_obligations article always lists at least one obligation" in text
+    assert "When no conduct of the article keeps a respaldo, the article is informative" in text
 
 
 def test_the_antecedents_for_an_application_are_procedural() -> None:
