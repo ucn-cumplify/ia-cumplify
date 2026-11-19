@@ -94,7 +94,7 @@ La respuesta trae la naturaleza, las exigencias con su estado, sus citas y lo qu
 
 **Validaciones:**
 
-- `review_version` es `evidence-review-v6@<modelo usado>`. `evidence-review-v6` nombra a Cumplify en la primera oración. Las reglas de la revisión siguen las de `evidence-review-v5`, y las revisiones guardadas con esa versión quedan desactualizadas.
+- `review_version` es `evidence-review-v7@<modelo usado>`. `evidence-review-v6` nombra a Cumplify en la primera oración, con las reglas de `evidence-review-v5`. `evidence-review-v7` decide la naturaleza con las reglas de `applicability-v7` (decisiones 23 y 24 del plan del sprint 3 de backend-cumplify): cambia qué exigencias trae una revisión, así que las guardadas con la v6 quedan desactualizadas.
 - Cada exigencia trae `evidence`, el respaldo que la acredita. Sin ese nombre, no sale.
 - `procedure_for` nombra la autorización de un artículo `procedural` y es `null` en las otras naturalezas.
 - Una cita se busca en el texto leído de su archivo, sin distinguir mayúsculas ni espacios. Una cita a otro archivo, en blanco o que no aparece, no sale. Una exigencia `accredited` o `partial` sin citas que queden baja a `not_accredited`, con la marca `cita no encontrada` en `missing`. El veredicto se recalcula a partir de las exigencias.
@@ -111,7 +111,7 @@ La respuesta trae la naturaleza, las exigencias con su estado, sus citas y lo qu
 
 **Descripción:**
 
-La naturaleza se decide solo con el texto del artículo (decisiones 7 y 21), en el orden `referral`, `explicit_obligations`, `procedural`, `informative`. Cuentan las obligaciones que recaen en la empresa y que un respaldo puede acreditar. Un artículo que solo obliga al Estado es `informative`. Un artículo que modifica otra ley, o que agrega una obligación dentro de otra, es `referral`, aunque el texto agregado imponga una obligación. Exigir una autorización impone la obligación de tenerla. Un artículo que solo regula el trámite es `procedural` y `procedure_for` nombra esa autorización. Una prohibición cuenta solo si un respaldo acredita que se respetó. Los antecedentes de una solicitud no son exigencias.
+La naturaleza se decide solo con el texto del artículo (decisiones 7 y 21), en el orden `referral`, `explicit_obligations`, `procedural`, `informative`. Cuentan las obligaciones que recaen en la empresa y que un respaldo puede acreditar. Desde `evidence-review-v7`, la empresa incluye a sus trabajadores, sus contratistas y sus órganos internos (Comité Paritario, Departamento de Prevención de Riesgos, delegado, sindicato), y una regla sobre cómo se forma, se elige o funciona uno de esos órganos cuenta solo cuando exige un acto de alguien. Un artículo que solo obliga, prohíbe o faculta al Estado, o a una entidad externa a la empresa, es `informative`. Un artículo que modifica otra ley, o que agrega una obligación dentro de otra, es `referral`, aunque el texto agregado imponga una obligación. Exigir una autorización impone la obligación de tenerla. Un artículo que solo regula el trámite es `procedural` y `procedure_for` nombra esa autorización. Una prohibición que recae en la empresa es una exigencia aunque el artículo no nombre un documento: su respaldo es la autorización que la levanta o el registro que mostraría que se respeta (decisión 24). Los antecedentes de una solicitud no son exigencias. Un deber que nace solo cuando ocurre algo es una exigencia, y dice su condición.
 
 Un artículo informativo, de remisión o procedimental no tiene nada que verificar y su veredicto es `not_evaluable`. El servicio vacía las exigencias y fija ese veredicto después de la respuesta del modelo. Una exigencia sin `evidence` se descarta.
 
@@ -215,7 +215,7 @@ La lectura de los archivos y la llamada al modelo se ejecutan en el pool de hilo
 
 - Recibir el pedido en partes y leer PDF, Word, Excel, CSV y PowerPoint.
 - Aplicar los topes de archivos, de tamaño, de páginas, de filas, de ZIP y de caracteres.
-- Pedir al modelo una revisión con el prompt `evidence-review-v5`.
+- Pedir al modelo una revisión con el prompt `evidence-review-v7`.
 - Neutralizar las líneas de los datos que imitan un delimitador del mensaje (EVR-009).
 - Cerrar en código el artículo informativo, de remisión o procedimental: sin exigencias y con veredicto `not_evaluable`. Solo el procedimental conserva `procedure_for`.
 - Descartar una exigencia que no nombra su respaldo.

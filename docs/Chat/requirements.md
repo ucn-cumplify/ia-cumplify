@@ -114,6 +114,7 @@ Cada afirmación de la respuesta cita el pasaje que la respalda (plan del equipo
 - Los marcadores `[n]` de los mensajes del asistente se quitan del historial antes de mandarlo al modelo.
 - Fuera de ese caso, un `[Pn]` o un `[n]` que llega escrito en la entrada no se convierte en cita: pasa a paréntesis antes de armar el prompt (CHT-007).
 - Desde `chat-v4`, el prompt pide que una lista de artículos cite cada uno con su propio pasaje (el artículo o su requisito en la app), justo después de su número y nunca con una sola clave para toda la lista; un pasaje que solo lista artículos, como el inventario de la app, respalda solo los que no tienen uno. También pide que cada norma de una lista se nombre con su tipo, número y título como los escribe un pasaje (CHT-047 de `test.csv`).
+- Desde `chat-v5`, cuando la pregunta pide las obligaciones que impone una norma o un artículo, o los artículos que establecen obligaciones, el modelo decide con las reglas de las alertas y de la revisión de respaldos (`applicability-v7` y `evidence-review-v7`; decisiones 23 y 24 del plan del sprint 3 de backend-cumplify): la conducta se busca en las palabras del artículo; la empresa incluye a sus trabajadores, sus contratistas y sus órganos internos; una regla interna de uno de esos órganos cuenta solo cuando exige un acto; una prohibición que recae en la empresa cuenta; y no cuentan lo que solo obliga al Estado o a una entidad externa, el objeto, las definiciones, los beneficios, la vigencia ni lo que solo se permite («podrá»). Las reglas solo deciden qué cuenta: la respuesta sigue diciendo solo lo que escriben los pasajes, con su cita, y no nombra un documento que los pasajes no escriben. Las oraciones compartidas son las mismas en los tres prompts, y `tests/test_chat_prompts.py` falla si dejan de coincidir. Cuando la pregunta pide la lista de los artículos que establecen obligaciones, el modelo recorre los pasajes artículo por artículo, incluye los que obligan a los trabajadores, a los contratistas o a un órgano interno, como el Comité Paritario, y antes de cerrar la lista revisa los que dejó fuera.
 
 ---
 
@@ -224,7 +225,7 @@ Cada respuesta informa qué versión del prompt y qué modelo la produjeron, y c
 
 **Validaciones:**
 
-- `chat_version` es `<CHAT_PROMPT_VERSION>@<modelo efectivo>`, por ejemplo `chat-v4@gpt-5.6-luna`, y viaja en `done` y en `error`. Con el respondedor falso vale `fake-v1@fake` (CHT-014).
+- `chat_version` es `<CHAT_PROMPT_VERSION>@<modelo efectivo>`, por ejemplo `chat-v5@gpt-5.6-luna`, y viaja en `done` y en `error`. Con el respondedor falso vale `fake-v1@fake` (CHT-014).
 - Todo cambio del prompt, del bloque de pasajes, de los textos fijos o de las reglas de marcadores y de cobertura sube `CHAT_PROMPT_VERSION`, una constante del código y no una variable de entorno.
 - `usage` trae `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens`, `reasoning_tokens` y `llm_calls`.
 - `usage` vale `null` cuando el proveedor no llegó a informarlo: si el stream se cortó, o si terminó sin mandar el fragmento de uso.

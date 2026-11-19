@@ -74,7 +74,7 @@
             "reasoning_tokens": 64,
             "llm_calls": 1
           },
-          "chat_version": "chat-v4@gpt-5.6-luna",
+          "chat_version": "chat-v5@gpt-5.6-luna",
           "dev_metrics": null
         }
       }
@@ -94,7 +94,7 @@
           "code": "provider_error",
           "retryable": true,
           "usage": null,
-          "chat_version": "chat-v4@gpt-5.6-luna"
+          "chat_version": "chat-v5@gpt-5.6-luna"
         }
       }
     ]

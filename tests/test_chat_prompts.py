@@ -268,7 +268,7 @@ def test_hostile_input_never_reaches_the_model_as_a_citation() -> None:
 
 
 def test_system_prompt_states_the_rules() -> None:
-    assert CHAT_PROMPT_VERSION == "chat-v4"
+    assert CHAT_PROMPT_VERSION == "chat-v5"
     for rule in (
         NOT_COVERED_MARK,
         '"--- PASAJE P<n> ---"',
@@ -289,3 +289,56 @@ def test_system_prompt_states_the_rules() -> None:
         assert rule in CHAT_SYSTEM_PROMPT, rule
     # The fixed rules carry no request data, so they are the same for every request.
     assert "{" not in CHAT_SYSTEM_PROMPT
+
+
+def _between(text: str, start: str, end: str) -> str:
+    begin = text.index(start)
+    return text[begin : text.index(end, begin) + len(end)]
+
+
+def test_a_list_of_articles_with_obligations_covers_workers_and_internal_bodies() -> None:
+    """chat-v5: asked for the articles that establish obligations, the chat read "for companies" as the employer only.
+
+    Through the real API, two answers about Decreto N 44 left out article 33 (the record of the election of the
+    Comité Paritario), which the alert and the evidence review bring with five obligations, and one of them left out
+    every duty of the workers and of the committee (backend docs/AI/prueba-e2e-reglas-obligaciones.md, 2026-11-19).
+    """
+    chat = CHAT_SYSTEM_PROMPT
+    rules = chat[chat.index("WHEN THE QUESTION ASKS ABOUT OBLIGATIONS") : chat.index("FORMAT\n")]
+    assert "go through the passages article by article" in rules
+    assert "never leave an article out because the one who must fulfil it is a worker or a body" in rules
+    assert "Before you close the list, check the articles you left out one by one" in rules
+    # It comes after the sentence that says who the company is, which it applies.
+    assert rules.index("a delegado or a sindicato.") < rules.index("go through the passages article by article")
+
+
+def test_the_chat_decides_what_an_obligation_is_with_the_rules_of_the_alerts() -> None:
+    """chat-v5: a question about the obligations of a norm gets the criteria of the alerts and the evidence reviews."""
+    from ia_cumplify.adapters.outbound.openai.applicability_prompts import APPLICABILITY_SYSTEM_PROMPT as alerts
+
+    chat = CHAT_SYSTEM_PROMPT
+    assert "WHEN THE QUESTION ASKS ABOUT OBLIGATIONS" in chat
+    assert chat.index("HOW TO ANSWER") < chat.index("WHEN THE QUESTION ASKS ABOUT OBLIGATIONS") < chat.index("FORMAT\n")
+    shared = (
+        "who must fulfil it, what they must do, and on what. Do not infer it from the subject of the article or from the mention of an authority.",
+        _between(alerts, "The company is the private company", "a delegado or a sindicato."),
+        _between(alerts, "A rule about how one of those bodies", "how long the body lasts."),
+        _between(alerts, "What the article requires only of the State or its bodies", "is not."),
+        "A company with administración delegada stands in the place of the organismo administrador",
+        "A prohibition the article sets on the company or on those who act inside it is an obligation, even when the article names no document",
+        "A prohibition set only on the State, its bodies or its officials is not.",
+        _between(alerts, "the power of an authority to inspect", "does not by itself require anything of the company."),
+        _between(alerts, "states the purpose or the scope of the law", '("podrá") without requiring it.'),
+    )
+    for sentence in shared:
+        assert len(sentence) > 40
+        assert sentence in chat, sentence
+        assert sentence in alerts, sentence
+    # The rules only decide what counts: the answer still says only what the passages write.
+    assert "everything you state still comes from the passages, with its citation" in chat
+    assert "Never name a document or record that the passages do not write." in chat
+    # An article that imposes no obligation is a negative answer with its citation, not a missing source: without
+    # this sentence the set case E02 came back not_covered in 4 of 12 runs (2026-11-17).
+    assert "that is the answer: say what it does instead, with its citation" in chat
+    assert f"do not start that answer with {NOT_COVERED_MARK}" in chat
+    assert "respaldo" not in chat

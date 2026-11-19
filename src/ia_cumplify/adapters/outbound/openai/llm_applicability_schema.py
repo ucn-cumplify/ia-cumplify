@@ -52,8 +52,8 @@ class LlmArticleReason(BaseModel):
     obligations: list[LlmObligation] = Field(
         ...,
         description=(
-            "For explicit_obligations, each obligation the article imposes on the company, with its respaldo. "
-            "Empty for informative, referral and procedural."
+            "For explicit_obligations, each obligation the article imposes on the company or on those who act "
+            "inside it, with its respaldo: at least one. Empty for informative, referral and procedural."
         ),
     )
     reason: str = Field(
