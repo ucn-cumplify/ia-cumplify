@@ -4,6 +4,7 @@ from datetime import date
 
 import pytest
 
+from ia_cumplify.adapters.outbound.openai.applicability_prompts import APPLICABILITY_SYSTEM_PROMPT
 from ia_cumplify.adapters.outbound.openai.evidence_review_prompts import (
     EVIDENCE_REVIEW_SYSTEM_PROMPT,
     render_evidence_review_user_content,
@@ -24,16 +25,55 @@ from ia_cumplify.domain.evidence_review import (
 def test_the_prompt_decides_nature_with_the_c9_rules():
     text = EVIDENCE_REVIEW_SYSTEM_PROMPT.casefold()
     assert "only from the article text" in text
-    assert "only obliges the state is informative" in text
+    assert "only obliges, forbids or empowers the state, its bodies or its officials" in text
     assert "adds an obligation inside another law" in text
     assert "even when the added text itself imposes an obligation" in text
     assert "has nothing to verify" in text
     assert "not_evaluable" in text
     assert "name its respaldo in evidence" in text
     assert "if you cannot name one, it is not a requirement" in text
-    assert "a prohibition counts only when a respaldo accredits" in text
+    assert "a prohibition the article sets on the company or on those who act inside it is a requirement" in text
     assert "the antecedents for an application are not requirements" in text
     assert "procedural" in text
+
+
+def _between(text: str, start: str, end: str) -> str:
+    begin = text.index(start)
+    return text[begin : text.index(end, begin) + len(end)]
+
+
+def test_the_review_decides_nature_with_the_rules_of_the_alert_analysis():
+    """evidence-review-v7: the alert and the review must give the same nature to the same article."""
+    review = EVIDENCE_REVIEW_SYSTEM_PROMPT
+    alerts = APPLICABILITY_SYSTEM_PROMPT
+    shared = (
+        "First find the conduct in the words of the article: who must fulfil it, what they must do, and on what.",
+        _between(alerts, "The company is the private company", "a delegado or a sindicato."),
+        _between(alerts, "to appoint or elect its members", "to carry out a function."),
+        _between(alerts, "how long the members serve", "how long the body lasts."),
+        _between(alerts, "What the article requires only of the State or its bodies", "is not."),
+        "A company with administración delegada stands in the place of the organismo administrador",
+        _between(alerts, "or on those who act inside it (its workers", 'without the word "deberá".'),
+        _between(alerts, "its respaldo is the authorization that lifts it", "or its officials is not."),
+        _between(alerts, "An article that only obliges, forbids or empowers the State", '("podrá") without requiring it.'),
+    )
+    for sentence in shared:
+        assert len(sentence) > 40
+        assert sentence in review, sentence
+
+
+def test_a_prohibition_on_the_company_is_a_requirement_without_a_document():
+    # Team decision of 2026-11-17, after point 40 of the client's methodology.
+    text = EVIDENCE_REVIEW_SYSTEM_PROMPT
+    assert "is a requirement, even when the article names no document" in text
+    assert "A prohibition counts only when a respaldo accredits" not in text
+
+
+def test_requirements_are_counted_by_independent_duty_and_a_conditional_one_says_its_condition():
+    text = EVIDENCE_REVIEW_SYSTEM_PROMPT
+    assert "List one requirement per independent duty." in text
+    assert "Do not merge two different duties into one requirement, and do not list the same duty twice." in text
+    assert "is a requirement: say the condition in it." in text
 
 
 def test_a_file_that_proves_a_breach_does_not_accredit_the_requirement():
