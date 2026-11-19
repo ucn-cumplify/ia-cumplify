@@ -33,6 +33,7 @@ SAMPLE = CandidateLabels(
 # old answers from new ones by the version alone: a change to either text needs a new version (and its
 # hash here).
 PINNED_PROMPTS = {
+    "classify-v6-closed-catalogs": "8a39328d0d9899b950db53be7bc7ae179c484f09940768d17f939ff89cfcd85f",
     "classify-v5-closed-catalogs": "9ca4ac8d60c69edf160dc116917c115b02123ba05ada6e92468736ac8fa1b979",
     "classify-v4-closed-catalogs": "ebfe24efb0793e4cce7d9d2d266a168e2f4b24719518184265d1eaffaef81aa0",
     "classify-v3-closed-catalogs": "bd696f7b4015cf4ebd973f735248ff3ebc970613732e922f24da50e6418d363c",

@@ -7,7 +7,8 @@ from ia_cumplify.domain.classification_catalogs import CLOSED_CATALOGS
 # v4 keeps the closed catalogs of v3 and names Cumplify in the first sentence.
 # v5 says the law is data and that a delimiter takes a whole line, and neutralizes labels and
 # fake Article ID lines (CLS-007, the part left for step 2.6).
-PROMPT_VERSION = "classify-v5-closed-catalogs"
+# v6 adds "Región Metropolitana de Santiago" to the territorial catalog. SYSTEM_PROMPT is the same as v5.
+PROMPT_VERSION = "classify-v6-closed-catalogs"
 
 SYSTEM_PROMPT = f"""{CUMPLIFY_ROLE}
 

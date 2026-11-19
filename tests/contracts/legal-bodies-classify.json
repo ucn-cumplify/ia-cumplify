@@ -35,6 +35,7 @@
         "Region de Atacama",
         "Región de Coquimbo",
         "Región de Valparaiso",
+        "Región Metropolitana de Santiago",
         "Región del Libertador General Bernardo O'Higgins",
         "Región del Maule",
         "Región de Ñuble",
@@ -102,7 +103,7 @@
         }
       }
     ],
-    "classifier_version": "classify-v5-closed-catalogs@gpt-5.6-luna",
+    "classifier_version": "classify-v6-closed-catalogs@gpt-5.6-luna",
     "usage": {
       "prompt_tokens": 2400,
       "completion_tokens": 600,

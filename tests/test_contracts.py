@@ -61,6 +61,7 @@ from ia_cumplify.adapters.inbound.http.schemas.evidence_review import (
     ReviewRequirementResponse,
     parse_evidence_review,
 )
+from ia_cumplify.adapters.outbound.openai.prompts import PROMPT_VERSION
 from ia_cumplify.application.use_cases.extract_documentary_situation import ExtractDocumentarySituationUseCase
 from ia_cumplify.application.use_cases.propose_action_plan import verified_tasks
 from ia_cumplify.application.use_cases.review_evidence import ReviewEvidenceUseCase
@@ -103,6 +104,7 @@ from ia_cumplify.domain.classification import (
     ClassifiedLegalBody,
     TokenUsage,
 )
+from ia_cumplify.domain.classification_catalogs import CLOSED_CATALOGS
 from ia_cumplify.domain.company_profile import ClassifiedCompanyProfile
 from ia_cumplify.domain.embedding import TextEmbeddings
 from ia_cumplify.domain.documentary_situation import DocumentarySituationJudgment, DocumentarySituationSubject
@@ -314,6 +316,13 @@ def test_classify_results_carry_the_six_dimensions(classify) -> None:
 
 def test_classify_reports_its_usage_and_version(classify) -> None:
     assert_usage_and_version(classify["response"])
+
+
+def test_classify_example_uses_the_current_closed_catalogs_and_version(classify) -> None:
+    # The backend copies this contract: its candidates are the closed catalogs, and the version is the prompt's.
+    candidates = classify["request"]["candidate_values"]
+    assert {dimension: tuple(labels) for dimension, labels in candidates.items()} == CLOSED_CATALOGS
+    assert classify["response"]["classifier_version"].split("@")[0] == PROMPT_VERSION
 
 
 def test_classify_response_is_what_the_endpoint_builds(classify) -> None:
