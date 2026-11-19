@@ -38,6 +38,7 @@ TerritorialCoverage = Literal[
     "Region de Atacama",
     "Región de Coquimbo",
     "Región de Valparaiso",
+    "Región Metropolitana de Santiago",
     "Región del Libertador General Bernardo O'Higgins",
     "Región del Maule",
     "Región de Ñuble",

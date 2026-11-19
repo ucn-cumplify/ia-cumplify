@@ -526,7 +526,7 @@ def test_usage_adds_up_every_batch_and_dev_metrics_repeats_it(
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["usage"] == {**usage_of(3), "llm_calls": 3}
-    assert body["classifier_version"] == "classify-v5-closed-catalogs@gpt-5.6-luna"
+    assert body["classifier_version"] == "classify-v6-closed-catalogs@gpt-5.6-luna"
     metrics = body["dev_metrics"]
     assert metrics["elapsed_ms"] >= 0
     assert {
@@ -560,7 +560,7 @@ def test_no_classifiable_article_does_not_call_the_model(adapter) -> None:
     assert body["results"] == []
     assert body["failed_article_ids"] == []
     assert body["usage"] == {**usage_of(0), "llm_calls": 0}
-    assert body["classifier_version"] == "classify-v5-closed-catalogs@fake-model"
+    assert body["classifier_version"] == "classify-v6-closed-catalogs@fake-model"
     assert script.bodies == []
 
 
@@ -789,7 +789,9 @@ def test_missing_database_url_or_openai_key_is_503(monkeypatch) -> None:
 @pytest.mark.parametrize("dimension, labels", [
     ("scope", ["Medio Ambiente"]),
     ("productive_sector", ["Transporte"]),
-    ("territorial_coverage", ["Región Metropolitana de Santiago"]),
+    ("territorial_coverage", ["Región Metropolitana"]),
+    ("territorial_coverage", ["RM"]),
+    ("territorial_coverage", ["Región Metropolitana de Santiago", "No especificado"]),
     ("scope", ["Laboral", "No especificado"]),
     ("activity_action", ["Registro de trabajadores", "No especificado"]),
 ])
@@ -802,6 +804,20 @@ def test_closed_catalog_or_mixed_sentinel_failure_is_not_silently_repaired(
     response = post(FakePool(legal_body(1)), classifier)
     assert response.status_code == 502
     assert len(script.bodies) == 1
+
+
+def test_the_metropolitan_region_is_returned_with_its_official_name(adapter, monkeypatch) -> None:
+    # classify-v6-closed-catalogs: the region is an option of the closed catalog; the open dimensions keep their text.
+    valid = classification()
+    labels = ["Región de Valparaiso", "Región Metropolitana de Santiago"]
+    monkeypatch.setitem(globals(), "classification", lambda: {**valid, "territorial_coverage": labels})
+    classifier, script = adapter("ok")
+    response = post(FakePool(legal_body(1)), classifier)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["results"][0]["classification"] == {**valid, "territorial_coverage": labels}
+    assert body["classifier_version"] == "classify-v6-closed-catalogs@fake-model"
+    assert "Región Metropolitana de Santiago" in script.prompts[0]
 
 
 def test_historical_candidates_cannot_override_the_official_catalogs(adapter) -> None:
