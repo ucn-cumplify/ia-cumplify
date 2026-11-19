@@ -296,6 +296,22 @@ def _between(text: str, start: str, end: str) -> str:
     return text[begin : text.index(end, begin) + len(end)]
 
 
+def test_a_list_of_articles_with_obligations_covers_workers_and_internal_bodies() -> None:
+    """chat-v5: asked for the articles that establish obligations, the chat read "for companies" as the employer only.
+
+    Through the real API, two answers about Decreto N 44 left out article 33 (the record of the election of the
+    Comité Paritario), which the alert and the evidence review bring with five obligations, and one of them left out
+    every duty of the workers and of the committee (backend docs/AI/prueba-e2e-reglas-obligaciones.md, 2026-11-19).
+    """
+    chat = CHAT_SYSTEM_PROMPT
+    rules = chat[chat.index("WHEN THE QUESTION ASKS ABOUT OBLIGATIONS") : chat.index("FORMAT\n")]
+    assert "go through the passages article by article" in rules
+    assert "never leave an article out because the one who must fulfil it is a worker or a body" in rules
+    assert "Before you close the list, check the articles you left out one by one" in rules
+    # It comes after the sentence that says who the company is, which it applies.
+    assert rules.index("a delegado or a sindicato.") < rules.index("go through the passages article by article")
+
+
 def test_the_chat_decides_what_an_obligation_is_with_the_rules_of_the_alerts() -> None:
     """chat-v5: a question about the obligations of a norm gets the criteria of the alerts and the evidence reviews."""
     from ia_cumplify.adapters.outbound.openai.applicability_prompts import APPLICABILITY_SYSTEM_PROMPT as alerts
